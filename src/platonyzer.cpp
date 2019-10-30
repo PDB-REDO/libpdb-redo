@@ -1,35 +1,19 @@
 #include "pdb-redo.h"
 
-// #include <sys/wait.h>
-
-// #include <fstream>
-// #include <chrono>
 #include <iomanip>
 
 #include <boost/program_options.hpp>
-// #include <boost/algorithm/string.hpp>
-// #include <boost/filesystem/path.hpp>
 #include <boost/filesystem/fstream.hpp>
-// #include <boost/iostreams/filter/bzip2.hpp>
-// #include <boost/iostreams/filter/gzip.hpp>
-// #include <boost/iostreams/filtering_stream.hpp>
-// #include <boost/iostreams/device/file_descriptor.hpp>
-// #include <boost/iostreams/copy.hpp>
-
-// #include <zeep/xml/document.hpp>
 
 #include "cif++/Cif++.h"
 #include "cif++/Compound.h"
 #include "cif++/Structure.h"
-#include "cif++/DistanceMap.h"
+#include "cif++/Symmetry.h"
 
 using namespace std;
 namespace po = boost::program_options;
-// namespace ba = boost::algorithm;
 namespace fs = boost::filesystem;
-// namespace io = boost::iostreams;
 namespace c = mmcif;
-// namespace zx = zeep::xml;
 
 // -----------------------------------------------------------------------
 
