@@ -88,8 +88,8 @@ class RestraintGenerator
 			   << " resi " << aw.m_a.authSeqId()
 			   << " ins " << (aw.m_a.pdbxAuthInsCode().empty() ? "." : aw.m_a.pdbxAuthInsCode())
 			   << " atom " << aw.m_a.authAtomId();
-			if (not aw.m_a.authAltId().empty())
-				os << " alt " + aw.m_a.authAltId();
+			if (not aw.m_a.pdbxAuthAltId().empty())
+				os << " alt " + aw.m_a.pdbxAuthAltId();
 			os << " symm " << (aw.m_a.isSymmetryCopy() ? "Y" : "N");
 
 			return os;
@@ -126,17 +126,17 @@ void RestraintGenerator::writeAngleRestraint(float target, float sd, const c::At
 
 // ------------------------------------------------------------------------
 
-struct ZincSite
+struct IonSite
 {
-	c::Atom zn;
-	vector<tuple<c::Atom,float>> lig;
+	c::Atom ion;
+	vector<tuple<c::Atom,float,string>> lig;
 };
 
 // -----------------------------------------------------------------------
 
-vector<ZincSite> findZincSites(c::Structure& structure, cif::Datablock& db, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell)
+vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell)
 {
-	vector<ZincSite> result;
+	vector<IonSite> result;
 
     // factory for symmetry atom iterators
 	c::SymmetryAtomIteratorFactory saif(structure, spacegroup, cell);
@@ -146,7 +146,7 @@ vector<ZincSite> findZincSites(c::Structure& structure, cif::Datablock& db, cons
 	 	if (atom.labelCompId() != "ZN")
 		 	continue;
 
-		ZincSite zs = { atom };
+		IonSite zs = { atom };
 
 		for (auto a: structure.atoms())
 		{
@@ -156,7 +156,7 @@ vector<ZincSite> findZincSites(c::Structure& structure, cif::Datablock& db, cons
 				{
 					float d = Distance(atom, sa);
 					if (d <= kMaxZnHisDistanceInCluster)
-						zs.lig.emplace_back(sa, d);
+						zs.lig.emplace_back(sa, d, saif.symop_mmcif(sa));
 				}
 				continue;
 			}
@@ -167,7 +167,7 @@ vector<ZincSite> findZincSites(c::Structure& structure, cif::Datablock& db, cons
 				{
 					float d = Distance(atom, sa);
 					if (d <= kMaxZnCysDistanceInCluster)
-						zs.lig.emplace_back(sa, d);
+						zs.lig.emplace_back(sa, d, saif.symop_mmcif(sa));
 				}
 				continue;
 			}
@@ -204,12 +204,12 @@ vector<ZincSite> findZincSites(c::Structure& structure, cif::Datablock& db, cons
 		if (cif::VERBOSE)
 		{
 			cerr << "preliminary cluster: " << endl
-				 << " zn: " << zs.zn.labelAsymId() << '/' << zs.zn.labelAtomId() << endl;
+				 << " zn: " << zs.ion.labelAsymId() << '/' << zs.ion.labelAtomId() << endl;
 
 			for (auto& l: zs.lig)
 			{
 				auto& a = get<0>(l);
-				cerr << " " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << ' ' << a.symmetry() << " @ " << get<1>(l) << endl;
+				cerr << " " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << ' ' << saif.symop_mmcif(a) << " @ " << get<1>(l) << endl;
 			}
 		}
 
@@ -371,17 +371,16 @@ int pr_main(int argc, char* argv[])
 		// write restraints
 		vector<c::Atom> ligands;
 		transform(zs.lig.begin(), zs.lig.end(), back_inserter(ligands), [](auto& l) { return get<0>(l); });
-		rg.writeTetrahedral(zs.zn, ligands);
+		rg.writeTetrahedral(zs.ion, ligands);
 
 		// replace LINK/struct_conn records
 		size_t n = structConn.size();
 		structConn.erase(
-			(cif::Key("ptnr1_label_asym_id") == zs.zn.labelAsymId() and cif::Key("ptnr1_label_atom_id") == zs.zn.labelAtomId()) or
-			(cif::Key("ptnr2_label_asym_id") == zs.zn.labelAsymId() and cif::Key("ptnr2_label_atom_id") == zs.zn.labelAtomId()) or
-			(cif::Key("ptnr3_label_asym_id") == zs.zn.labelAsymId() and cif::Key("ptnr3_label_atom_id") == zs.zn.labelAtomId()));
+			(cif::Key("ptnr1_label_asym_id") == zs.ion.labelAsymId() and cif::Key("ptnr1_label_atom_id") == zs.ion.labelAtomId()) or
+			(cif::Key("ptnr2_label_asym_id") == zs.ion.labelAsymId() and cif::Key("ptnr2_label_atom_id") == zs.ion.labelAtomId()));
 		removedLinks += (n - structConn.size());
 
-		for (auto&& [atom, distance] : zs.lig)
+		for (auto&& [atom, distance, symop] : zs.lig)
 		{
 			string id = "metalc_p-" + to_string(platonyzerLinkId++);
 
@@ -394,21 +393,21 @@ int pr_main(int argc, char* argv[])
 				{ "ptnr1_label_atom_id", atom.labelAtomId() },
 				{ "pdbx_ptnr1_label_alt_id", atom.labelAltId() },
 				{ "pdbx_ptnr1_PDB_ins_code", atom.pdbxAuthInsCode() },
-				// { "ptnr1_symmetry", atom.symmetry() },
+				{ "ptnr1_symmetry", "1_555" },
 				{ "ptnr1_auth_asym_id", atom.authAsymId() },
 				{ "ptnr1_auth_comp_id", atom.authCompId() },
 				{ "ptnr1_auth_seq_id", atom.authSeqId() },
 
-				{ "ptnr2_label_asym_id", zs.zn.labelAsymId() },
-				{ "ptnr2_label_comp_id", zs.zn.labelCompId() },
+				{ "ptnr2_label_asym_id", zs.ion.labelAsymId() },
+				{ "ptnr2_label_comp_id", zs.ion.labelCompId() },
 				{ "ptnr2_label_seq_id", "?" },
-				{ "ptnr2_label_atom_id", zs.zn.labelAtomId() },
-				{ "pdbx_ptnr2_label_alt_id", zs.zn.labelAltId() },
-				{ "pdbx_ptnr2_PDB_ins_code", zs.zn.pdbxAuthInsCode() },
-				{ "ptnr2_auth_asym_id", zs.zn.authAsymId() },
-				{ "ptnr2_auth_comp_id", zs.zn.authCompId() },
-				{ "ptnr2_auth_seq_id", zs.zn.authSeqId() },
-				// { "ptnr2_symmetry", zs.zn.symmetry() },
+				{ "ptnr2_label_atom_id", zs.ion.labelAtomId() },
+				{ "pdbx_ptnr2_label_alt_id", zs.ion.labelAltId() },
+				{ "pdbx_ptnr2_PDB_ins_code", zs.ion.pdbxAuthInsCode() },
+				{ "ptnr2_auth_asym_id", zs.ion.authAsymId() },
+				{ "ptnr2_auth_comp_id", zs.ion.authCompId() },
+				{ "ptnr2_auth_seq_id", zs.ion.authSeqId() },
+				{ "ptnr2_symmetry", symop },
 
 				{ "pdbx_dist_value", distance }
 			});
