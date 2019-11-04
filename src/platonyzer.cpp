@@ -26,7 +26,9 @@ const float
 	kMaxZnCysDistanceInCluster = 4.8f,
 	kBoundaryClosenessAtomToZn = 2.9f,
 
-	kDixonQTest95Perc5Points = 0.710f;
+	kDixonQTest95Perc5Points = 0.710f,
+
+	kMaxMetalLigandDistance = 3.5f;
 
 // -----------------------------------------------------------------------
 
@@ -114,7 +116,42 @@ struct IonSite
 {
 	c::Atom ion;
 	vector<tuple<c::Atom,float,string>> lig;
+	vector<tuple<size_t,size_t>> opposing;
+
+	bool isOctaHedral();
 };
+
+bool IonSite::isOctaHedral()
+{
+	const float kMaxAllowedAngleDeviation = 30.0f;
+
+	bool result = lig.size() == 6;
+
+	// check angles
+	for (size_t a = 0; result and a + 1 < 6; ++a)
+	{
+		auto& la = get<0>(lig[a]);
+		size_t opposing_la = 0;
+
+		for (size_t b = a + 1; result and b < 6; ++b)
+		{
+			auto& lb = get<0>(lig[b]);
+			float angle = c::Angle(la.location(), ion.location(), lb.location());
+			
+			if (abs(angle - 180) < kMaxAllowedAngleDeviation)	// opposing?
+			{
+				if (opposing_la++ > 0)
+					result = false;
+				else
+					opposing.emplace_back(a, b);
+			}
+			else if (abs(angle - 90) > kMaxAllowedAngleDeviation) // should be 90 degrees then
+				result = false;
+		}
+	}
+
+	return result and opposing.size() == 3;
+}
 
 // -----------------------------------------------------------------------
 
@@ -188,12 +225,12 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, const
 		if (cif::VERBOSE)
 		{
 			cerr << "preliminary cluster: " << endl
-				 << " zn: " << zs.ion.labelAsymId() << '/' << zs.ion.labelAtomId() << endl;
+				 << " zn: " << zs.ion.labelAsymId() << '/' << zs.ion.labelAtomId() << " (" << zs.ion.pdbID() << ')' << endl;
 
 			for (auto& l: zs.lig)
 			{
 				auto& a = get<0>(l);
-				cerr << " " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << ' ' << saif.symop_mmcif(a) << " @ " << get<1>(l) << endl;
+				cerr << " " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " (" << a.pdbID() << ')'  << ' ' << saif.symop_mmcif(a) << " @ " << get<1>(l) << endl;
 			}
 		}
 
@@ -217,7 +254,7 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, const
                 for (size_t i = 4; i < zs.lig.size(); ++i)
                 {
                     auto& a = get<0>(zs.lig[i]);
-                    cerr << "Atom " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " was considered to be an outlier" << endl;
+                    cerr << "Atom " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " (" << a.pdbID() << ')'  << " was considered to be an outlier" << endl;
                 }
 			}
 
@@ -232,6 +269,188 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, const
 		}
 
 		result.emplace_back(move(zs));
+	}
+
+	return result;
+}
+
+// -----------------------------------------------------------------------
+
+constexpr float get_t_90(size_t N)
+{
+	const float t_dist_90[4] = {
+		1.638,	// 3
+		1.533,	// 4
+		1.476,	// 5
+		1.440,	// 6
+	};
+
+	assert(N > 5 and N < 10);
+	return t_dist_90[N - 3];
+}
+
+vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell)
+{
+	vector<IonSite> result;
+
+    // factory for symmetry atom iterators
+	c::SymmetryAtomIteratorFactory saif(structure, spacegroup, cell);
+
+	for (auto atom: structure.atoms())
+	{
+	 	if (atom.labelCompId() != "NA" and atom.labelCompId() != "MG")
+		 	continue;
+
+		IonSite is = { atom };
+
+		for (auto a: structure.atoms())
+		{
+			if (a.type() == c::AtomType::S or
+				a.type() == c::AtomType::O or
+				a.type() == c::AtomType::N)
+			{
+				for (auto sa: saif(a))
+				{
+					float d = Distance(atom, sa);
+					if (d <= kMaxMetalLigandDistance)
+						is.lig.emplace_back(sa, d, saif.symop_mmcif(sa));
+				}
+			}
+		}
+
+		// sort ligands on distance
+		sort(is.lig.begin(), is.lig.end(), [](auto& a, auto& b) { return get<1>(a) < get<1>(b); });
+
+		// take the nearest atom of a residue, this takes care of NE2/ND1 from a single HIS
+		// and also the alt cases
+		for (auto a = is.lig.begin(); a != is.lig.end() and next(a) != is.lig.end(); ++a)
+		{
+			auto& aa = get<0>(*a);
+
+			auto ad = get<1>(*a);
+
+			for (auto b = next(a); b != is.lig.end(); ++b)
+			{
+				auto& ba = get<0>(*b);
+
+				// mmCIF...
+				if (aa.isWater())
+				{
+					if (aa.authSeqId() != ba.authSeqId() or aa.authAsymId() != ba.authAsymId() or aa.symmetry() != ba.symmetry())
+						continue;
+				}
+				else if (ba.labelCompId() != aa.labelCompId() or aa.labelSeqId() != ba.labelSeqId() or aa.labelAsymId() != ba.labelAsymId() or aa.symmetry() != ba.symmetry())
+					continue;
+
+				auto bd = get<1>(*b);
+				assert(bd > ad);
+
+				is.lig.erase(b);
+				break;
+			}
+		}
+
+		// -----------------------------------------------------------------------
+
+		if (cif::VERBOSE)
+		{
+			cerr << "preliminary cluster: " << endl
+				 << " metal: " << is.ion.labelAsymId() << '/' << is.ion.labelAtomId() << " (" << is.ion.pdbID() << ')' << endl;
+
+			for (auto& l: is.lig)
+			{
+				auto& a = get<0>(l);
+				cerr << " " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " (" << a.pdbID() << ')' << ' ' << saif.symop_mmcif(a) << " @ " << get<1>(l) << endl;
+			}
+		}
+
+		// -----------------------------------------------------------------------
+		
+		for (auto a = is.lig.begin(); a != is.lig.end() and next(a) != is.lig.end(); ++a)
+		{
+			auto& aa = get<0>(*a);
+
+			if (aa.type() != c::AtomType::N)
+				continue;
+				
+			if (aa.labelCompId() == "GLN")
+			{
+				assert(aa.labelAtomId() == "NE2");
+				auto o = structure.getAtomByLabel("OE1", aa.labelAsymId(), "GLN", aa.labelSeqId(), aa.labelAltId());
+
+				if (cif::VERBOSE)
+					cerr << "Flipping side chain for GLN " << " " << aa.labelAsymId() << aa.labelSeqId() << " (" << aa.pdbID() << ')' << endl;
+
+				structure.swapAtoms(aa, o);
+				continue;
+			}
+			
+			if (aa.labelCompId() == "ASN")
+			{
+				assert(aa.labelAtomId() == "ND2");
+				auto o = structure.getAtomByLabel("OD1", aa.labelAsymId(), "GLN", aa.labelSeqId(), aa.labelAltId());
+
+				if (cif::VERBOSE)
+					cerr << "Flipping side chain for ASN " << " " << aa.labelAsymId() << aa.labelSeqId() << " (" << aa.pdbID() << ')' << endl;
+
+				structure.swapAtoms(aa, o);
+				continue;
+			}
+		}
+
+		// -----------------------------------------------------------------------
+		// if there are less than six atoms or more than nine, give up.
+
+		if (is.lig.size() < 6 or is.lig.size() > 9)
+		{
+			if (cif::VERBOSE)
+				cerr << "Rejecting cluster since the number of atoms is unreasonable" << endl;
+			continue;
+		}
+		
+		// However, if we have more than six, try to remove outliers with a Grubbs test
+		// See: https://en.wikipedia.org/wiki/Grubbs%27s_test_for_outliers
+		// Note we also test atom number 6...
+
+		while (is.lig.size() > 5)
+		{
+			double sum = accumulate(is.lig.begin(), is.lig.end(), 0.0, [](double s, auto& l) { return s + get<1>(l); });
+			double avg = sum / is.lig.size();
+			double stddev = accumulate(is.lig.begin(), is.lig.end(), 0.0, [avg](double s, auto& l) { return s + (get<1>(l) - avg) * (get<1>(l) - avg); }) / (is.lig.size() - 1);
+
+			// only test if max distance is outlier
+			double G = (get<1>(is.lig.back()) - avg) / stddev;
+
+			// extracted from student t-distribution table, with one-sided confidence level 90%
+			// and degrees of freedom 
+			
+			if (G < get_t_90(is.lig.size()))
+				break;
+			
+			if (cif::VERBOSE)
+			{
+				auto& a = get<0>(is.lig.back());
+				cerr << "Removing outlier " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " (" << a.pdbID() << ')' << ' ' << saif.symop_mmcif(a) << " @ " << get<1>(is.lig.back()) << endl;
+			}
+
+			is.lig.erase(is.lig.begin() + is.lig.size() - 1);
+		}
+
+		if (not is.isOctaHedral())
+		{
+			if (cif::VERBOSE)
+				cerr << "Rejecting cluster since it is not an octahedral" << endl;
+			continue;
+		}
+
+		// if (is.lig.size() != 4)
+		// {
+		// 	if (cif::VERBOSE)
+		// 		cerr << "Rejecting cluster since there not 4 atoms near by" << endl;
+		// 	continue;
+		// }
+
+		result.emplace_back(move(is));
 	}
 
 	return result;
@@ -343,13 +562,13 @@ int pr_main(int argc, char* argv[])
 	string restraintFileName = entryId + "_platonyzer.restraints";
 	if (vm.count("restraints-file"))
 		restraintFileName = vm["restraints-file"].as<string>();
+	RestraintGenerator rg(restraintFileName);
 
 	auto& structConn = db["struct_conn"];
 
 	size_t removedLinks = 0;
 	size_t platonyzerLinkId = 1;
 
-	RestraintGenerator rg(restraintFileName);
 	for (auto zs: zincSites)
 	{
 		// write restraints
@@ -397,6 +616,20 @@ int pr_main(int argc, char* argv[])
 			});
 		}
 	}
+
+	// -----------------------------------------------------------------------
+	
+	auto octSites = findOctahedralSites(structure, db, clipper::Spacegroup(clipper::Spgr_descr(spacegroup)), cell);
+	for (auto& os: octSites)
+	{
+		// write restraints
+		vector<c::Atom> ligands;
+		transform(os.lig.begin(), os.lig.end(), back_inserter(ligands), [](auto& l) { return get<0>(l); });
+		rg.writeOctahedral(os.ion, ligands);
+		
+	}
+
+	// -----------------------------------------------------------------------
 
 	if (cif::VERBOSE)
 		cerr << "Removed " << removedLinks << " link records" << endl;
