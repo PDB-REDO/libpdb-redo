@@ -57,6 +57,8 @@ class RestraintGenerator
 	~RestraintGenerator() = default;
 
 	size_t writeTetrahedral(const c::Atom& ion, const vector<c::Atom>& ligands);
+	size_t writeOctahedral(const c::Atom& ion, const vector<c::Atom>& ligands,
+		const vector<tuple<size_t,size_t>>& opposing);
 
   private:
 
@@ -97,6 +99,28 @@ size_t RestraintGenerator::writeTetrahedral(const c::Atom& ion, const vector<c::
 		for (auto b = a + 1; b != ligands.end(); ++b)
 		{
 			writeAngleRestraint(kTarget, kSD, *a, ion, *b);
+			++n;
+		}
+	}
+
+	return n;
+}
+
+size_t RestraintGenerator::writeOctahedral(const c::Atom& ion, const vector<c::Atom>& ligands,
+	const vector<tuple<size_t,size_t>>& opposing)
+{
+	const float kSD = 3;
+
+	size_t n = 0, ai = 0;
+	for (auto a = ligands.begin(); next(a) != ligands.end(); ++a, ++ai)
+	{
+		size_t bi = ai + 1;
+		for (auto b = a + 1; b != ligands.end(); ++b, ++bi)
+		{
+			if (find(opposing.begin(), opposing.end(), make_tuple(ai, bi)) == opposing.end())
+				writeAngleRestraint(90, kSD, *a, ion, *b);
+			else
+				writeAngleRestraint(180, kSD, *a, ion, *b);
 			++n;
 		}
 	}
@@ -410,13 +434,12 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 		
 		// However, if we have more than six, try to remove outliers with a Grubbs test
 		// See: https://en.wikipedia.org/wiki/Grubbs%27s_test_for_outliers
-		// Note we also test atom number 6...
 
-		while (is.lig.size() > 5)
+		while (is.lig.size() > 6)
 		{
 			double sum = accumulate(is.lig.begin(), is.lig.end(), 0.0, [](double s, auto& l) { return s + get<1>(l); });
 			double avg = sum / is.lig.size();
-			double stddev = accumulate(is.lig.begin(), is.lig.end(), 0.0, [avg](double s, auto& l) { return s + (get<1>(l) - avg) * (get<1>(l) - avg); }) / (is.lig.size() - 1);
+			double stddev = sqrt(accumulate(is.lig.begin(), is.lig.end(), 0.0, [avg](double s, auto& l) { return s + (get<1>(l) - avg) * (get<1>(l) - avg); }) / (is.lig.size() - 1));
 
 			// only test if max distance is outlier
 			double G = (get<1>(is.lig.back()) - avg) / stddev;
@@ -442,13 +465,6 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 				cerr << "Rejecting cluster since it is not an octahedral" << endl;
 			continue;
 		}
-
-		// if (is.lig.size() != 4)
-		// {
-		// 	if (cif::VERBOSE)
-		// 		cerr << "Rejecting cluster since there not 4 atoms near by" << endl;
-		// 	continue;
-		// }
 
 		result.emplace_back(move(is));
 	}
@@ -553,11 +569,7 @@ int pr_main(int argc, char* argv[])
 	else if (spacegroup.empty())
 		throw runtime_error("No spacegroup, cannot continue");
 
-	// c::DistanceMap dm(structure, clipper::Spacegroup(clipper::Spgr_descr(spacegroup)), cell, 5.0f);
-
 	// -----------------------------------------------------------------------
-
-	auto zincSites = findZincSites(structure, db, clipper::Spacegroup(clipper::Spgr_descr(spacegroup)), cell);
 
 	string restraintFileName = entryId + "_platonyzer.restraints";
 	if (vm.count("restraints-file"))
@@ -569,64 +581,67 @@ int pr_main(int argc, char* argv[])
 	size_t removedLinks = 0;
 	size_t platonyzerLinkId = 1;
 
-	for (auto zs: zincSites)
+	for (auto& ionSites: {
+		findZincSites(structure, db, clipper::Spacegroup(clipper::Spgr_descr(spacegroup)), cell),
+		findOctahedralSites(structure, db, clipper::Spacegroup(clipper::Spgr_descr(spacegroup)), cell)
+		})
 	{
-		// write restraints
-		vector<c::Atom> ligands;
-		transform(zs.lig.begin(), zs.lig.end(), back_inserter(ligands), [](auto& l) { return get<0>(l); });
-		rg.writeTetrahedral(zs.ion, ligands);
-
-		// replace LINK/struct_conn records
-		size_t n = structConn.size();
-		structConn.erase(
-			(cif::Key("ptnr1_label_asym_id") == zs.ion.labelAsymId() and cif::Key("ptnr1_label_atom_id") == zs.ion.labelAtomId()) or
-			(cif::Key("ptnr2_label_asym_id") == zs.ion.labelAsymId() and cif::Key("ptnr2_label_atom_id") == zs.ion.labelAtomId()));
-		removedLinks += (n - structConn.size());
-
-		for (auto&& [atom, distance, symop] : zs.lig)
+		for (auto ionSite: ionSites)
 		{
-			string id = "metalc_p-" + to_string(platonyzerLinkId++);
+			// write restraints
+			vector<c::Atom> ligands;
+			transform(ionSite.lig.begin(), ionSite.lig.end(), back_inserter(ligands), [](auto& l) { return get<0>(l); });
 
-			structConn.emplace({
-				{ "id", id },
-				{ "conn_type_id", "metalc" },
-				{ "ptnr1_label_asym_id", atom.labelAsymId() },
-				{ "ptnr1_label_comp_id", atom.labelCompId() },
-				{ "ptnr1_label_seq_id", atom.labelSeqId() },
-				{ "ptnr1_label_atom_id", atom.labelAtomId() },
-				{ "pdbx_ptnr1_label_alt_id", atom.labelAltId() },
-				{ "pdbx_ptnr1_PDB_ins_code", atom.pdbxAuthInsCode() },
-				{ "ptnr1_symmetry", "1_555" },
-				{ "ptnr1_auth_asym_id", atom.authAsymId() },
-				{ "ptnr1_auth_comp_id", atom.authCompId() },
-				{ "ptnr1_auth_seq_id", atom.authSeqId() },
+			switch (ionSite.lig.size())
+			{
+				case 4: 
+					rg.writeTetrahedral(ionSite.ion, ligands);
+					break;
+				case 6:
+					rg.writeOctahedral(ionSite.ion, ligands, ionSite.opposing);
+					break;
+			};
 
-				{ "ptnr2_label_asym_id", zs.ion.labelAsymId() },
-				{ "ptnr2_label_comp_id", zs.ion.labelCompId() },
-				{ "ptnr2_label_seq_id", "?" },
-				{ "ptnr2_label_atom_id", zs.ion.labelAtomId() },
-				{ "pdbx_ptnr2_label_alt_id", zs.ion.labelAltId() },
-				{ "pdbx_ptnr2_PDB_ins_code", zs.ion.pdbxAuthInsCode() },
-				{ "ptnr2_auth_asym_id", zs.ion.authAsymId() },
-				{ "ptnr2_auth_comp_id", zs.ion.authCompId() },
-				{ "ptnr2_auth_seq_id", zs.ion.authSeqId() },
-				{ "ptnr2_symmetry", symop },
+			// replace LINK/struct_conn records
+			size_t n = structConn.size();
+			structConn.erase(
+				(cif::Key("ptnr1_label_asym_id") == ionSite.ion.labelAsymId() and cif::Key("ptnr1_label_atom_id") == ionSite.ion.labelAtomId()) or
+				(cif::Key("ptnr2_label_asym_id") == ionSite.ion.labelAsymId() and cif::Key("ptnr2_label_atom_id") == ionSite.ion.labelAtomId()));
+			removedLinks += (n - structConn.size());
 
-				{ "pdbx_dist_value", distance }
-			});
+			for (auto&& [atom, distance, symop] : ionSite.lig)
+			{
+				string id = "metalc_p-" + to_string(platonyzerLinkId++);
+
+				structConn.emplace({
+					{ "id", id },
+					{ "conn_type_id", "metalc" },
+					{ "ptnr1_label_asym_id", atom.labelAsymId() },
+					{ "ptnr1_label_comp_id", atom.labelCompId() },
+					{ "ptnr1_label_seq_id", atom.labelSeqId() },
+					{ "ptnr1_label_atom_id", atom.labelAtomId() },
+					{ "pdbx_ptnr1_label_alt_id", atom.labelAltId() },
+					{ "pdbx_ptnr1_PDB_ins_code", atom.pdbxAuthInsCode() },
+					{ "ptnr1_symmetry", "1_555" },
+					{ "ptnr1_auth_asym_id", atom.authAsymId() },
+					{ "ptnr1_auth_comp_id", atom.authCompId() },
+					{ "ptnr1_auth_seq_id", atom.authSeqId() },
+
+					{ "ptnr2_label_asym_id", ionSite.ion.labelAsymId() },
+					{ "ptnr2_label_comp_id", ionSite.ion.labelCompId() },
+					{ "ptnr2_label_seq_id", "?" },
+					{ "ptnr2_label_atom_id", ionSite.ion.labelAtomId() },
+					{ "pdbx_ptnr2_label_alt_id", ionSite.ion.labelAltId() },
+					{ "pdbx_ptnr2_PDB_ins_code", ionSite.ion.pdbxAuthInsCode() },
+					{ "ptnr2_auth_asym_id", ionSite.ion.authAsymId() },
+					{ "ptnr2_auth_comp_id", ionSite.ion.authCompId() },
+					{ "ptnr2_auth_seq_id", ionSite.ion.authSeqId() },
+					{ "ptnr2_symmetry", symop },
+
+					{ "pdbx_dist_value", distance }
+				});
+			}
 		}
-	}
-
-	// -----------------------------------------------------------------------
-	
-	auto octSites = findOctahedralSites(structure, db, clipper::Spacegroup(clipper::Spgr_descr(spacegroup)), cell);
-	for (auto& os: octSites)
-	{
-		// write restraints
-		vector<c::Atom> ligands;
-		transform(os.lig.begin(), os.lig.end(), back_inserter(ligands), [](auto& l) { return get<0>(l); });
-		rg.writeOctahedral(os.ion, ligands);
-		
 	}
 
 	// -----------------------------------------------------------------------
