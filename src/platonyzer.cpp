@@ -397,28 +397,39 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 			if (aa.type() != c::AtomType::N)
 				continue;
 				
-			if (aa.labelCompId() == "GLN")
+			try
 			{
-				assert(aa.labelAtomId() == "NE2");
-				auto o = structure.getAtomByLabel("OE1", aa.labelAsymId(), "GLN", aa.labelSeqId(), aa.labelAltId());
+				if (aa.labelCompId() == "GLN")
+				{
+					assert(aa.labelAtomId() == "NE2");
+					auto o = structure.getAtomByLabel("OE1", aa.labelAsymId(), "GLN", aa.labelSeqId(), aa.labelAltId());
 
-				if (cif::VERBOSE)
-					cerr << "Flipping side chain for GLN " << " " << aa.labelAsymId() << aa.labelSeqId() << " (" << aa.pdbID() << ')' << endl;
+					if (cif::VERBOSE)
+						cerr << "Flipping side chain for GLN " << " " << aa.labelAsymId() << aa.labelSeqId() << " (" << aa.pdbID() << ')' << endl;
 
-				structure.swapAtoms(aa, o);
-				continue;
+					structure.swapAtoms(aa, o);
+					continue;
+				}
+				
+				if (aa.labelCompId() == "ASN")
+				{
+					assert(aa.labelAtomId() == "ND2");
+					auto o = structure.getAtomByLabel("OD1", aa.labelAsymId(), "GLN", aa.labelSeqId(), aa.labelAltId());
+
+					if (cif::VERBOSE)
+						cerr << "Flipping side chain for ASN " << " " << aa.labelAsymId() << aa.labelSeqId() << " (" << aa.pdbID() << ')' << endl;
+
+					structure.swapAtoms(aa, o);
+					continue;
+				}
 			}
-			
-			if (aa.labelCompId() == "ASN")
+			catch (const std::out_of_range& ex)
 			{
-				assert(aa.labelAtomId() == "ND2");
-				auto o = structure.getAtomByLabel("OD1", aa.labelAsymId(), "GLN", aa.labelSeqId(), aa.labelAltId());
-
 				if (cif::VERBOSE)
-					cerr << "Flipping side chain for ASN " << " " << aa.labelAsymId() << aa.labelSeqId() << " (" << aa.pdbID() << ')' << endl;
+					cerr << ex.what() << endl;
 
-				structure.swapAtoms(aa, o);
-				continue;
+				is.lig.clear();	// give up
+				break;
 			}
 		}
 
@@ -538,9 +549,15 @@ int pr_main(int argc, char* argv[])
 	if (vm.count("debug"))
 		cif::VERBOSE = vm["debug"].as<int>();
 
+	if (cif::VERBOSE)
+		cerr << "Loading data...";
+
 	fs::path input = vm["input"].as<string>();
 	c::File pdb(input);
 	c::Structure structure(pdb);
+
+	if (cif::VERBOSE)
+		cerr << " done" << endl;
 
 	auto& db = pdb.data();
 
