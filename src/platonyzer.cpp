@@ -595,7 +595,7 @@ int pr_main(int argc, char* argv[])
 
 	auto& structConn = db["struct_conn"];
 
-	size_t removedLinks = 0;
+	size_t removedLinks = 0, createdLinks = 0;
 	size_t platonyzerLinkId = 1;
 
 	for (auto& ionSites: {
@@ -625,6 +625,7 @@ int pr_main(int argc, char* argv[])
 				(cif::Key("ptnr1_label_asym_id") == ionSite.ion.labelAsymId() and cif::Key("ptnr1_label_atom_id") == ionSite.ion.labelAtomId()) or
 				(cif::Key("ptnr2_label_asym_id") == ionSite.ion.labelAsymId() and cif::Key("ptnr2_label_atom_id") == ionSite.ion.labelAtomId()));
 			removedLinks += (n - structConn.size());
+			createdLinks += ionSite.lig.size();
 
 			for (auto&& [atom, distance, symop] : ionSite.lig)
 			{
@@ -664,7 +665,8 @@ int pr_main(int argc, char* argv[])
 	// -----------------------------------------------------------------------
 
 	if (cif::VERBOSE)
-		cerr << "Removed " << removedLinks << " link records" << endl;
+		cerr << "Removed " << removedLinks << " link records" << endl
+			 << "Created " << createdLinks << " link records" << endl;
 
 	// -----------------------------------------------------------------------
 
