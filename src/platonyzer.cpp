@@ -585,6 +585,25 @@ int pr_main(int argc, char* argv[])
 		spacegroup = "P 21 21 2 (a)";
 	else if (spacegroup.empty())
 		throw runtime_error("No spacegroup, cannot continue");
+	
+	clipper::Spgr_descr clipperSpacegroupDescr(spacegroup);
+	if (clipperSpacegroupDescr.spacegroup_number() == 0)
+	{
+		if (cif::VERBOSE)
+			cerr << "Clipper does not know spacegroup " << spacegroup << endl;
+		
+		int nr = c::GetSpacegroupNumber(spacegroup);
+
+		if (cif::VERBOSE)
+		{
+			cerr << "According to symop.lib the number should be " << nr << endl;
+			if (nr > 1000)
+				cerr << " ... but using " << (nr % 1000) << " for clipper." << endl;
+
+		}
+		
+		clipperSpacegroupDescr = clipper::Spgr_descr(nr % 1000);
+	}
 
 	// -----------------------------------------------------------------------
 
@@ -599,8 +618,8 @@ int pr_main(int argc, char* argv[])
 	size_t platonyzerLinkId = 1;
 
 	for (auto& ionSites: {
-		findZincSites(structure, db, clipper::Spacegroup(clipper::Spgr_descr(spacegroup)), cell),
-		findOctahedralSites(structure, db, clipper::Spacegroup(clipper::Spgr_descr(spacegroup)), cell)
+		findZincSites(structure, db, clipper::Spacegroup(clipperSpacegroupDescr), cell),
+		findOctahedralSites(structure, db, clipper::Spacegroup(clipperSpacegroupDescr), cell)
 		})
 	{
 		for (auto ionSite: ionSites)
