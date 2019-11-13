@@ -179,7 +179,7 @@ bool IonSite::isOctaHedral()
 
 // -----------------------------------------------------------------------
 
-vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell)
+vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int spacegroup, const clipper::Cell& cell)
 {
 	vector<IonSite> result;
 
@@ -313,7 +313,7 @@ constexpr float get_t_90(size_t N)
 	return t_dist_90[N - 3];
 }
 
-vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell)
+vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db, int spacegroup, const clipper::Cell& cell)
 {
 	vector<IonSite> result;
 
@@ -363,7 +363,7 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 					if (aa.authSeqId() != ba.authSeqId() or aa.authAsymId() != ba.authAsymId() or aa.symmetry() != ba.symmetry())
 						continue;
 				}
-				else if (ba.labelCompId() != aa.labelCompId() or aa.labelSeqId() != ba.labelSeqId() or aa.labelAsymId() != ba.labelAsymId() or aa.symmetry() != ba.symmetry())
+				else if (ba.labelAtomId() != aa.labelAtomId() or ba.labelCompId() != aa.labelCompId() or aa.labelSeqId() != ba.labelSeqId() or aa.labelAsymId() != ba.labelAsymId() or aa.symmetry() != ba.symmetry())
 					continue;
 
 				auto bd = get<1>(*b);
@@ -575,35 +575,11 @@ int pr_main(int argc, char* argv[])
 
 	clipper::Cell cell(clipper::Cell_descr(a, b, c, alpha, beta, gamma));
 
-	string spacegroup = db["symmetry"]
+	string spacegroupName = db["symmetry"]
 		[cif::Key("entry_id") == entryId]
 		["space_group_name_H-M"].as<string>();
 
-	if (spacegroup == "P 1-")
-		spacegroup = "P -1";
-	else if (spacegroup == "P 21 21 2 A")
-		spacegroup = "P 21 21 2 (a)";
-	else if (spacegroup.empty())
-		throw runtime_error("No spacegroup, cannot continue");
-	
-	clipper::Spgr_descr clipperSpacegroupDescr(spacegroup);
-	if (clipperSpacegroupDescr.spacegroup_number() == 0)
-	{
-		if (cif::VERBOSE)
-			cerr << "Clipper does not know spacegroup " << spacegroup << endl;
-		
-		int nr = c::GetSpacegroupNumber(spacegroup);
-
-		if (cif::VERBOSE)
-		{
-			cerr << "According to symop.lib the number should be " << nr << endl;
-			if (nr > 1000)
-				cerr << " ... but using " << (nr % 1000) << " for clipper." << endl;
-
-		}
-		
-		clipperSpacegroupDescr = clipper::Spgr_descr(nr % 1000);
-	}
+	int spacegroupNr = mmcif::GetSpacegroupNumber(spacegroupName);
 
 	// -----------------------------------------------------------------------
 
@@ -618,8 +594,8 @@ int pr_main(int argc, char* argv[])
 	size_t platonyzerLinkId = 1;
 
 	for (auto& ionSites: {
-		findZincSites(structure, db, clipper::Spacegroup(clipperSpacegroupDescr), cell),
-		findOctahedralSites(structure, db, clipper::Spacegroup(clipperSpacegroupDescr), cell)
+		findZincSites(structure, db, spacegroupNr, cell),
+		findOctahedralSites(structure, db, spacegroupNr, cell)
 		})
 	{
 		for (auto ionSite: ionSites)
