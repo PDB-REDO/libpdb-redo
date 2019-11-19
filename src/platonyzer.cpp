@@ -302,14 +302,18 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int s
 
 constexpr float get_t_90(size_t N)
 {
-	const float t_dist_90[4] = {
+	const float t_dist_90[] = {
 		1.638,	// 3
 		1.533,	// 4
 		1.476,	// 5
 		1.440,	// 6
+		1.415,	// 7
+		1.397,	// 8
+		1.383,	// 9
+		1.372,	// 10
 	};
 
-	assert(N > 5 and N < 10);
+	assert(N >= 3 and N < sizeof(t_dist_90) / sizeof(float) + 3);
 	return t_dist_90[N - 3];
 }
 
@@ -426,10 +430,10 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 			catch (const std::out_of_range& ex)
 			{
 				if (cif::VERBOSE)
-					cerr << ex.what() << endl;
+					cerr << "Could not flip " << aa.labelCompId() << ": " << ex.what() << endl;
 
-				is.lig.clear();	// give up
-				break;
+				// is.lig.clear();	// give up
+				// break;
 			}
 		}
 
