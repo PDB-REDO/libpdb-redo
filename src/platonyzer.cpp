@@ -47,8 +47,8 @@ class RestraintGenerator
 {
   public:
 
-	RestraintGenerator(const string& file)
-		: m_file(file)
+	RestraintGenerator(const string& file, bool deleteVDWRestraints)
+		: m_file(file), m_deleteVDWRestraints(deleteVDWRestraints)
 	{
 		if (not m_file.is_open())
 			throw runtime_error("Could not open restraint file " + file);
@@ -85,6 +85,7 @@ class RestraintGenerator
 	};
 
 	ofstream m_file;
+	bool m_deleteVDWRestraints;
 };
 
 size_t RestraintGenerator::writeTetrahedral(const c::Atom& ion, const vector<c::Atom>& ligands)
@@ -110,6 +111,9 @@ size_t RestraintGenerator::writeOctahedral(const c::Atom& ion, const vector<c::A
 	const vector<tuple<size_t,size_t>>& opposing)
 {
 	const float kSD = 3;
+
+	if (m_deleteVDWRestraints)
+		m_file << "vdwr exclude " << AtomPart(ion) << endl;
 
 	size_t n = 0, ai = 0;
 	for (auto a = ligands.begin(); next(a) != ligands.end(); ++a, ++ai)
@@ -496,6 +500,7 @@ int pr_main(int argc, char* argv[])
 		("output,o",	po::value<string>(),	"The output file, default is stdout")
 		("restraints-file,r",
 						po::value<string>(),	"Restraint file name, default is {id}_platonyze.restraints")
+		("delete-vdw-rest",						"Delete vanderWaals restraints for octahedral ions in the external for Refmac")
 		("help,h",								"Display help message")
 		("version",								"Print version")
 		("verbose,v",							"Verbose output")
@@ -590,7 +595,7 @@ int pr_main(int argc, char* argv[])
 	string restraintFileName = entryId + "_platonyzer.restraints";
 	if (vm.count("restraints-file"))
 		restraintFileName = vm["restraints-file"].as<string>();
-	RestraintGenerator rg(restraintFileName);
+	RestraintGenerator rg(restraintFileName, vm.count("delete-vdw-rest"));
 
 	auto& structConn = db["struct_conn"];
 
