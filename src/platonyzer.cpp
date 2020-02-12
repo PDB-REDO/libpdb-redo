@@ -571,7 +571,6 @@ int pr_main(int argc, char* argv[])
 	auto& db = pdb.data();
 
 	// -----------------------------------------------------------------------
-	// first build a distance map, makes life easier
 
 	string entryId = db["entry"].front()["id"].as<string>();
 	if (entryId.empty())
