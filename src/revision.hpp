@@ -1,8 +1,11 @@
 const char kRevision[] = R"(
-build-81-gfd60707
-commit fd607072ef8f9e2fb8f2f1a2ab081ed379beaa10
+build-82-g8584fb0-dirty
+commit 8584fb04d9eb120b54969d27b2ee9c61186ab62e
 Author: Maarten L. Hekkelman <maarten@hekkelman.com>
-Date:   2020-09-21 13:46:20 +0200
+Date:   2020-10-13 11:53:10 +0200
 
-    fix in nested range based loops
+    - added license
+    - update configure.ac
+    - added clipper wrapper
+    - ported mtz-maker
 )";

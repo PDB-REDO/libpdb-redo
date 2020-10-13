@@ -29,7 +29,7 @@
    Date: maandag 19 februari, 2018
 */
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -59,11 +59,12 @@
 #include "cif++/Cif++.hpp"
 #include "cif++/Structure.hpp"
 #include "cif++/Compound.hpp"
-#include "cif++/AtomShape.hpp"
 #include "cif++/CifUtils.hpp"
-#include "cif++/BondMap.hpp"
-#include "cif++/MapMaker.hpp"
-#include "cif++/ResolutionCalculator.hpp"
+
+#include "AtomShape.hpp"
+#include "BondMap.hpp"
+#include "MapMaker.hpp"
+#include "ResolutionCalculator.hpp"
 
 #include "HBondTraits.h"
 

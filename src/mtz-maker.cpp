@@ -26,7 +26,7 @@
 
 // my humble attempt to create mtz files
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <filesystem>
 

@@ -29,7 +29,7 @@
    Date: woensdag 27 december, 2017
 */
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <fstream>
 #include <iomanip>
@@ -39,8 +39,8 @@
 
 #include "zeep/json/element.hpp"
 
-#include "cif++/BondMap.hpp"
-#include "cif++/Statistics.hpp"
+#include "BondMap.hpp"
+#include "Statistics.hpp"
 
 using namespace std;
 
@@ -52,7 +52,7 @@ namespace c = mmcif;
 
 int pr_main(int argc, char* argv[])
 {
-	po::options_description visible_options(fs::path(argv[0]).filename().string() + " options");
+	po::options_description visible_options(fs::path(argv[0]).filename().string() + " [options] <mtzfile> <coordinatesfile> [<output>]");
 	visible_options.add_options()
 		("hklin",				po::value<string>(),	"mtz file")
 		("recalc",										"Recalculate Fc from FP/SIGFP in mtz file")
@@ -85,6 +85,7 @@ int pr_main(int argc, char* argv[])
 	po::positional_options_description p;
 	p.add("hklin", 1);
 	p.add("xyzin", 1);
+	p.add("output", 1);
 	
 	po::variables_map vm;
 	po::store(po::command_line_parser(argc, argv).options(cmdline_options).positional(p).run(), vm);

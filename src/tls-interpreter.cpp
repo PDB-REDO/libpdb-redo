@@ -24,8 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <termios.h>
 #include <sys/ioctl.h>

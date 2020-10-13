@@ -29,7 +29,7 @@
    Date: dinsdag 30 april, 2019
 */
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <csignal>
 #include <pwd.h>

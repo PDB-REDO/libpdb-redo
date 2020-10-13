@@ -31,7 +31,7 @@
 
 // test 3fvl
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <iomanip>
 #include <numeric>

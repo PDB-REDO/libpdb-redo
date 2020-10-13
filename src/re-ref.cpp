@@ -31,7 +31,7 @@
 
 // test 3fvl
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <iomanip>
 #include <fstream>
@@ -39,8 +39,9 @@
 
 #include <boost/program_options.hpp>
 
-#include "cif++/Statistics.hpp"
 #include "cif++/CifUtils.hpp"
+
+#include "Statistics.hpp"
 
 #include "minimizer.h"
 

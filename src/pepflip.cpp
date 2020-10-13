@@ -31,7 +31,7 @@
 
 // test 3fvl
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <fcntl.h>
 
@@ -42,15 +42,15 @@
 
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/thread.hpp>
 
 #include "cif++/Secondary.hpp"
-#include "cif++/Statistics.hpp"
 #include "cif++/CifUtils.hpp"
 
+#include "Statistics.hpp"
 #include "minimizer.h"
 #include "ramachandran.h"
 #include "skiplist.h"
+#include "utils.hpp"
 
 using namespace std;
 
@@ -76,7 +76,7 @@ typedef mmcif::MapMaker<float> MapMaker;
 // --------------------------------------------------------------------
 
 size_t
-	NTHREADS = boost::thread::hardware_concurrency();
+	NTHREADS = std::thread::hardware_concurrency();
 
 float
 	gMinAngle		= 90,
@@ -855,12 +855,12 @@ void FlipPeptides(Structure& structure, const string& asymID,
 	}
 	else
 	{
-		boost::thread_group t;
+		std::list<std::thread> t;
 		atomic<size_t> next(0);
 		mutex m;
 		
 		for (size_t ti = 0; ti < NTHREADS; ++ti)
-			t.create_thread([&]()
+			t.emplace_back([&]()
 			{
 				Structure s(structure);
 				StatsCollector sc(mm, s, false /*electronScattering*/);
@@ -899,7 +899,8 @@ void FlipPeptides(Structure& structure, const string& asymID,
 				}
 			});
 	
-		t.join_all();
+		for (auto& ti: t)
+			ti.join();
 		
 		sort(flipped.begin(), flipped.end());
 		
@@ -1125,8 +1126,8 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("max-threads"))
 		NTHREADS = vm["max-threads"].as<uint16_t>();
-	if (NTHREADS > boost::thread::hardware_concurrency())
-		NTHREADS = boost::thread::hardware_concurrency();
+	if (NTHREADS > std::thread::hardware_concurrency())
+		NTHREADS = std::thread::hardware_concurrency();
 
 	if (cif::VERBOSE or NTHREADS < 1)
 		NTHREADS = 1;

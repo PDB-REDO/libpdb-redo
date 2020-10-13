@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include "ClipperWrapper.hpp"
 
@@ -80,3 +80,27 @@ clipper::Atom toClipper(const mmcif::Atom& atom)
 	
 	return result;
 }
+
+// --------------------------------------------------------------------
+
+mmcif::Atom symmetryCopy(const mmcif::Atom& atom, const mmcif::Point& d, const clipper::RTop_orth& rt)
+{
+	auto loc = atom.location();
+	loc += d;
+	loc = ((clipper::Coord_orth)loc).transform(rt);
+
+	return mmcif::Atom(atom, loc);
+}
+
+	// AtomImpl(const AtomImpl& impl, const Point& d, const clipper::RTop_orth& rt)
+	// 	: mFile(impl.mFile), mID(impl.mID), mType(impl.mType), mAtomID(impl.mAtomID)
+	// 	, mCompID(impl.mCompID), mAsymID(impl.mAsymID), mSeqID(impl.mSeqID)
+	// 	, mAltID(impl.mAltID), mLocation(impl.mLocation), mRefcount(1)
+	// 	, mRow(impl.mRow), mCompound(impl.mCompound), mRadius(impl.mRadius)
+	// 	, mCachedProperties(impl.mCachedProperties)
+	// 	, mSymmetryCopy(true), mRTop(rt), mD(d)
+	// {
+	// 	mLocation += d;
+	// 	mLocation = ((clipper::Coord_orth)mLocation).transform(rt);
+	// 	mLocation -= d;
+	// }

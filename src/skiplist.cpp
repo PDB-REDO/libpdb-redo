@@ -29,7 +29,7 @@
    Date: maandag 07 januari, 2019
 */
 
-#include "cif++/Config.hpp"
+#include "pdb-redo.hpp"
 
 #include <fstream>
 #include <filesystem>

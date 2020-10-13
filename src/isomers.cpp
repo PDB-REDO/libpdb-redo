@@ -29,7 +29,7 @@
    Date: woensdag 07 maart, 2018
 */
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <iostream>
 #include <fstream>
@@ -38,9 +38,9 @@
 #include <iomanip>
 #include <atomic>
 #include <ctgmath>
+#include <thread>
 
 #include <boost/program_options.hpp>
-
 
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/algorithm/string.hpp>
@@ -48,7 +48,6 @@
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
 #include <boost/format.hpp>
-#include <boost/thread.hpp>
 
 #include <clipper/clipper.h>
 #include <clipper/clipper-contrib.h>
@@ -61,15 +60,15 @@
 #include "cif++/Cif++.hpp"
 #include "cif++/Structure.hpp"
 #include "cif++/Compound.hpp"
-#include "cif++/AtomShape.hpp"
-#include "cif++/CifUtils.hpp"
-#include "cif++/BondMap.hpp"
-#include "cif++/MapMaker.hpp"
-#include "cif++/ResolutionCalculator.hpp"
 #include "cif++/CifUtils.hpp"
 
+#include "BondMap.hpp"
+#include "MapMaker.hpp"
+#include "ResolutionCalculator.hpp"
+#include "AtomShape.hpp"
 #include "HBondTraits.h"
 
+#include "utils.hpp"
 #include "svm++.h"
 
 using namespace std;
@@ -142,61 +141,46 @@ vector<string> CollectCandidateIds(bool includeSugars)
 //		p1.consumed(1);
 //	}
 
-	boost::thread_group t;
-	size_t N = boost::thread::hardware_concurrency();
-	atomic<size_t> next(0);
-	
-	boost::mutex m;
-	boost::barrier bar(N);
+	std::mutex m;
+	// boost::barrier bar(N);
 
-	for (size_t i = 0; i < N; ++i)
+	parallel_for(ids.size(), [&](size_t i)
 	{
-		t.create_thread([&]()
+		set<string> failed;
+		
+		for (;;)
 		{
-			set<string> failed;
-			
-			for (;;)
+			try
 			{
-				size_t i = next++;
-				
-				if (i >= ids.size())
-					break;
-				
-				try
+				auto l = mmcif::Compound::create(ids[i]);
+				if (l == nullptr or
+					(l->isSugar() and not includeSugars) or
+					l->chiralCentres().empty())
 				{
-					
-					auto l = mmcif::Compound::create(ids[i]);
-					if (l == nullptr or
-						(l->isSugar() and not includeSugars) or
-						l->chiralCentres().empty())
-					{
-						failed.insert(ids[i]);
-					}
-				}
-				catch (const exception& ex)
-				{
-					cerr << ex.what() << endl;
 					failed.insert(ids[i]);
 				}
-		
-				p1.consumed(1);
 			}
-			
-			bar.wait();
-			
-			boost::mutex::scoped_lock l(m);
-			
-			vector<string> nIds;
-			nIds.reserve(ids.size() - failed.size());
+			catch (const exception& ex)
+			{
+				cerr << ex.what() << endl;
+				failed.insert(ids[i]);
+			}
+	
+			p1.consumed(1);
+		}
+		
+		// bar.wait();
+		
+		std::unique_lock l(m);
+		
+		vector<string> nIds;
+		nIds.reserve(ids.size() - failed.size());
 
-			set_difference(ids.begin(), ids.end(), failed.begin(), failed.end(),
-				back_inserter(nIds));
-			
-			swap(ids, nIds);
-		});
-	}
-
-	t.join_all();
+		set_difference(ids.begin(), ids.end(), failed.begin(), failed.end(),
+			back_inserter(nIds));
+		
+		swap(ids, nIds);
+	});
 	
 	return ids;
 }
@@ -205,11 +189,7 @@ vector<string> CollectCandidateIds(bool includeSugars)
 
 void CompareCompounds(const vector<string>& ids, ostream& report)
 {
-	boost::thread_group t;
-	size_t N = boost::thread::hardware_concurrency();
-	atomic<size_t> next(0);
-	
-	boost::mutex m;
+	std::mutex m;
 	
 	vector<tuple<int,int>> idSets;
 
@@ -221,37 +201,22 @@ void CompareCompounds(const vector<string>& ids, ostream& report)
 
 	cif::Progress p2(idSets.size(), "compare");
 
-	for (size_t i = 0; i < N; ++i)
+	parallel_for(ids.size(), [&](size_t i)
 	{
-		t.create_thread([&]()
+		int a, b;
+		tie(a, b) = idSets[i];
+		
+		auto* ca = mmcif::Compound::create(ids[a]);
+		auto* cb = mmcif::Compound::create(ids[b]);
+		
+		p2.consumed(1);
+
+		if (ca->isIsomerOf(*cb))
 		{
-			set<string> failed;
-			
-			for (;;)
-			{
-				size_t i = next++;
-				
-				if (i >= idSets.size())
-					break;
-				
-				int a, b;
-				tie(a, b) = idSets[i];
-				
-				auto* ca = mmcif::Compound::create(ids[a]);
-				auto* cb = mmcif::Compound::create(ids[b]);
-				
-				p2.consumed(1);
-
-				if (ca->isIsomerOf(*cb))
-				{
-					boost::mutex::scoped_lock l(m);
-					report << ids[a] << " is isomer of " << ids[b] << endl;
-				}
-			}
-		});
-	}
-
-	t.join_all();
+			std::unique_lock l(m);
+			report << ids[a] << " is isomer of " << ids[b] << endl;
+		}
+	});
 }
 
 // --------------------------------------------------------------------

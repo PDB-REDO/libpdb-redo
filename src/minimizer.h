@@ -34,8 +34,9 @@
 #include <boost/optional.hpp>
 
 #include "cif++/Structure.hpp"
-#include "cif++/MapMaker.hpp"
-#include "cif++/BondMap.hpp"
+
+#include "MapMaker.hpp"
+#include "BondMap.hpp"
 
 #include "restraints.h"
 

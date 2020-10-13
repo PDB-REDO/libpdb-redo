@@ -25,11 +25,12 @@
 firstTarget: all
 
 CXX					= @CXX@
-CXXFLAGS			= @CXXFLAGS@ @CPPFLAGS@ @PTHREAD_CFLAGS@ @CIFPP_CFLAGS@
+CXXFLAGS			= @CXXFLAGS@ @CPPFLAGS@ @PTHREAD_CFLAGS@ @CIFPP_CFLAGS@ @GSL_CFLAGS@
 LDFLAGS				= @LDFLAGS@ @PTHREAD_CFLAGS@
 LIBS				= @LIBS@ \
 					  @CIFPP_LIBS@ \
 					  @ZEEP_LIBS@ \
+					  @GSL_LIBS@ \
 					  -Wl,-Bstatic \
 					  @BOOST_IOSTREAMS_LIB@ \
 					  @BOOST_PROGRAM_OPTIONS_LIB@ \
@@ -136,11 +137,14 @@ PROGRAMS = \
 	pepflip compref flipper
 
 mtz-maker_OBJECTS = MapMaker.o ResolutionCalculator.o ClipperWrapper.o
+extractor_OBJECTS = ResolutionCalculator.o
+stats_OBJECTS = AtomShape.o Statistics.o BondMap.o MapMaker.o DistanceMap.o ClipperWrapper.o ResolutionCalculator.o
+isomers_OBJECTS = utils.o
 centrifuge_OBJECTS = HBondTraits.o svm++.o
 map-maker_OBJECTS = pr-server.o
 rama-angles_OBJECTS = pr-server.o ramachandran.o
-re-ref_OBJECTS = minimizer.o restraints.o
-pepflip_OBJECTS = minimizer.o restraints.o skiplist.o ramachandran.o
+re-ref_OBJECTS = minimizer.o restraints.o MapMaker.o BondMap.o Statistics.o AtomShape.o ClipperWrapper.o DistanceMap.o ResolutionCalculator.o
+pepflip_OBJECTS = minimizer.o restraints.o skiplist.o ramachandran.o MapMaker.o BondMap.o Statistics.o AtomShape.o ClipperWrapper.o DistanceMap.o ResolutionCalculator.o
 
 tortoize_RSRC = rsrc/rama-data.bin rsrc/torsion-data.bin
 map-maker_RSRC = $(DOCROOT_FILES)

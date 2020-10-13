@@ -24,55 +24,39 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.hpp"
+#pragma once
 
-#include "ResolutionCalculator.hpp"
+#include <functional>
 
-#include "cif++/Point.hpp"
+// --------------------------------------------------------------------
 
-using namespace std;
+void parallel_for(size_t N, std::function<void(size_t)>&& f);
 
-namespace mmcif
+// --------------------------------------------------------------------
+
+int get_terminal_width();
+void showVersionInfo();
+std::string get_user_name();
+
+// -----------------------------------------------------------------------
+
+class progress
 {
+  public:
+	progress(const std::string &action, int64_t max);
+	progress(const progress &) = delete;
+	progress &operator=(const progress &) = delete;
 
-ResolutionCalculator::ResolutionCalculator(const clipper::Cell& cell)
-	: ResolutionCalculator(cell.a(), cell.b(), cell.c(),
-		180 * cell.alpha() / kPI,
-		180 * cell.beta() / kPI,
-		180 * cell.gamma() / kPI)
-{
-}
+	// indefinite version, shows ascii spinner
+	progress(const std::string &action);
 
-ResolutionCalculator::ResolutionCalculator(double a, double b, double c,
-		double alpha, double beta, double gamma)
-{
-	double deg2rad = atan(1.0) / 45.0;
-	
-	double ca = cos(deg2rad * alpha);
-	double sa = sin(deg2rad * alpha);
-	double cb = cos(deg2rad * beta);
-	double sb = sin(deg2rad * beta);
-	double cg = cos(deg2rad * gamma);
-	double sg = sin(deg2rad * gamma);
-	
-	double cast = (cb * cg - ca) / (sb * sg);
-	double cbst = (cg * ca - cb) / (sg * sa);
-	double cgst = (ca * cb - cg) / (sa * sb);
-	
-	double sast = sqrt(1 - cast * cast);
-	double sbst = sqrt(1 - cbst * cbst);
-	double sgst = sqrt(1 - cgst * cgst);
+	virtual ~progress();
 
-	double ast = 1 / (a * sb * sgst);
-	double bst = 1 / (b * sg * sast);
-	double cst = 1 / (c * sa * sbst);
-	
-	mCoefs[0] = ast * ast;
-	mCoefs[1] = 2 * ast * bst * cgst;
-	mCoefs[2] = 2 * ast * cst * cbst;
-	mCoefs[3] = bst * bst;
-	mCoefs[4] = 2 * bst * cst * cast;
-	mCoefs[5] = cst * cst;
-}
+	void consumed(int64_t n); // consumed is relative
+	void set(int64_t n); // progress is absolute
 
-}
+	void message(const std::string &msg);
+
+  private:
+	struct progress_impl *m_impl;
+};

@@ -34,7 +34,8 @@
 #include <set>
 
 #include "cif++/Point.hpp"
-#include "cif++/MapMaker.hpp"
+
+#include "MapMaker.hpp"
 
 // --------------------------------------------------------------------
 

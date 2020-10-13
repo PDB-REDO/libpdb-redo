@@ -32,7 +32,7 @@
 // NOTE: TODO the OXT atoms are ignored at multiple locations
 
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <iostream>
 #include <fstream>

@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <set>
 #include <regex>

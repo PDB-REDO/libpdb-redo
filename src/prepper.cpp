@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <sys/wait.h>
 
@@ -47,6 +47,8 @@
 #include "cif++/Compound.hpp"
 #include "cif++/Structure.hpp"
 #include "cif++/Symmetry.hpp"
+
+#include "ClipperWrapper.hpp"
 
 using namespace std;
 namespace po = boost::program_options;
@@ -664,7 +666,7 @@ int pr_main(int argc, char* argv[])
 	numOfAtomsDeleted += atomSites.erase(cif::Key("occupancy") == 0.0 and cif::Key("label_comp_id") == "HOH",
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted zero occupancy water atom: " << r["id"] << endl;
+				cerr << "Deleted zero occupancy water atom: " << r["id"].as<std::string>() << endl;
 		});
 
 
@@ -698,7 +700,7 @@ int pr_main(int argc, char* argv[])
 	numOfAtomsDeleted += atomSites.erase(cif::Key("occupancy") < 0.0,
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted zero occupancy (hetero) atom: " << r["id"] << endl;
+				cerr << "Deleted zero occupancy (hetero) atom: " << r["id"].as<std::string>() << endl;
 		});
 	
 	// remove dubious links
@@ -721,7 +723,7 @@ int pr_main(int argc, char* argv[])
 			),
 			[](const cif::Row& r) {
 				if (cif::VERBOSE)
-					cerr << "Deleted dubious LINK " << r["id"] << endl;
+					cerr << "Deleted dubious LINK " << r["id"].as<std::string>() << endl;
 			}
 		);
 	}
@@ -730,7 +732,7 @@ int pr_main(int argc, char* argv[])
 	numOfLinksDeleted += db["struct_conn"].erase(cif::Key("pdbx_dist_value") > 5.0,
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted extremely long LINK: " << r["id"] << endl;
+				cerr << "Deleted extremely long LINK: " << r["id"].as<std::string>() << endl;
 		});
 	
 	// Flip ASN if glycosylated at OD1 (LINK part)
@@ -751,7 +753,7 @@ int pr_main(int argc, char* argv[])
 		string asymId, seqId;
 		
 		if (cif::VERBOSE)
-			cerr << "Flipping at OD1 glycosylated ASN " << lr["id"] << endl;
+			cerr << "Flipping at OD1 glycosylated ASN " << lr["id"].as<std::string>() << endl;
 		
 		if (lr["ptnr1_label_atom_id"].as<string>() == "OD1")
 		{
@@ -810,7 +812,7 @@ int pr_main(int argc, char* argv[])
 			continue;
 		
 		if (cif::VERBOSE)
-			cerr << "Fixing non-standard carbohydrate LINK " << lr["id"] << endl;
+			cerr << "Fixing non-standard carbohydrate LINK " << lr["id"].as<std::string>() << endl;
 		
 		string asymId[2], seqId[2], entityId[2];
 		
@@ -943,7 +945,7 @@ int pr_main(int argc, char* argv[])
 		cif::Key("type_symbol") == "H" or cif::Key("type_symbol") == "D" or cif::Key("type_symbol") == "X",
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted (hetero) atom: " << r["id"] << endl;
+				cerr << "Deleted (hetero) atom: " << r["id"].as<std::string>() << endl;
 		});
 	
 	// Remove unknown ligands when running in database mode.
@@ -979,7 +981,7 @@ int pr_main(int argc, char* argv[])
 //		for (auto a: atomSites.find(cif::Key("label_comp_id") == "UNL"))
 //		{
 //			if (cif::VERBOSE)
-//				cerr << "Deleted (hetero) atom: " << a["id"] << endl;
+//				cerr << "Deleted (hetero) atom: " << a["id"].as<std::string>() << endl;
 //			
 //			atomSites.erase(cif::Key("label_comp_id") == "UNL");
 //			
@@ -997,7 +999,7 @@ int pr_main(int argc, char* argv[])
 		cif::Key("label_atom_id") != "CB",
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted atom from unknown residue " << r["id"] << endl;
+				cerr << "Deleted atom from unknown residue " << r["id"].as<std::string>() << endl;
 		}
 	);
 	
@@ -1005,7 +1007,7 @@ int pr_main(int argc, char* argv[])
 		cif::Key("label_comp_id") == "GLY" and cif::Key("label_atom_id") == "CB",
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted CB atom from GLY " << r["id"] << endl;
+				cerr << "Deleted CB atom from GLY " << r["id"].as<std::string>() << endl;
 		}
 	);
 	
@@ -1029,7 +1031,7 @@ int pr_main(int argc, char* argv[])
 		if (not sideChainAtoms.empty())
 		{
 			if (cif::VERBOSE)
-				cerr << "Changed selenium occupancy to 1.00 for " << a["id"] << endl;
+				cerr << "Changed selenium occupancy to 1.00 for " << a["id"].as<std::string>() << endl;
 			
 			a["occupancy"] = 1.0;
 			
@@ -1198,7 +1200,7 @@ int pr_main(int argc, char* argv[])
 					continue;
 				
 				if (testHemHec or cif::VERBOSE)
-					std::cerr << "Renaming HEM to HEC " << asym << " (" << h["pdb_strand_id"] << ':' << h["pdb_seq_num"] << ')' << std::endl;
+					std::cerr << "Renaming HEM to HEC " << asym << " (" << h["pdb_strand_id"].as<std::string>() << ':' << h["pdb_seq_num"].as<std::string>() << ')' << std::endl;
 
 				// see if chem_comp is available
 				auto hemc = db["chem_comp"].find(cif::Key("id") == "HEC");

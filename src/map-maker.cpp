@@ -26,7 +26,7 @@
 
 // my humble attempt to create map files
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <clipper/clipper-ccp4.h>
 

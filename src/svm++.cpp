@@ -24,6 +24,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "pdb-redo.hpp"
+
 #include <iostream>
 #include <vector>
 #include <tuple>
@@ -32,7 +34,6 @@
 #include <algorithm>
 #include <memory>
 
-#include "cif++/Config.hpp"
 #include "svm++.h"
 
 using namespace std;

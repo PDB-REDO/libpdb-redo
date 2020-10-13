@@ -29,7 +29,7 @@
    Date: dinsdag 19 juni, 2018
 */
 
-#include "cif++/Config.hpp"
+#include "pdb-redo.hpp"
 
 #include <cmath>
 #include <cassert>

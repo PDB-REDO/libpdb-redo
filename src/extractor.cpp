@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.h"
+#include "pdb-redo.hpp"
 
 #include <sys/wait.h>
 
@@ -48,7 +48,8 @@
 #include "cif++/CifUtils.hpp"
 #include "cif++/Structure.hpp"
 #include "cif++/TlsParser.hpp"
-#include "cif++/ResolutionCalculator.hpp"
+
+#include "ResolutionCalculator.hpp"
 
 using namespace std;
 namespace po = boost::program_options;

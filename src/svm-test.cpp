@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "libpr.h"
+#include "pdb-redo.hpp"
 
 #include <fstream>
 

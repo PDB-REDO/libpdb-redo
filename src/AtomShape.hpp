@@ -24,25 +24,37 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* 
-   Created by: Maarten L. Hekkelman
-   Date: woensdag 27 februari, 2019
-*/
+// AtomShape, analogue to the similarly named code in clipper
 
 #pragma once
 
-#include <string>
+#include "cif++/Structure.hpp"
 
-#include "cif++/Config.hpp"
+namespace mmcif
+{
 
-extern std::string VERSION_STRING;
+// --------------------------------------------------------------------
+// Class used in calculating radii
 
-std::string get_version_nr();
-std::string get_version_date();
+class AtomShape
+{
+  public:
+	AtomShape(const Atom& atom, float resHigh, float resLow,
+		bool electronScattering);
+	AtomShape(const Atom& atom, float resHigh, float resLow,
+		bool electronScattering, float bFactor);
 
+	~AtomShape();
+	
+	AtomShape(const AtomShape&) = delete;
+	AtomShape& operator=(const AtomShape&) = delete;
 
-#undef PACKAGE_VERSION
+	float radius() const;
+	float calculatedDensity(float r) const;
+	float calculatedDensity(Point p) const;
 
-#undef PACKAGE_NAME
-
-#undef USE_RSRC
+  private:
+	struct AtomShapeImpl*	mImpl;
+};
+	
+}

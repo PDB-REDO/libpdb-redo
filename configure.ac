@@ -6,10 +6,13 @@ AX_CXX_COMPILE_STDCXX_17([noext])
 
 AC_CONFIG_SRCDIR([src/pr-main.cpp])
 AC_CONFIG_AUX_DIR(config)
-AC_CONFIG_HEADERS([src/pdb-redo.h])
+AC_CONFIG_HEADERS([src/config.hpp])
 dnl AC_CONFIG_MACRO_DIR([config/m4])
 
 AC_PREFIX_DEFAULT(/usr/local)
+
+AC_DEFUN([read_test], [AC_LANG_SOURCE(
+	esyscmd(config/tools/m4esc.sh config-tests/$1))])
 
 AC_PROG_INSTALL
 
@@ -32,7 +35,7 @@ fi
 if test "x$MRC" = "x"; then
 	AC_MSG_ERROR([mrc not found, the application will be built without resources])
 else
-	AC_DEFINE([USE_RSRC], [1])
+	AC_DEFINE([USE_RSRC], [1], [Use USE_RSRC to force or disable using resources])
 fi
 
 AX_PTHREAD
@@ -76,7 +79,6 @@ AC_ARG_WITH([newuoa],
 AC_SUBST([CIFPP_RSRC], [$CIFPP_RSRC])
 
 AS_IF([test "x$CIFPP_LIBS" = "x"], [
-	AC_PATH_PROG([PKG_CONFIG], [pkg-config])
 	if test -x "$PKG_CONFIG"
 	then
 		AX_PKG_CHECK_MODULES([CIFPP], [libcif++], [], [], [AC_MSG_ERROR([the required package libcif++ is not installed])])
@@ -110,7 +112,7 @@ AC_ARG_WITH([zeep],
 			])
 
 			ZEEP_CFLAGS="-I ${withval}/include"
-			ZEEP_LIBS="-L${withval}/.libs -lzeep-json"
+			ZEEP_LIBS="-L${withval}/.libs -lzeep-http -lzeep-json -lzeep-xml"
 
 			AC_SUBST([ZEEP_CFLAGS], [$ZEEP_CFLAGS])
 			AC_SUBST([ZEEP_LIBS], [$ZEEP_LIBS])
@@ -119,7 +121,7 @@ AC_ARG_WITH([zeep],
 AS_IF([test "x$ZEEP_LIBS" = "x"], [
 	if test -x "$PKG_CONFIG"
 	then
-		AX_PKG_CHECK_MODULES([ZEEP], [libzeep-json], [], [], [AC_MSG_ERROR([the required package libzeep is not installed])])
+		AX_PKG_CHECK_MODULES([ZEEP], [libzeep-http], [], [], [AC_MSG_ERROR([the required package libzeep is not installed])])
 	else
 		AC_CHECK_HEADER(
 			[zeep/json/element.hpp],
@@ -130,7 +132,7 @@ is installed, and either use the --with-zeep option or install
 pkg-config.])])
 
 			AX_CHECK_LIBRARY([ZEEP], [zeep/json/element.hpp], [zeep-json],
-					[ LIBS="-lzeep-json $LIBS" ],
+					[ LIBS="-lzeep-http -lzeep-json -lzeep-xml $LIBS" ],
 					[AC_MSG_ERROR([libzeep-json not found])])
 	fi
 ])
@@ -189,6 +191,12 @@ AX_CHECK_LIBRARY([LIBCLIPPER], [clipper/clipper.h], [clipper-core],
 	],
 	[AC_MSG_ERROR([libclipper not found - cannot continue])])
 
+AC_MSG_CHECKING([clipper version])
+AC_COMPILE_IFELSE(
+	[read_test(clipper-test.cpp)],
+	[AC_MSG_RESULT([ok])],
+	[AC_MSG_ERROR([The version of clipper is not up to date])])
+
 AC_CHECK_HEADER(
 	[newuoa.h],
 	[
@@ -206,6 +214,8 @@ AX_CHECK_LIBRARY([LIBZ], [zlib.h], [z],
 AX_CHECK_LIBRARY([LIBBZ2], [bzlib.h], [bz2],
 				 [ LIBS="$LIBS -lbz2"],
                  [AC_MSG_ERROR([libbz2 not found - compressed files not supported])])
+
+
 
 dnl AC_MSG_CHECKING([clipper version])
 dnl AC_COMPILE_IFELSE(
