@@ -41,7 +41,6 @@
 #include "restraints.h"
 #include "minimizer.h"
 
-using namespace std;
 
 namespace ba = boost::algorithm;
 
@@ -65,9 +64,9 @@ double BondRestraint::f(const AtomLocationProvider& atoms) const
 	double result = (d * d) / (mDistESD * mDistESD);
 	
 	if (cif::VERBOSE > 2)
-		cerr << "bond::f() = " << atoms.atom(mA) << " <> " << atoms.atom(mB)
+		std::cerr << "bond::f() = " << atoms.atom(mA) << " <> " << atoms.atom(mB)
 			 << " " << atoms[mA] << " <> " << atoms[mB]
-			 << " => " << result << endl;
+			 << " => " << result << std::endl;
 	
 	return result;
 }
@@ -83,8 +82,8 @@ void BondRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) const
 	auto c = 2 * (1 - mDist / bi) / (mDistESD * mDistESD);
 	
 	if (cif::VERBOSE > 2)
-		cerr << "bond::df(): " << atoms.atom(mA) << " <> " << atoms.atom(mB) << ' '
-			 << bi << ' ' << mDist << ' ' << mDistESD << endl;
+		std::cerr << "bond::df(): " << atoms.atom(mA) << " <> " << atoms.atom(mB) << ' '
+			 << bi << ' ' << mDist << ' ' << mDistESD << std::endl;
 
 	df.add(mA, (a1 - a2) * c);
 	df.add(mB, (a2 - a1) * c);
@@ -92,7 +91,7 @@ void BondRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) const
 
 void BondRestraint::print(const AtomLocationProvider& atoms) const
 {
-	cout << "bond " << atoms.atom(mA) << " to " << atoms.atom(mB) << " => " << mDist << " / " << mDistESD << endl;
+	std::cout << "bond " << atoms.atom(mA) << " to " << atoms.atom(mB) << " => " << mDist << " / " << mDistESD << std::endl;
 }
 
 // --------------------------------------------------------------------
@@ -108,7 +107,7 @@ double AngleRestraint::f(const AtomLocationProvider& atoms) const
 	double result = (d * d) / (mESD * mESD);
 	
 	if (cif::VERBOSE > 2)
-		cerr << "angle::f() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << " = " << result << endl;
+		std::cerr << "angle::f() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << " = " << result << std::endl;
 	
 	return result;
 }
@@ -118,7 +117,7 @@ void AngleRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) cons
 	const double kRadToDegree = 180.0 / mmcif::kPI, kDegreeToRad = 1 / kRadToDegree;
 	
 	if (cif::VERBOSE > 2)
-		cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ": " << endl;
+		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ": " << std::endl;
 
 	DPoint k = atoms[mA], l = atoms[mB], m = atoms[mC];
 	
@@ -161,12 +160,12 @@ void AngleRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) cons
 
 void AngleRestraint::print(const AtomLocationProvider& atoms) const
 {
-	cout << "angle " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " => " << mAngle << " / " << mESD << endl;
+	std::cout << "angle " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " => " << mAngle << " / " << mESD << std::endl;
 }
 
 // --------------------------------------------------------------------
 
-tuple<DPoint,DPoint,DPoint,DPoint>
+std::tuple<DPoint,DPoint,DPoint,DPoint>
 TorsionRestraint::CalculateTorsionGradients(float theta, DPoint p[4]) const
 {
 	auto a = p[1] - p[0], b = p[2] - p[1], c = p[3] - p[2];
@@ -231,7 +230,7 @@ TorsionRestraint::CalculateTorsionGradients(float theta, DPoint p[4]) const
 	auto kl = K * L;
 	auto jk = J * K;
 	
-	return make_tuple(
+	return std::make_tuple(
 		F * dE[0] - eff * (dH[0] + jl * dK[0] + kl * dJ[0] + jk * dL[0]),
 		F * dE[1] - eff * (dH[1] + jl * dK[1] + kl * dJ[1] + jk * dL[1]),
 		F * dE[2] - eff * (dH[2] + jl * dK[2] + kl * dJ[2] + jk * dL[2]),
@@ -259,11 +258,11 @@ double TorsionRestraint::f(const AtomLocationProvider& atoms) const
 			result = (diff * diff) / (mESD * mESD);
 
 		if (cif::VERBOSE > 2)
-			cerr << "torsion::f() = " << result << " for theta " << theta
+			std::cerr << "torsion::f() = " << result << " for theta " << theta
 				 << " diff: " << diff
 				 << " target: " << mTarget << " sigma: " << mESD
 				 << " atoms: " << atoms.atom(mA) << ", " << atoms.atom(mB) << ", " << atoms.atom(mC) << ", " << atoms.atom(mD)
-				 << endl;
+				 << std::endl;
 	}
 	
 	return result;
@@ -272,7 +271,7 @@ double TorsionRestraint::f(const AtomLocationProvider& atoms) const
 void TorsionRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) const
 {
 	if (cif::VERBOSE > 2)
-		cerr << "torsion::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << "/" << atoms.atom(mD) << ' ' << ": " << endl;
+		std::cerr << "torsion::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << "/" << atoms.atom(mD) << ' ' << ": " << std::endl;
 
 	double cos_a1 = CosinusAngle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
 	double cos_a2 = CosinusAngle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
@@ -299,7 +298,7 @@ void TorsionRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) co
 			DPoint p[4] = { atoms[mA], atoms[mB], atoms[mC], atoms[mD] };
 			DPoint d[4];
 			
-			tie(d[0], d[1], d[2], d[3]) = CalculateTorsionGradients(theta, p);
+			std::tie(d[0], d[1], d[2], d[3]) = CalculateTorsionGradients(theta, p);
 
 			df.add(mA, 2.0 * diff * d[0] * scale * w);
 			df.add(mB, 2.0 * diff * d[1] * scale * w);
@@ -311,7 +310,7 @@ void TorsionRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) co
 
 void TorsionRestraint::print(const AtomLocationProvider& atoms) const
 {
-	cout << "torsion " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " ; " << atoms.atom(mD) << " => " << mPeriodicity << " / " << mESD << endl;
+	std::cout << "torsion " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " ; " << atoms.atom(mD) << " => " << mPeriodicity << " / " << mESD << std::endl;
 }
 
 // --------------------------------------------------------------------
@@ -327,7 +326,7 @@ double ChiralVolumeRestraint::f(const AtomLocationProvider& atoms) const
 	double result = (d * d) / (kChiralVolumeESD * kChiralVolumeESD);
 	
 	if (cif::VERBOSE > 2)
-		cerr << "chiral::f() = " << result << endl;
+		std::cerr << "chiral::f() = " << result << std::endl;
 	
 	return result;
 }
@@ -335,7 +334,7 @@ double ChiralVolumeRestraint::f(const AtomLocationProvider& atoms) const
 void ChiralVolumeRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) const
 {
 	if (cif::VERBOSE > 2)
-		cerr << "chiral::df(): " << endl;
+		std::cerr << "chiral::df(): " << std::endl;
 
 	DPoint centre = atoms[mCentre];
 	DPoint a = atoms[mA1] - centre;
@@ -360,7 +359,7 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider& atoms, DFCollector& d
 
 void ChiralVolumeRestraint::print(const AtomLocationProvider& atoms) const
 {
-	cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << kChiralVolumeESD << endl;
+	std::cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << kChiralVolumeESD << std::endl;
 }
 
 // --------------------------------------------------------------------
@@ -424,16 +423,16 @@ double PlanarityRestraint::f(const AtomLocationProvider& atoms) const
 
 	if (cif::VERBOSE > 2)
 	{
-		vector<string> as;
+		std::vector<std::string> as;
 		transform(mAtoms.begin(), mAtoms.end(), back_inserter(as),
 			[](auto& a)
 			{
-				stringstream s;
+				std::stringstream s;
 				s << a;
 				return s.str();
 			});
 		
-		cerr << "plane::f() = " << result << " for " << mAtoms.size() << " atoms " << ba::join(as, ", ") << endl;
+		std::cerr << "plane::f() = " << result << " for " << mAtoms.size() << " atoms " << ba::join(as, ", ") << std::endl;
 	}
 	
 	return result;
@@ -443,16 +442,16 @@ void PlanarityRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) 
 {
 	if (cif::VERBOSE > 2)
 	{
-		vector<string> as;
+		std::vector<std::string> as;
 		transform(mAtoms.begin(), mAtoms.end(), back_inserter(as),
 			[](auto& a)
 			{
-				stringstream s;
+				std::stringstream s;
 				s << a;
 				return s.str();
 			});
 		
-		cerr << "plane::df() for " << mAtoms.size() << " atoms " << ba::join(as, ", ") << endl;
+		std::cerr << "plane::df() for " << mAtoms.size() << " atoms " << ba::join(as, ", ") << std::endl;
 	}
 
 	double abcd[4];
@@ -470,12 +469,12 @@ void PlanarityRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) 
 
 void PlanarityRestraint::print(const AtomLocationProvider& atoms) const
 {
-	cout << "plane ";
+	std::cout << "plane ";
 	
 	for (auto& a: mAtoms)
-		cout << atoms.atom(a) << ' ';
+		std::cout << atoms.atom(a) << ' ';
 
-	cout << "=> " << 0 << " / " << mESD << endl;
+	std::cout << "=> " << 0 << " / " << mESD << std::endl;
 }
 
 // --------------------------------------------------------------------
@@ -492,9 +491,9 @@ double NonBondedContactRestraint::f(const AtomLocationProvider& atoms) const
 	}
 	
 	if (cif::VERBOSE > 2)
-			cerr << "non-bonded-contact::f() = " << result << " min-dist is " << mMinDist << " and dist is " << sqrt(distance)
-			 << " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << endl
-			 << " a1: " << atoms[mA] << " a2: " << atoms[mB] << endl;
+			std::cerr << "non-bonded-contact::f() = " << result << " min-dist is " << mMinDist << " and dist is " << sqrt(distance)
+			 << " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << std::endl
+			 << " a1: " << atoms[mA] << " a2: " << atoms[mB] << std::endl;
 	
 	return result;
 }
@@ -511,9 +510,9 @@ void NonBondedContactRestraint::df(const AtomLocationProvider& atoms, DFCollecto
 			bi = 0.1;
 		
 		if (cif::VERBOSE > 2)
-			cerr << "non-bonded::df(): " << atoms.atom(mA) << " and " << atoms.atom(mB) << " "
+			std::cerr << "non-bonded::df(): " << atoms.atom(mA) << " and " << atoms.atom(mB) << " "
 				 << "distance: " << bi << " "
-				 << "target: " << mMinDist << endl;
+				 << "target: " << mMinDist << std::endl;
 
 		double c = 2 * (1 - mMinDist / bi) / (mDistESD * mDistESD);
 		
@@ -524,13 +523,13 @@ void NonBondedContactRestraint::df(const AtomLocationProvider& atoms, DFCollecto
 
 void NonBondedContactRestraint::print(const AtomLocationProvider& atoms) const
 {
-	cout << "nbc " << atoms.atom(mA) << " " << atoms.atom(mB)
-		 << " => " << Distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << endl;
+	std::cout << "nbc " << atoms.atom(mA) << " " << atoms.atom(mB)
+		 << " => " << Distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << std::endl;
 }
 
 // --------------------------------------------------------------------
 
-DensityRestraint::DensityRestraint(vector<pair<AtomRef,double>>&& atoms,
+DensityRestraint::DensityRestraint(std::vector<std::pair<AtomRef,double>>&& atoms,
 	const Xmap& xMap, double mapWeight)
 	: mAtoms(move(atoms)), mXMap(xMap), mMapWeight(mapWeight)
 {
@@ -549,7 +548,7 @@ double DensityRestraint::f(const AtomLocationProvider& atoms) const
 	}
 
 	if (cif::VERBOSE > 2)
-		cerr << "density::f() = " << -result << endl;
+		std::cerr << "density::f() = " << -result << std::endl;
 	
 	return mMapWeight * -result;
 }
@@ -557,7 +556,7 @@ double DensityRestraint::f(const AtomLocationProvider& atoms) const
 void DensityRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) const
 {
 	if (cif::VERBOSE > 2)
-		cerr << "density::df(): " << endl;
+		std::cerr << "density::df(): " << std::endl;
 
 	for (auto& a: mAtoms)
 	{
@@ -579,6 +578,6 @@ void DensityRestraint::df(const AtomLocationProvider& atoms, DFCollector& df) co
 
 void DensityRestraint::print(const AtomLocationProvider& atoms) const
 {
-	cout << "density " << endl;
+	std::cout << "density " << std::endl;
 }
 

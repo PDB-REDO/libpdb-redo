@@ -45,7 +45,6 @@
 
 #include "minimizer.h"
 
-using namespace std;
 
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
@@ -69,14 +68,14 @@ int pr_main(int argc, char* argv[])
 {
 	po::options_description visible_options(fs::path(argv[0]).filename().string() + " options");
 	visible_options.add_options()
-		("hklin",				po::value<string>(),	"reflections file")
-		("xyzin",				po::value<string>(),	"coordinates file")
-		("xyzout,o",			po::value<string>(),	"output coordinates to this file")
-		("asym-id",				po::value<string>(),	"Asymetric unit to refine")
+		("hklin",				po::value<std::string>(),	"reflections file")
+		("xyzin",				po::value<std::string>(),	"coordinates file")
+		("xyzout,o",			po::value<std::string>(),	"output coordinates to this file")
+		("asym-id",				po::value<std::string>(),	"Asymetric unit to refine")
 		("res-first",			po::value<int>(),		"Sequence number for first residue to refine, default = 1")
 		("res-last",			po::value<int>(),		"Sequence number for last residue to refine, default is last in sequence")
 		("iterations,i",		po::value<uint32_t>(),	"Maximum number of iterations, default is nr of moving atoms x 1000")
-		("algorithm",			po::value<string>(),	"Optimisation algorithm (either gsl or sa)")
+		("algorithm",			po::value<std::string>(),	"Optimisation algorithm (either gsl or sa)")
 		
 		("weight-density",		po::value<float>(),		"Weight for density score")
 //		("nudge-offset",		po::value<float>(),		"Maximum offset for nudging atom in simulated annealing") 
@@ -85,7 +84,7 @@ int pr_main(int argc, char* argv[])
 
 		("stats",										"Calculated statistics for refined residues")
 
-		("dict",				po::value<vector<string>>(),
+		("dict",				po::value<std::vector<std::string>>(),
 														"Dictionary file containing restraints for residues in this specific target, can be specified multiple times.")
 		
 		("help,h",										"Display help message")
@@ -121,25 +120,25 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help"))
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(0);
 	}
 	
 	if (vm.count("xyzin") == 0 or vm.count("hklin") == 0)
 	{
-		cerr << "Input files not specified" << endl;
+		std::cerr << "Input files not specified" << std::endl;
 		exit(1);
 	}
 
 	if (vm.count("asym-id") == 0)
 	{
-		cerr << "Asym-id not specified" << endl;
+		std::cerr << "Asym-id not specified" << std::endl;
 		exit(1);
 	}
 
@@ -149,22 +148,22 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("dict"))
 	{
-		for (auto dict: vm["dict"].as<vector<string>>())
+		for (auto dict: vm["dict"].as<std::vector<std::string>>())
 			mmcif::CompoundFactory::instance().pushDictionary(dict);
 	}
 
-	string algo = "gsl";
+	std::string algo = "gsl";
 	if (vm.count("algorithm"))
-		algo = vm["algorithm"].as<string>();
+		algo = vm["algorithm"].as<std::string>();
 
 	float mapWeight = 60;
 	if (vm.count("weight-density"))
 		mapWeight = vm["weight-density"].as<float>();
 
-	mmcif::File f(vm["xyzin"].as<string>());
+	mmcif::File f(vm["xyzin"].as<std::string>());
 	Structure structure(f);
 	
-	fs::path mtzFile = vm["hklin"].as<string>();
+	fs::path mtzFile = vm["hklin"].as<std::string>();
 
 	float samplingRate = 1.5;
 	if (vm.count("sampling-rate"))
@@ -179,15 +178,15 @@ int pr_main(int argc, char* argv[])
 
 	mmcif::BondMap bm(structure);
 
-	unique_ptr<Minimizer> minimizer;
+	std::unique_ptr<Minimizer> minimizer;
 
-	string asymID = vm["asym-id"].as<string>();
+	std::string asymID = vm["asym-id"].as<std::string>();
 	
 	int resFirst = 1;
 	if (vm.count("res-first"))
 		resFirst = vm["res-first"].as<int>();
 	
-	int resLast = numeric_limits<int>::max();
+	int resLast = std::numeric_limits<int>::max();
 	if (vm.count("res-last"))
 		resLast = vm["res-last"].as<int>();
 
@@ -196,22 +195,22 @@ int pr_main(int argc, char* argv[])
 		mmcif::StatsCollector collector(mm, structure, false /*electronScattering*/);
 		auto r = collector.collect(asymID, resFirst, resLast);
 	
-		cout << "RESIDUE" << '\t'
+		std::cout << "RESIDUE" << '\t'
 			 << "RSR" << '\t'
 			 << "SRSR" << '\t'
 			 << "RSCCS" << '\t'
 			 << "NGRID" << '\t'
-			 << endl;
+			 << std::endl;
 	
 		for (auto i: r)
 		{
-			cout << fixed << setprecision(3)
+			std::cout << std::fixed << std::setprecision(3)
 				 << i.compID << '_' << i.asymID << '_' << i.seqID << '\t'
 				 << i.RSR << '\t'
 				 << i.SRSR << '\t'
 				 << i.RSCCS << '\t'
 				 << i.ngrid << '\t'
-				 << endl;
+				 << std::endl;
 		}
 	}
 	
@@ -224,7 +223,7 @@ int pr_main(int argc, char* argv[])
 	}
 
 	if (not minimizer)
-		throw runtime_error("Asymmetric unit with id " + asymID + " was not found");
+		throw std::runtime_error("Asymmetric unit with id " + asymID + " was not found");
 
 //	float nudgeOffset = 0.05f;
 //	if (vm.count("nudge-offset"))
@@ -232,8 +231,8 @@ int pr_main(int argc, char* argv[])
 //	
 //	minimizer->SetNudgeOffset(nudgeOffset);
 
-	cout << "Initial score: " << minimizer->score() << endl
-		 << "Initial rmsz values: " << endl;
+	std::cout << "Initial score: " << minimizer->score() << std::endl
+		 << "Initial rmsz values: " << std::endl;
 	minimizer->printStats();
 
 //	uint32_t iterations = 0;
@@ -242,8 +241,8 @@ int pr_main(int argc, char* argv[])
 
 	minimizer->refine(true);
 	
-	cout << "Final score: " << minimizer->score() << endl
-		 << "Final rmsz values: " << endl;
+	std::cout << "Final score: " << minimizer->score() << std::endl
+		 << "Final rmsz values: " << std::endl;
 	minimizer->printStats();
 	
 	if (vm.count("stats"))
@@ -251,27 +250,27 @@ int pr_main(int argc, char* argv[])
 		mmcif::StatsCollector collector(mm, structure, false /*electronScattering*/);
 		auto r = collector.collect(asymID, resFirst, resLast);
 	
-		cout << "RESIDUE" << '\t'
+		std::cout << "RESIDUE" << '\t'
 			 << "RSR" << '\t'
 			 << "SRSR" << '\t'
 			 << "RSCCS" << '\t'
 			 << "NGRID" << '\t'
-			 << endl;
+			 << std::endl;
 	
 		for (auto i: r)
 		{
-			cout << fixed << setprecision(3)
+			std::cout << std::fixed << std::setprecision(3)
 				 << i.compID << '_' << i.asymID << '_' << i.seqID << '\t'
 				 << i.RSR << '\t'
 				 << i.SRSR << '\t'
 				 << i.RSCCS << '\t'
 				 << i.ngrid << '\t'
-				 << endl;
+				 << std::endl;
 		}
 	}
 		
 	if (vm.count("xyzout"))
-		f.save(vm["xyzout"].as<string>());
+		f.save(vm["xyzout"].as<std::string>());
 	
 	return 0;
 }

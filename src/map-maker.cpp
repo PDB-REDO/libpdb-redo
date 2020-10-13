@@ -24,34 +24,31 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-// my humble attempt to create map files
+// my humble attempt to create std::map files
 
 #include "pdb-redo.hpp"
 
 #include <clipper/clipper-ccp4.h>
 
 #include <zeep/json/element.hpp>
-#include <zeep/http/webapp.hpp>
+// #include <zeep/http/webapp.hpp>
 
 #include <boost/program_options.hpp>
-
 
 #include <boost/algorithm/string.hpp>
 
 #include <boost/date_time/posix_time/posix_time.hpp>
 #include <boost/date_time/local_time/local_time.hpp>
 
-#include "cif++/MapMaker.hpp"
 #include "cif++/CifUtils.hpp"
 
+#include "MapMaker.hpp"
 #include "pr-server.hpp"
 
-using namespace std;
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
 namespace c = mmcif;
 namespace zh = zeep::http;
-namespace el = zeep::el;
 namespace ba = boost::algorithm;
 
 // --------------------------------------------------------------------
@@ -62,7 +59,7 @@ fs::path
 
 fs::path gExePath;
 
-const char* PID_FILE = "/var/run/map-maker.pid";
+const char* PID_FILE = "/var/run/std::map-maker.pid";
 
 // --------------------------------------------------------------------
 
@@ -84,7 +81,7 @@ class self_destructing_file : public std::ifstream
 
 // --------------------------------------------------------------------
 
-ostream& operator<<(ostream& os, const clipper::Coord_grid& c)
+std::ostream& operator<<(std::ostream& os, const clipper::Coord_grid& c)
 {
 	os << '{' << c[0] << ',' << c[1] << ',' << c[2] << '}';
 	return os;
@@ -98,8 +95,8 @@ void carveOutNXMap(const mmcif::Structure& structure, clipper::Xmap<float>& xMap
 
 	// bepaal eerst de box om het model met een marge van kMargin
 	clipper::Coord_orth oMin, oMax;
-	oMin[0] = oMin[1] = oMin[2] = numeric_limits<int>::max();
-	oMax[0] = oMax[1] = oMax[2] = numeric_limits<int>::min();
+	oMin[0] = oMin[1] = oMin[2] = std::numeric_limits<int>::max();
+	oMax[0] = oMax[1] = oMax[2] = std::numeric_limits<int>::min();
 	
 	for (auto& atom: structure.atoms())
 	{
@@ -153,8 +150,8 @@ clipper::Grid_range calculateRange(const mmcif::Structure& structure, clipper::X
 {
 	// bepaal eerst de box om het model met een marge van kMargin
 	clipper::Coord_orth oMin, oMax;
-	oMin[0] = oMin[1] = oMin[2] = numeric_limits<int>::max();
-	oMax[0] = oMax[1] = oMax[2] = numeric_limits<int>::min();
+	oMin[0] = oMin[1] = oMin[2] = std::numeric_limits<int>::max();
+	oMax[0] = oMax[1] = oMax[2] = std::numeric_limits<int>::min();
 	
 	for (auto& atom: structure.atoms())
 	{
@@ -188,10 +185,10 @@ clipper::Grid_range calculateRange(const mmcif::Structure& structure, clipper::X
 
 // --------------------------------------------------------------------
 
-void createMap(fs::path xyzin, fs::path hklin, string type,
+void createMap(fs::path xyzin, fs::path hklin, std::string type,
 	bool masked, float border, float samplingRate, zh::reply& reply)
 {
-	fs::path mapout = fs::unique_path("map-maker-%%%%-%%%%-%%%%-%%%%.map");
+	fs::path mapout = fs::unique_path("std::map-maker-%%%%-%%%%-%%%%-%%%%.std::map");
 	
 	mmcif::File f(xyzin);
 	mmcif::Structure structure(f);
@@ -210,18 +207,18 @@ void createMap(fs::path xyzin, fs::path hklin, string type,
 	else if (type == "anomalous")
 	{
 		if (mm.fa().get().is_null())
-			throw runtime_error("Anomalous map not present");
+			throw std::runtime_error("Anomalous std::map not present");
 		mm.fa().write_masked(mapout, range);
 	}
 	else
-		throw runtime_error("Unsupported map type " + type);
+		throw std::runtime_error("Unsupported std::map type " + type);
 	
 	reply.set_content(new self_destructing_file(mapout), "application/octet-stream");
 }
 
 // --------------------------------------------------------------------
 
-const char kMapMakerNS[] = "http://pdb-redo.eu/ns/map-maker";
+const char kMapMakerNS[] = "http://pdb-redo.eu/ns/std::map-maker";
 
 class MapMakerServer : public zh::webapp
 {
@@ -230,7 +227,7 @@ class MapMakerServer : public zh::webapp
 	~MapMakerServer();
 	
     void handle_map_request(const zh::request& request, const el::scope& scope, zh::reply& reply);
-	virtual void load_template(const string& file, zeep::xml::document& doc);
+	virtual void load_template(const std::string& file, zeep::xml::document& doc);
 	void handle_file(const zh::request& request, const el::scope& scope, zh::reply& reply);
 };
 
@@ -238,13 +235,13 @@ MapMakerServer::MapMakerServer()
 	: webapp(kMapMakerNS)
 {
 	// create our temp directory and move there
-	fs::path tmpDir = fs::temp_directory_path() / ("map-maker-" + to_string(getpid()));
+	fs::path tmpDir = fs::temp_directory_path() / ("std::map-maker-" + std::to_string(getpid()));
 	fs::create_directories(tmpDir);
 	fs::current_path(tmpDir);
 
 	using namespace std::placeholders;
 
-	mount("map",		&MapMakerServer::handle_map_request);
+	mount("std::map",		&MapMakerServer::handle_map_request);
 	mount("style.css",	&MapMakerServer::handle_file);
 }
 
@@ -254,23 +251,23 @@ MapMakerServer::~MapMakerServer()
 
 void MapMakerServer::handle_map_request(const zh::request& request, const el::scope& scope, zh::reply& reply)
 {
-	string pdbID = request.get_parameter("id", ""s);
-	string type = request.get_parameter("type", "density"s);
-	string stage = request.get_parameter("stage", "final"s);
+	std::string pdbID = request.get_parameter("id", ""s);
+	std::string type = request.get_parameter("type", "density"s);
+	std::string stage = request.get_parameter("stage", "final"s);
 	float samplingRate = request.get_parameter("sampling-rate", 1.5f);
 	float border = request.get_parameter("border", 5.f);
 	bool masked = request.has_parameter("masked");
 	
 	if (type != "density" and type != "difference" and type != "anomalous")
-		throw runtime_error("Invalid type specified, allowed values are density, difference and anomalous");
+		throw std::runtime_error("Invalid type specified, allowed values are density, difference and anomalous");
 	
 	if (stage != "final" and stage != "besttls" and stage != "0cyc")
-		runtime_error("Invalid stage specified, allowed values are final, besttls and 0cyc");
+		std::runtime_error("Invalid stage specified, allowed values are final, besttls and 0cyc");
 	
 	ba::to_lower(pdbID);
 	
 	if (pdbID.length() != 4)	// sja... TODO!!! fix
-		throw runtime_error("not a valid pdbid");
+		throw std::runtime_error("not a valid pdbid");
 	
 	fs::path xyzin = gPDBREDODIR / pdbID.substr(1, 2) / pdbID / (pdbID + "_" + stage + ".cif");
 	if (not fs::exists(xyzin))
@@ -281,21 +278,21 @@ void MapMakerServer::handle_map_request(const zh::request& request, const el::sc
 		xyzin = gPDBREDODIR / pdbID.substr(1, 2) / pdbID / (pdbID + "_" + stage + ".pdb.gz");
 
 	if (not fs::exists(xyzin))
-		throw runtime_error("pdb file not found: " + xyzin.string());
+		throw std::runtime_error("pdb file not found: " + xyzin.std::string());
 
 	fs::path mtzin = gPDBREDODIR / pdbID.substr(1, 2) / pdbID / (pdbID + "_" + stage + ".mtz");
 	if (not fs::exists(mtzin))
 		mtzin = gPDBREDODIR / pdbID.substr(1, 2) / pdbID / (pdbID + "_" + stage + ".mtz.gz");
 	
 	if (not fs::exists(mtzin))
-		throw runtime_error("mtz file not found: " + mtzin.string());
+		throw std::runtime_error("mtz file not found: " + mtzin.std::string());
 
 	createMap(xyzin, mtzin, type, masked, border, samplingRate, reply);
 
-	string fileName = pdbID + '-' + type;
+	std::string fileName = pdbID + '-' + type;
 	if (masked)
 		fileName += "-masked";
-	fileName += ".map";
+	fileName += ".std::map";
 
     reply.set_header("Content-disposition", "attachment; filename=" + fileName);
 }
@@ -304,9 +301,9 @@ void MapMakerServer::load_template(const std::string& file, zeep::xml::document&
 {
 	cif::rsrc::rsrc rsrc(file);
 	if (not rsrc)
-		throw runtime_error("missing template");
+		throw std::runtime_error("missing template");
 	
-	string data(rsrc.data(), rsrc.size());
+	std::string data(rsrc.data(), rsrc.size());
 	doc.read(data);
 }
 
@@ -315,16 +312,16 @@ void MapMakerServer::handle_file(const zh::request& request, const el::scope& sc
 	using namespace boost::local_time;
 	using namespace boost::posix_time;
 
-	fs::path file = scope["baseuri"].as<string>();
+	fs::path file = scope["baseuri"].as<std::string>();
 
-	cif::rsrc::rsrc rsrc(file.string());
+	cif::rsrc::rsrc rsrc(file.std::string());
 
 	if (not rsrc)
 		create_error_reply(request, zh::not_found, "The requested file was not found on this 'server'", reply);
 	else
 	{
 		// compare with the date/time of our executable, since we're reading resources :-)
-		string ifModifiedSince;
+		std::string ifModifiedSince;
 		for (const zeep::http::header& h : request.headers)
 		{
 			if (ba::iequals(h.name, "If-Modified-Since"))
@@ -333,7 +330,7 @@ void MapMakerServer::handle_file(const zh::request& request, const el::scope& sc
 
 				local_time_input_facet* lif1(new local_time_input_facet("%a, %d %b %Y %H:%M:%S GMT"));
 
-				stringstream ss;
+				std::stringstream ss;
 				ss.imbue(std::locale(std::locale::classic(), lif1));
 				ss.str(h.value);
 				ss >> modifiedSince;
@@ -350,8 +347,8 @@ void MapMakerServer::handle_file(const zh::request& request, const el::scope& sc
 			}
 		}
 
-		string data(rsrc.data(), rsrc.size());
-		string mimetype = "text/plain";
+		std::string data(rsrc.data(), rsrc.size());
+		std::string mimetype = "text/plain";
 	
 		if (file.extension() == ".css")
 			mimetype = "text/css";
@@ -373,7 +370,7 @@ void MapMakerServer::handle_file(const zh::request& request, const el::scope& sc
 		local_date_time t(local_sec_clock::local_time(time_zone_ptr()));
 		local_time_facet* lf(new local_time_facet("%a, %d %b %Y %H:%M:%S GMT"));
 		
-		stringstream s;
+		std::stringstream s;
 		s.imbue(std::locale(std::cout.getloc(), lf));
 		
 		ptime pt = from_time_t(std::filesystem::last_write_time(gExePath));
@@ -388,17 +385,17 @@ void MapMakerServer::handle_file(const zh::request& request, const el::scope& sc
 
 int pr_main(int argc, char* argv[])
 {
-	po::options_description visible_options("map-maker " + VERSION_STRING + " options");
+	po::options_description visible_options("std::map-maker " + VERSION_STRING + " options");
 	visible_options.add_options()
 		("help,h",										"Display help message")
-		("hklin",			po::value<string>(),		"Input file (either mtz or cif reflections file)")
-		("xyzin",			po::value<string>(),		"Input coordinates file")
-		("mapout",			po::value<string>(),		"Output map file")
-		("type",			po::value<string>(),		"Map type to generate can be one of density, difference or anomalous")
+		("hklin",			po::value<std::string>(),		"Input file (either mtz or cif reflections file)")
+		("xyzin",			po::value<std::string>(),		"Input coordinates file")
+		("mapout",			po::value<std::string>(),		"Output std::map file")
+		("type",			po::value<std::string>(),		"std::Map type to generate can be one of density, difference or anomalous")
 		
 		("sampling-rate",	po::value<float>(),			"Sampling rate, default is 0.75")
 
-		("masked",										"Create a map around the coordinates of the atoms in de model")
+		("masked",										"Create a std::map around the coordinates of the atoms in de model")
 		("border",			po::value<float>(),			"Border around the masked region, default is 5")
 		
 		("no-bulk",										"No bulk ")
@@ -407,15 +404,15 @@ int pr_main(int argc, char* argv[])
 		("aniso-cal",									"Anisotropic scaling of calculated")
 
 		("server",										"Start as web service")
-		("address",				po::value<string>(),	"External address, default is 0.0.0.0")
+		("address",				po::value<std::string>(),	"External address, default is 0.0.0.0")
 		("port",				po::value<uint16_t>(),	"Port to listen to, default is 10337")
 		("no-daemon,F",									"Do not fork into background")
-		("user,u",				po::value<string>(),	"User to run the daemon")
-		("logfile",				po::value<string>(),	"Logfile to write to, default /var/log/rama-angles.log")
+		("user,u",				po::value<std::string>(),	"User to run the daemon")
+		("logfile",				po::value<std::string>(),	"Logfile to write to, default /var/log/rama-angles.log")
 
-		("pdb-dir",				po::value<string>(),	"PDB mmCIF data directory")
-		("pdb-redo-dir",		po::value<string>(),	"PDB-REDO data directory")
-		("ccp4-dir",			po::value<string>(),	"Directory where ccp4 is installed")
+		("pdb-dir",				po::value<std::string>(),	"PDB mmCIF data directory")
+		("pdb-redo-dir",		po::value<std::string>(),	"PDB-REDO data directory")
+		("ccp4-dir",			po::value<std::string>(),	"Directory where ccp4 is installed")
 
 		("version",										"Print version")
 		("verbose,v",									"Verbose output")
@@ -436,20 +433,20 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help"))
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("server") == 0 and
 		(vm.count("help") or vm.count("hklin") == 0 or vm.count("xyzin") == 0 or vm.count("mapout") == 0 or vm.count("type") == 0))
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(1);
 	}
 
@@ -458,19 +455,19 @@ int pr_main(int argc, char* argv[])
 		cif::VERBOSE = vm["debug"].as<int>();
 
 	if (vm.count("pdb-dir"))
-		gPDBDIR = vm["pdb-dir"].as<string>();
+		gPDBDIR = vm["pdb-dir"].as<std::string>();
 
 	if (vm.count("pdb-redo-dir"))
-		gPDBREDODIR = vm["pdb-redo-dir"].as<string>();
+		gPDBREDODIR = vm["pdb-redo-dir"].as<std::string>();
 
 	const char* ccp4 = getenv("CCP4");
-	string ccp4Dir = ccp4 ? ccp4 : "";
+	std::string ccp4Dir = ccp4 ? ccp4 : "";
 	if (vm.count("ccp4-dir"))
-		ccp4Dir = vm["ccp4-dir"].as<string>();
+		ccp4Dir = vm["ccp4-dir"].as<std::string>();
 	if (not ccp4Dir.empty())
 	{
 		auto clibdMon = fs::path(ccp4Dir) / "lib" / "data" / "monomers";
-		setenv("CLIBD_MON", clibdMon.string().c_str(), 1);
+		setenv("CLIBD_MON", clibdMon.std::string().c_str(), 1);
 	}
 
 	// --------------------------------------------------------------------
@@ -488,26 +485,26 @@ int pr_main(int argc, char* argv[])
 		if (not fs::exists(gExePath))
 			gExePath = fs::system_complete(argv[0]);
 	
-		string address = "0.0.0.0";
+		std::string address = "0.0.0.0";
 		if (vm.count("address"))
-			address = vm["address"].as<string>();
+			address = vm["address"].as<std::string>();
 		
 		uint16_t port = 10337;
 		if (vm.count("port"))
 			port = vm["port"].as<uint16_t>();
 
-		string user = "nobody";
+		std::string user = "nobody";
 		if (vm.count("user"))
-			user = vm["user"].as<string>();
+			user = vm["user"].as<std::string>();
 		
 		bool fork = vm.count("no-daemon") == 0;
 
 		if (fork)
 			Daemonize();
 		
-		string logFile = "/var/log/map-server.log";
+		std::string logFile = "/var/log/std::map-server.log";
 		if (vm.count("logfile"))
-			logFile = vm["logfile"].as<string>();
+			logFile = vm["logfile"].as<std::string>();
 
 		auto serverFactory = []() -> zeep::http::server*
 		{
@@ -534,12 +531,12 @@ int pr_main(int argc, char* argv[])
 	if (vm.count("sampling-rate"))
 		samplingRate = vm["sampling-rate"].as<float>();
 
-	mmcif::File f(vm["xyzin"].as<string>());
+	mmcif::File f(vm["xyzin"].as<std::string>());
 	mmcif::Structure structure(f);
 
 	mmcif::MapMaker<float> mm;
 	
-	fs::path hklin = vm["hklin"].as<string>();
+	fs::path hklin = vm["hklin"].as<std::string>();
 	
 	if (mmcif::IsMTZFile(hklin))
 		mm.loadMTZ(hklin, samplingRate);
@@ -548,9 +545,9 @@ int pr_main(int argc, char* argv[])
 		auto aniso = c::MapMaker<float>::as_None;
 		if (vm.count("aniso-scaling"))
 		{
-			if (vm["aniso-scaling"].as<string>() == "observed")
+			if (vm["aniso-scaling"].as<std::string>() == "observed")
 				aniso = c::MapMaker<float>::as_Observed;
-			else if (vm["aniso-scaling"].as<string>() == "calculated")
+			else if (vm["aniso-scaling"].as<std::string>() == "calculated")
 				aniso = c::MapMaker<float>::as_Calculated;
 		}
 
@@ -564,11 +561,11 @@ int pr_main(int argc, char* argv[])
 		mm.calculate(hklin, structure, vm.count("no-bulk"), aniso, samplingRate, electronScattering);
 	}
 	
-	string type = vm["type"].as<string>();
-	fs::path mapout = vm["mapout"].as<string>();
+	std::string type = vm["type"].as<std::string>();
+	fs::path mapout = vm["mapout"].as<std::string>();
 	std::ofstream mapFile(mapout, ios_base::binary);
 	if (not mapFile.is_open())
-		throw runtime_error("Could not open map file " + mapout.string());
+		throw std::runtime_error("Could not open std::map file " + mapout.std::string());
 
 	auto range = mm.fb().get().grid_asu();
 	if (vm.count("masked"))
@@ -586,11 +583,11 @@ int pr_main(int argc, char* argv[])
 	else if (type == "anomalous")
 	{
 		if (mm.fa().get().is_null())
-			throw runtime_error("Anomalous map not present");
+			throw std::runtime_error("Anomalous std::map not present");
 		mm.fa().write_masked(mapout, range);
 	}
 	else
-		throw runtime_error("Unsupported map type " + type);
+		throw std::runtime_error("Unsupported std::map type " + type);
 
 	return 0;
 }

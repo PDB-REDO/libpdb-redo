@@ -46,7 +46,6 @@
 #include "ResolutionCalculator.hpp"
 #include "MapMaker.hpp"
 
-using namespace std;
 namespace io = boost::iostreams;
 namespace ba = boost::algorithm;
 namespace fs = std::filesystem;
@@ -146,11 +145,11 @@ struct CCP4MapFileHeader
 };
 
 template<typename FTYPE>
-tuple<float,float,float,float> CalculateMapStatistics(const clipper::Xmap<FTYPE>& xmap, clipper::Grid_range r)
+std::tuple<float,float,float,float> CalculateMapStatistics(const clipper::Xmap<FTYPE>& xmap, clipper::Grid_range r)
 {
 	float
-		amin = numeric_limits<float>::max(),
-		amax = numeric_limits<float>::min();
+		amin = std::numeric_limits<float>::max(),
+		amax = std::numeric_limits<float>::min();
 	long double asum = 0, asum2 = 0;
 	size_t n = 0;
 
@@ -175,11 +174,11 @@ tuple<float,float,float,float> CalculateMapStatistics(const clipper::Xmap<FTYPE>
 	float mean = static_cast<float>(asum / n);
 	float rmsd = static_cast<float>(sqrt((asum2 / n) - (mean * mean)));
 
-	return make_tuple(amin, amax, mean, rmsd);
+	return std::make_tuple(amin, amax, mean, rmsd);
 }
 
 template<typename FTYPE>
-void writeCCP4MapFile(ostream& os, clipper::Xmap<FTYPE>& xmap, clipper::Grid_range range)
+void writeCCP4MapFile(std::ostream& os, clipper::Xmap<FTYPE>& xmap, clipper::Grid_range range)
 {
 	static_assert(sizeof(CCP4MapFileHeader) == 256 * 4, "Map header is of incorrect size");
 	static_assert(__BYTE_ORDER == __LITTLE_ENDIAN, "Code for big endian systems is not implemented yet");
@@ -244,21 +243,21 @@ void writeCCP4MapFile(ostream& os, clipper::Xmap<FTYPE>& xmap, clipper::Grid_ran
 	h.ISPG = spaceGroupNumber;
 	h.NSYMBT = spacegroup.num_symops() * 80;
 
-	tie(h.AMIN, h.AMAX, h.AMEAN, h.ARMS) = CalculateMapStatistics(xmap, range);
+	std::tie(h.AMIN, h.AMAX, h.AMEAN, h.ARMS) = CalculateMapStatistics(xmap, range);
 
 	os.write(reinterpret_cast<char*>(&h), sizeof(h));
 
-	const string kSpaces(80, ' ');
+	const std::string kSpaces(80, ' ');
 	for (int si = 0; si < spacegroup.num_symops(); ++si)
 	{
-		string symop = spacegroup.symop(si).format();
+		std::string symop = spacegroup.symop(si).format();
 		os.write(symop.c_str(), symop.length());
 		os.write(kSpaces.c_str(), 80 - symop.length());
 	}
 
 	clipper::Xmap_base::Map_reference_coord c(xmap);
 	const uint32_t kSectionLength = dim[0] * dim[1];
-	vector<float> section(kSectionLength);
+	std::vector<float> section(kSectionLength);
 
 	int g[3];
 	for (g[2] = gridFMSMin[2]; g[2] <= gridFMSMax[2]; ++g[2])
@@ -287,7 +286,7 @@ bool IsMTZFile(const std::string& p)
 	{
 		char sig[5] = {};
 		f.read(sig, 4);
-		result = sig == string("MTZ ");
+		result = sig == std::string("MTZ ");
 	}
 
 	return result;
@@ -311,15 +310,15 @@ void Map<FTYPE>::calculateStats()
 	double sum = 0, sum2 = 0;
 	int count = 0;
 
-	mMinDensity = numeric_limits<double>::max();
-	mMaxDensity = numeric_limits<double>::min();
+	mMinDensity = std::numeric_limits<double>::max();
+	mMaxDensity = std::numeric_limits<double>::min();
 
 	for (auto ix = mMap.first(); not ix.last(); ix.next())
 	{
 		auto v = mMap[ix];
 		
 		if (isnan(v))
-			throw runtime_error("map contains NaN values");
+			throw std::runtime_error("map contains NaN values");
 		
 		if (mMinDensity > v)
 			mMinDensity = v;
@@ -342,14 +341,14 @@ void Map<FTYPE>::read(const std::string& f)
 	fs::path dataFile = mapFile;
 
 	if (cif::VERBOSE)
-		cout << "Reading map from " << mapFile << endl;
+		std::cout << "Reading map from " << mapFile << std::endl;
 	
 	if (mapFile.extension() == ".gz" or mapFile.extension() == ".bz2")
 	{
 		// file is compressed
 		
 		fs::path p = mapFile.parent_path();
-		string s = mapFile.filename().string();
+		std::string s = mapFile.filename().string();
 		
 		io::filtering_stream<io::input> in;
 		
@@ -364,7 +363,7 @@ void Map<FTYPE>::read(const std::string& f)
 
 		char tmpFileName[] = "/tmp/map-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
-			throw runtime_error(string("Could not create temp file for map: ") + strerror(errno));
+			throw std::runtime_error(std::string("Could not create temp file for map: ") + strerror(errno));
 		
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
@@ -372,7 +371,7 @@ void Map<FTYPE>::read(const std::string& f)
 	}
 	
 	if (not fs::exists(dataFile))
-		throw runtime_error("Could not open map file " + mapFile.string());
+		throw std::runtime_error("Could not open map file " + mapFile.string());
 	
 	using namespace clipper;
 
@@ -394,7 +393,7 @@ void Map<FTYPE>::write(const std::string& f)
 }
 
 template<typename FTYPE>
-void Map<FTYPE>::write_masked(ostream& os, clipper::Grid_range r)
+void Map<FTYPE>::write_masked(std::ostream& os, clipper::Grid_range r)
 {
 	writeCCP4MapFile(os, mMap, r);
 }
@@ -402,9 +401,9 @@ void Map<FTYPE>::write_masked(ostream& os, clipper::Grid_range r)
 template<typename FTYPE>
 void Map<FTYPE>::write_masked(const std::string& f, clipper::Grid_range r)
 {
-	std::ofstream file(f, ios_base::binary);
+	std::ofstream file(f, std::ios_base::binary);
 	if (not file.is_open())
-		throw runtime_error("Could not open map file for writing: " + f);
+		throw std::runtime_error("Could not open map file for writing: " + f);
 	
 	write_masked(file, r);
 }
@@ -426,19 +425,19 @@ MapMaker<FTYPE>::~MapMaker()
 
 template<typename FTYPE>
 void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
-	initializer_list<string> fbLabels, initializer_list<string> fdLabels,
-	initializer_list<string> foLabels, initializer_list<string> fcLabels,
-	initializer_list<string> faLabels)
+	std::initializer_list<std::string> fbLabels, std::initializer_list<std::string> fdLabels,
+	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> fcLabels,
+	std::initializer_list<std::string> faLabels)
 {
 	fs::path hklin(f);
 
 	if (cif::VERBOSE)
-		cerr << "Reading map from " << hklin << endl
-			 << "  with labels: FB: " << ba::join(fbLabels, ",") << endl
-			 << "  with labels: FD: " << ba::join(fdLabels, ",") << endl
-			 << "  with labels: FA: " << ba::join(faLabels, ",") << endl
-			 << "  with labels: FO: " << ba::join(foLabels, ",") << endl
-			 << "  with labels: FC: " << ba::join(fcLabels, ",") << endl;
+		std::cerr << "Reading map from " << hklin << std::endl
+			 << "  with labels: FB: " << ba::join(fbLabels, ",") << std::endl
+			 << "  with labels: FD: " << ba::join(fdLabels, ",") << std::endl
+			 << "  with labels: FA: " << ba::join(faLabels, ",") << std::endl
+			 << "  with labels: FO: " << ba::join(foLabels, ",") << std::endl
+			 << "  with labels: FC: " << ba::join(fcLabels, ",") << std::endl;
 
 	fs::path dataFile = hklin;
 	
@@ -447,7 +446,7 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 		// file is compressed
 		
 		fs::path p = hklin.parent_path();
-		string s = hklin.filename().string();
+		std::string s = hklin.filename().string();
 		
 		io::filtering_stream<io::input> in;
 		
@@ -462,7 +461,7 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 
 		char tmpFileName[] = "/tmp/mtz-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
-			throw runtime_error(string("Could not create temp file for mtz: ") + strerror(errno));
+			throw std::runtime_error(std::string("Could not create temp file for mtz: ") + strerror(errno));
 		
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
@@ -470,9 +469,9 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 	}
 	
 	if (not fs::exists(dataFile))
-		throw runtime_error("Could not open mtz file " + hklin.string());
+		throw std::runtime_error("Could not open mtz file " + hklin.string());
 	
-	const string kBasePath("/%1%/%2%/[%3%]");
+	const std::string kBasePath("/%1%/%2%/[%3%]");
 
 	using clipper::CCP4MTZfile;
 
@@ -482,12 +481,12 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 	mtzin.import_hkl_info(mHKLInfo);
 	
 	bool hasFAN = false;
-	const regex rx(R"(^/[^/]+/[^/]+/(.+) \S$)");
+	const std::regex rx(R"(^/[^/]+/[^/]+/(.+) \S$)");
 	
 	for (auto& label: mtzin.column_labels())
 	{
-		smatch m;
-		if (regex_match(label, m, rx) and m[1] == "FAN")
+		std::smatch m;
+		if (std::regex_match(label, m, rx) and m[1] == "FAN")
 		{
 			hasFAN = true;
 			break;
@@ -556,12 +555,12 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 
 	if (cif::VERBOSE)
 	{
-		cerr << "Read Xmaps with sampling rate: " << samplingRate << endl
-		     << "  stored resolution: " << mHKLInfo.resolution().limit() << endl
-			 << "  calculated reshi = " << mResHigh << " reslo = " << mResLow << endl
-		     << "  spacegroup: " << spacegroup.symbol_hm() << endl
-		     << "  cell: " << cell.format() << endl
-		     << "  grid: " << mGrid.format() << endl;
+		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << std::endl
+		     << "  stored resolution: " << mHKLInfo.resolution().limit() << std::endl
+			 << "  calculated reshi = " << mResHigh << " reslo = " << mResLow << std::endl
+		     << "  spacegroup: " << spacegroup.symbol_hm() << std::endl
+		     << "  cell: " << cell.format() << std::endl
+		     << "  grid: " << mGrid.format() << std::endl;
 
 		printStats();
 	}
@@ -583,12 +582,12 @@ void MapMaker<FTYPE>::loadMaps(
 	mFd.read(fdMapFile);
 	
 	if (not mFb.cell().equals(mFd.cell()))
-		throw runtime_error("Fb and Fd map do not contain the same cell");
+		throw std::runtime_error("Fb and Fd map do not contain the same cell");
 }
 
 // --------------------------------------------------------------------
 
-ostream& operator<<(ostream& os, const clipper::HKL& hkl)
+std::ostream& operator<<(std::ostream& os, const clipper::HKL& hkl)
 {
 	os << "h: " << hkl.h() << ", "
 	   << "k: " << hkl.k() << ", "
@@ -603,7 +602,7 @@ template<typename FTYPE>
 void MapMaker<FTYPE>::calculate(const std::string& hklin,
 	const Structure& structure, bool noBulk, AnisoScalingFlag anisoScaling,
 	float samplingRate, bool electronScattering,
-	initializer_list<std::string> foLabels, initializer_list<std::string> freeLabels)
+	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> freeLabels)
 {
 	if (IsMTZFile(hklin))
 		loadFoFreeFromMTZFile(hklin, foLabels, freeLabels);
@@ -623,8 +622,8 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const std::string& hklin)
 	cif::File reflnsFile(hklin);
 	auto& reflns = reflnsFile.firstDatablock();
 	
-//	m_xname = reflns["exptl_crystal"].front()["id"].as<string>();
-//	m_pname = reflns["entry"].front()["id"].as<string>();
+//	m_xname = reflns["exptl_crystal"].front()["id"].as<std::string>();
+//	m_pname = reflns["entry"].front()["id"].as<std::string>();
 
 	float a, b, c, alpha, beta, gamma;
 	cif::tie(a, b, c, alpha, beta, gamma) = reflns["cell"].front().get(
@@ -634,7 +633,7 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const std::string& hklin)
 	Cell cell = Cell(Cell_descr{a, b, c, alpha, beta, gamma});
 
 //	if (not cell2.equals(m_cell))
-//		throw runtime_error("Reflections file and coordinates file do not agree upon the cell parameters");
+//		throw std::runtime_error("Reflections file and coordinates file do not agree upon the cell parameters");
 
 	// --------------------------------------------------------------------
 
@@ -654,7 +653,7 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const std::string& hklin)
 			hires = res;
 	}
 	
-	string spacegroupDescr = reflns["symmetry"].front()["space_group_name_H-M"].as<string>();
+	std::string spacegroupDescr = reflns["symmetry"].front()["space_group_name_H-M"].as<std::string>();
 	auto spacegroup = Spacegroup(clipper::Spgr_descr{spacegroupDescr});
 	mHKLInfo = HKL_info(spacegroup, cell, clipper::Resolution{hires}, true);
 	
@@ -692,14 +691,14 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const std::string& hklin)
 		if (ix < 0)
 		{
 			if (cif::VERBOSE)
-				cerr << "Ignoring hkl(" << h << ", " << k << ", " << l << ")" << endl;
+				std::cerr << "Ignoring hkl(" << h << ", " << k << ", " << l << ")" << std::endl;
 			continue;
 		}
 		
 		if (first and (flag == freeRefl or flag == workRefl))
 		{
-			cerr << "Non-standard _refln.status column detected" << endl
-				 << "Assuming " << (freeRConvention == frXPLO ? "XPLOR" : "CCP4") << " convention for free R flag" << endl;
+			std::cerr << "Non-standard _refln.status column detected" << std::endl
+				 << "Assuming " << (freeRConvention == frXPLO ? "XPLOR" : "CCP4") << " convention for free R flag" << std::endl;
 			first = false;
 		}
 		
@@ -724,7 +723,7 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const std::string& hklin)
 
 			default:
 				if (cif::VERBOSE > 1)
-					cerr << "Unexpected value in status: '" << flag << "' for hkl(" << h << ", " << k << ", " << l << ")" << endl;
+					std::cerr << "Unexpected value in status: '" << flag << "' for hkl(" << h << ", " << k << ", " << l << ")" << std::endl;
 				break;
 		}
 	}
@@ -734,12 +733,12 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const std::string& hklin)
 
 template<typename FTYPE>
 void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const std::string& hklin,
-	initializer_list<std::string> foLabels, initializer_list<std::string> freeLabels)
+	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> freeLabels)
 {
 	if (cif::VERBOSE)
-		cerr << "Recalculating maps from " << hklin << endl;
+		std::cerr << "Recalculating maps from " << hklin << std::endl;
 	
-	const string kBasePath("/%1%/%2%/[%3%]");
+	const std::string kBasePath("/%1%/%2%/[%3%]");
 
 	using clipper::CCP4MTZfile;
 
@@ -766,7 +765,7 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 	Spacegroup spacegroup = mHKLInfo.spacegroup();
 
 	// The calculation work
-	vector<clipper::Atom> atoms;
+	std::vector<clipper::Atom> atoms;
 
 	for (auto a: structure.atoms())
 		atoms.push_back(toClipper(a));
@@ -793,8 +792,8 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 		sfcb(mFcData, mFoData, atoms);
 		
 		if (cif::VERBOSE)
-			cerr << "Bulk correction volume: " << sfcb.bulk_frac() << endl
-				 << "Bulk correction factor: " << sfcb.bulk_scale() << endl;
+			std::cerr << "Bulk correction volume: " << sfcb.bulk_frac() << std::endl
+				 << "Bulk correction factor: " << sfcb.bulk_scale() << std::endl;
 	}
 	
 	if (anisoScaling != as_None)
@@ -807,8 +806,8 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 			sfscl(mFcData, mFoData);  // scale Fcal
 			
 		if (cif::VERBOSE)
-			cerr << "Anisotropic scaling:" << endl
-				 << sfscl.u_aniso_orth(F).format() << endl;
+			std::cerr << "Anisotropic scaling:" << std::endl
+				 << sfscl.u_aniso_orth(F).format() << std::endl;
 	}
 
 	// now do sigmaa calc
@@ -851,7 +850,7 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 	}
 
 	if (cif::VERBOSE > 1)
-		cerr << "calculated reshi = " << mResHigh << " reslo = " << mResLow << endl;
+		std::cerr << "calculated reshi = " << mResHigh << " reslo = " << mResLow << std::endl;
 
 	samplingRate /= 2;
 	
@@ -869,9 +868,9 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 
 	if (cif::VERBOSE)
 	{
-		cerr << "Read Xmaps with sampling rate: " << samplingRate << endl
+		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << std::endl
 			 << "  resolution: " << mResHigh
-			 << endl;
+			 << std::endl;
 
 		printStats();
 	}
@@ -900,12 +899,12 @@ void MapMaker<FTYPE>::fixMTZ()
 		TestCount
 	};
 
-	vector<bool> tests(TestCount, true);
+	std::vector<bool> tests(TestCount, true);
 	
 	// first run the tests to see if we need to fix anything
 	
 	if (cif::VERBOSE)
-		cerr << "Testing MTZ file" << endl;
+		std::cerr << "Testing MTZ file" << std::endl;
 	
 	for (auto ih = mFbData.first(); not ih.last(); ih.next())
 	{
@@ -934,13 +933,13 @@ void MapMaker<FTYPE>::fixMTZ()
 			if (tests[T10] and abs(FM - FC) > 0.05)
 			{
 				tests[T10] = false;
-				if (cif::VERBOSE) cerr << "Test 10 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test 10 failed at " << ih.hkl() << std::endl;
 			}
 			
 			if (tests[T11] and abs(FD) > 0.05)
 			{
 				tests[T11] = false;
-				if (cif::VERBOSE) cerr << "Test 11 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test 11 failed at " << ih.hkl() << std::endl;
 			}
 		}
 		else if (cls.centric())
@@ -948,31 +947,31 @@ void MapMaker<FTYPE>::fixMTZ()
 			if (tests[C5] and abs(FC + FM - 2 * WFO) > 0.05)
 			{
 				tests[C5] = false;
-				if (cif::VERBOSE) cerr << "Test C5 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test C5 failed at " << ih.hkl() << std::endl;
 			}
 			
 			if (tests[C6] and abs(FM - WFO) > 0.05)
 			{
 				tests[C6] = false;
-				if (cif::VERBOSE) cerr << "Test C6 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test C6 failed at " << ih.hkl() << std::endl;
 			}
 			
 			if (tests[C7] and abs(FC + FD - WFO) > 0.05)
 			{
 				tests[C7] = false;
-				if (cif::VERBOSE) cerr << "Test C7 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test C7 failed at " << ih.hkl() << std::endl;
 			}
 			
 			if (tests[C8] and abs(FC + 0.5 * FD - WFO) > 0.05)
 			{
 				tests[C8] = false;
-				if (cif::VERBOSE) cerr << "Test C8 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test C8 failed at " << ih.hkl() << std::endl;
 			}
 			
 			if (tests[C9] and (1.01 * FC + Gd - WFO) < -0.05)
 			{
 				tests[C9] = false;
-				if (cif::VERBOSE) cerr << "Test C9 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test C9 failed at " << ih.hkl() << std::endl;
 			}
 			
 		}
@@ -981,25 +980,25 @@ void MapMaker<FTYPE>::fixMTZ()
 			if (tests[A1] and abs(FC + FM - 2 * WFO) > 0.05)
 			{
 				tests[A1] = false;
-				if (cif::VERBOSE) cerr << "Test A1 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test A1 failed at " << ih.hkl() << std::endl;
 			}
 			
 			if (tests[A2] and 1.01 * FC + FM - 2 * WFO < -0.05)
 			{
 				tests[A2] = false;
-				if (cif::VERBOSE) cerr << "Test A2 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test A2 failed at " << ih.hkl() << std::endl;
 			}
 			
 			if (tests[A3] and abs(FM - FD - WFO) > 0.05)
 			{
 				tests[A3] = false;
-				if (cif::VERBOSE) cerr << "Test A3 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test A3 failed at " << ih.hkl() << std::endl;
 			}
 			
 			if (tests[A4] and abs(FM - 0.5 * FD - WFO) > 0.05)
 			{
 				tests[A4] = false;
-				if (cif::VERBOSE) cerr << "Test A4 failed at " << ih.hkl() << endl;
+				if (cif::VERBOSE) std::cerr << "Test A4 failed at " << ih.hkl() << std::endl;
 			}
 		}
 	}	
@@ -1071,7 +1070,7 @@ template<typename FTYPE>
 void MapMaker<FTYPE>::printStats()
 {
 	// calc R and R-free
-	vector<double> params(mNumParam, 1.0);
+	std::vector<double> params(mNumParam, 1.0);
 
 	clipper::BasisFn_spline basisfn(mFoData, mNumParam, 1.0);
 	clipper::TargetFn_scaleF1F2<clipper::data32::F_phi,clipper::data32::F_sigF> targetfn(mFcData, mFoData);
@@ -1084,7 +1083,7 @@ void MapMaker<FTYPE>::printStats()
 	{
 		if (mFcData[ih].missing())
 			continue;
-//			throw runtime_error("missing Fc");
+//			throw std::runtime_error("missing Fc");
 		
 		double Fo = mFoData[ih].f();
 		double Fc = sqrt(rfn.f(ih)) * mFcData[ih].f();
@@ -1109,21 +1108,21 @@ void MapMaker<FTYPE>::printStats()
 		f1w = 0.1;
 	r1w /= f1w;
 
-	cerr << "R-factor      : " << r1w << endl
-		 << "Free R-factor : " << r1f << endl;
+	std::cerr << "R-factor      : " << r1w << std::endl
+		 << "Free R-factor : " << r1f << std::endl;
 }
 
 template<typename FTYPE>
-void MapMaker<FTYPE>::writeMTZ(const std::string& file, const string& pname, const string& cname)
+void MapMaker<FTYPE>::writeMTZ(const std::string& file, const std::string& pname, const std::string& cname)
 {
 	if (mHKLInfo.is_null())
-		throw runtime_error("HKL info not initialized");
+		throw std::runtime_error("HKL info not initialized");
 	
 	clipper::CCP4MTZfile mtz;
 	clipper::MTZdataset dataset(pname, 0);
 	clipper::MTZcrystal crystal(cname, pname, mHKLInfo.cell());
 
-	const string col = "/" + pname + "/" + cname + "/";
+	const std::string col = "/" + pname + "/" + cname + "/";
 	
 	mtz.open_write(file);
 	mtz.export_hkl_info(mHKLInfo);

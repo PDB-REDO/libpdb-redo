@@ -42,13 +42,12 @@
 
 #include "minimizer.h"
 
-using namespace std;
 using namespace mmcif;
 namespace fs = std::filesystem;
 
 // --------------------------------------------------------------------
 
-const uint32_t kRefSentinel = numeric_limits<uint32_t>::max();
+const uint32_t kRefSentinel = std::numeric_limits<uint32_t>::max();
 
 const double
 	kNonBondedContactDistanceSq = 11.0 * 11.0,
@@ -61,23 +60,23 @@ struct lessAtom
 	bool operator()(const Atom& a, const Atom& b) const { return a.id().compare(b.id()) < 0; }
 };
 
-typedef set<Atom, lessAtom> AtomSet;
+typedef std::set<Atom, lessAtom> AtomSet;
 
 // --------------------------------------------------------------------
 
 DPoint AtomLocationProvider::operator[](AtomRef atomID) const
 {
 	if (atomID >= mAtoms.size())
-		throw range_error("Unknown atom " + to_string(atomID));
+		throw std::range_error("Unknown atom " + std::to_string(atomID));
 	return mAtoms[atomID].location();
 }
 
-string AtomLocationProvider::atom(AtomRef atomID) const
+std::string AtomLocationProvider::atom(AtomRef atomID) const
 {
 	if (atomID >= mAtoms.size())
-		throw range_error("Unknown atom " + to_string(atomID));
+		throw std::range_error("Unknown atom " + std::to_string(atomID));
 	auto& a = mAtoms[atomID];
-	return to_string(a.labelSeqID()) + ' ' + a.labelAtomID();
+	return std::to_string(a.labelSeqID()) + ' ' + a.labelAtomID();
 }
 
 // --------------------------------------------------------------------
@@ -132,7 +131,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 					}
 		
 					// add planar restraints
-					vector<AtomRef> atoms = {
+					std::vector<AtomRef> atoms = {
 						ref(prev->atomByID("CA")),
 						ref(c),
 						ref(prev->atomByID("O")),
@@ -143,10 +142,10 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 					mPlanarityRestraints.emplace_back(PlanarityRestraint{move(atoms), plane5AtomsESD});
 				}
 			}
-			catch (const exception& ex)
+			catch (const std::exception& ex)
 			{
 				if (cif::VERBOSE)
-					cerr << "While processing plane-5-atoms restraints: " << ex.what() << endl;
+					std::cerr << "While processing plane-5-atoms restraints: " << ex.what() << std::endl;
 	//			continue;
 			}
 		
@@ -172,10 +171,10 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 
 				mBondRestraints.emplace_back(ref(a1), ref(a2), b.distance, b.esd);
 			}
-			catch (const exception& ex)
+			catch (const std::exception& ex)
 			{
 				if (cif::VERBOSE > 1)
-					cerr << "While processing bond restraints: " << ex.what() << endl;
+					std::cerr << "While processing bond restraints: " << ex.what() << std::endl;
 				continue;
 			}
 		}
@@ -198,10 +197,10 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 				mAngleRestraints.emplace_back(
 					ref(a1), ref(a2), ref(a3), a.angle, a.esd);
 			}
-			catch (const exception& ex)
+			catch (const std::exception& ex)
 			{
 				if (cif::VERBOSE > 1)
-					cerr << "While processing angle restraints: " << ex.what() << endl;
+					std::cerr << "While processing angle restraints: " << ex.what() << std::endl;
 				continue;
 			}
 		}
@@ -231,7 +230,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 //			catch (const exception& ex)
 //			{
 //				if (cif::VERBOSE > 1)
-//					cerr << "While processing torsion restraints: " << ex.what() << endl;
+//					std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
 //				continue;
 //			}
 //		}
@@ -257,10 +256,10 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 				mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1),
 					ref(a2), ref(a3), volume * 6);
 			}
-			catch (const exception& ex)
+			catch (const std::exception& ex)
 			{
 				if (cif::VERBOSE > 1)
-					cerr << "While processing chiral volume restraints: " << ex.what() << endl;
+					std::cerr << "While processing chiral volume restraints: " << ex.what() << std::endl;
 				continue;
 			}
 		}
@@ -269,7 +268,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 		{
 			try
 			{
-				vector<AtomRef> atoms;
+				std::vector<AtomRef> atoms;
 				
 				for (auto a: p.atomID)
 				{
@@ -282,10 +281,10 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 				if (atoms.size() > 3)
 					mPlanarityRestraints.emplace_back(PlanarityRestraint{move(atoms), p.esd});
 			}
-			catch (const exception& ex)
+			catch (const std::exception& ex)
 			{
 				if (cif::VERBOSE > 1)
-					cerr << "While processing planarity restraints: " << ex.what() << endl;
+					std::cerr << "While processing planarity restraints: " << ex.what() << std::endl;
 				continue;
 			}
 		}
@@ -298,7 +297,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 //	}
 	
 	if (mAtoms.empty())
-		throw runtime_error("No atoms to refine");
+		throw std::runtime_error("No atoms to refine");
 
 	fs::path enerLibFilePath(getenv("CLIBD_MON"));
 	enerLibFilePath /= "ener_lib.cif";
@@ -307,9 +306,9 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 	auto& db = enerLibFile.firstDatablock();
 	auto& libAtom = db["lib_atom"];
 
-	const regex donorRx("B|D|H"), acceptorRx("B|A|H");
+	const std::regex donorRx("B|D|H"), acceptorRx("B|A|H");
 
-	set<tuple<AtomRef,AtomRef>> nbc;
+	std::set<std::tuple<AtomRef,AtomRef>> nbc;
 
 	// now add the non-bonded restraints
 	for (auto& a1: mAtoms)
@@ -329,7 +328,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 
 			AtomRef ra2 = ref(a2);
 
-			if (nbc.count(make_tuple(ra1, ra2)))
+			if (nbc.count(std::make_tuple(ra1, ra2)))
 				continue;
 			
 			if (find_if(mAngleRestraints.begin(), mAngleRestraints.end(),
@@ -367,7 +366,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 			if (bonds.is1_4(a1, a2))
 			{
 				if (cif::VERBOSE > 1)
-					cerr << "1_4 for " << a1 << " and " << a2 << endl;
+					std::cerr << "1_4 for " << a1 << " and " << a2 << std::endl;
 				minDist = 2.64;
 			}
 			else if ((a1.labelSeqID() + 1 == a2.labelSeqID() and a1.labelAtomID() == "O" and a2.labelAtomID() == "C") or
@@ -379,8 +378,8 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 			{
 				try
 				{
-					string et1 = a1.energyType();
-					string et2 = a2.energyType();
+					std::string et1 = a1.energyType();
+					std::string et2 = a2.energyType();
 					
 					if (not (et1.empty() or et2.empty()))
 					{
@@ -404,10 +403,10 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 							if (a1.labelAsymID() == a2.labelAsymID() and a1.labelSeqID() == a2.labelSeqID())
 								minDist *= 0.84;
 							
-							string hbType1 = r1.front()["hb_type"].as<string>(),
-								   hbType2 = r2.front()["hb_type"].as<string>();
+							std::string hbType1 = r1.front()["hb_type"].as<std::string>(),
+								   hbType2 = r2.front()["hb_type"].as<std::string>();
 							
-							if (regex_match(hbType1, donorRx) and regex_match(hbType2, acceptorRx))
+							if (std::regex_match(hbType1, donorRx) and regex_match(hbType2, acceptorRx))
 							{
 								minDist -= 0.5;
 								if (hbType1 == "H")
@@ -451,22 +450,22 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 						}
 					}
 				}
-				catch (const exception& ex)
+				catch (const std::exception& ex)
 				{
 					if (cif::VERBOSE)
-						cerr << "err calculating nbc distance: " << ex.what() << endl;
+						std::cerr << "err calculating nbc distance: " << ex.what() << std::endl;
 					minDist = 2.8;
 				}
 			}
 			
 			mNonBondedContactRestraints.emplace_back(ra1, ra2, minDist, 0.02);
-			nbc.insert(make_tuple(ra1, ra2));
-			nbc.insert(make_tuple(ra2, ra1));
+			nbc.insert(std::make_tuple(ra1, ra2));
+			nbc.insert(std::make_tuple(ra2, ra1));
 		}
 	}
 
 	// create reverse index (for dfcollector)
-	mRef2AtomIndex = vector<size_t>(mReferencedAtoms.size(), kRefSentinel);
+	mRef2AtomIndex = std::vector<size_t>(mReferencedAtoms.size(), kRefSentinel);
 	for (size_t i = 0; i < mAtoms.size(); ++i)
 	{
 		AtomRef ar = ref(mAtoms[i]);
@@ -474,7 +473,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 		mRef2AtomIndex[ar] = i;
 	}
 
-	vector<pair<AtomRef,double>> densityAtoms;
+	std::vector<std::pair<AtomRef,double>> densityAtoms;
 	densityAtoms.reserve(mAtoms.size());
 	
 	transform(mAtoms.begin(), mAtoms.end(), back_inserter(densityAtoms),
@@ -488,7 +487,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 			
 			// TODO: cryo_em support
 			
-			return make_pair(ref(a), z * weight * occupancy);
+			return std::make_pair(ref(a), z * weight * occupancy);
 		});
 
 	mDensityRestraint.reset(new DensityRestraint(move(densityAtoms), xMap, mapWeight));
@@ -507,14 +506,14 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 	// report
 	
 	if (cif::VERBOSE)
-		cout << "created " << mBondRestraints.size() << " bond restraints" << endl
-			 << "created " << mAngleRestraints.size() << " angle restraints" << endl
-			 << "created " << mTorsionRestraints.size() << " torsion restraints" << endl
-			 << "created " << mPlanarityRestraints.size() << " plane restraints" << endl
-			 << "created " << mTransPeptideRestraints.size() << " trans peptide restraints" << endl
-			 << "created " << mChiralVolumeRestraints.size() << " chiral vol restraints" << endl
-			 << "created " << mNonBondedContactRestraints.size() << " non-bonded-contact restraints" << endl
-			 << endl;
+		std::cout << "created " << mBondRestraints.size() << " bond restraints" << std::endl
+			 << "created " << mAngleRestraints.size() << " angle restraints" << std::endl
+			 << "created " << mTorsionRestraints.size() << " torsion restraints" << std::endl
+			 << "created " << mPlanarityRestraints.size() << " plane restraints" << std::endl
+			 << "created " << mTransPeptideRestraints.size() << " trans peptide restraints" << std::endl
+			 << "created " << mChiralVolumeRestraints.size() << " chiral vol restraints" << std::endl
+			 << "created " << mNonBondedContactRestraints.size() << " non-bonded-contact restraints" << std::endl
+			 << std::endl;
 
 	AtomLocationProvider loc(mReferencedAtoms);
 
@@ -525,7 +524,7 @@ Minimizer::Minimizer(const mmcif::Polymer& poly, int first, int last,
 
 AtomRef Minimizer::ref(const mmcif::Atom& atom)
 {
-	string atomID = atom.id();
+	std::string atomID = atom.id();
 	AtomRef result;
 	
 	auto k = mRefIndex.find(atomID);
@@ -572,10 +571,10 @@ void Minimizer::addLinkRestraints(const Monomer& a, const Monomer& b, const Link
 
 			mBondRestraints.emplace_back(ref(a1), ref(a2), b.distance, b.esd);
 		}
-		catch (const exception& ex)
+		catch (const std::exception& ex)
 		{
 			if (cif::VERBOSE)
-				cerr << "While processing bond restraints: " << ex.what() << endl;
+				std::cerr << "While processing bond restraints: " << ex.what() << std::endl;
 			continue;
 		}
 	}
@@ -597,10 +596,10 @@ void Minimizer::addLinkRestraints(const Monomer& a, const Monomer& b, const Link
 
 			mAngleRestraints.emplace_back(ref(a1), ref(a2), ref(a3), a.angle, a.esd);
 		}
-		catch (const exception& ex)
+		catch (const std::exception& ex)
 		{
 			if (cif::VERBOSE)
-				cerr << "While processing angle restraints: " << ex.what() << endl;
+				std::cerr << "While processing angle restraints: " << ex.what() << std::endl;
 			continue;
 		}
 	}
@@ -630,7 +629,7 @@ void Minimizer::addLinkRestraints(const Monomer& a, const Monomer& b, const Link
 //		catch (const exception& ex)
 //		{
 //			if (cif::VERBOSE)
-//				cerr << "While processing torsion restraints: " << ex.what() << endl;
+//				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
 //			continue;
 //		}
 //	}
@@ -655,10 +654,10 @@ void Minimizer::addLinkRestraints(const Monomer& a, const Monomer& b, const Link
 
 			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1), ref(a2), ref(a3), volume);
 		}
-		catch (const exception& ex)
+		catch (const std::exception& ex)
 		{
 			if (cif::VERBOSE)
-				cerr << "While processing chiral volume restraints: " << ex.what() << endl;
+				std::cerr << "While processing chiral volume restraints: " << ex.what() << std::endl;
 			continue;
 		}
 	}
@@ -667,7 +666,7 @@ void Minimizer::addLinkRestraints(const Monomer& a, const Monomer& b, const Link
 	{
 		try
 		{
-			vector<AtomRef> atoms;
+			std::vector<AtomRef> atoms;
 			
 			for (auto a: p.atoms)
 			{
@@ -680,10 +679,10 @@ void Minimizer::addLinkRestraints(const Monomer& a, const Monomer& b, const Link
 			if (atoms.size() > 3)
 				mPlanarityRestraints.emplace_back(PlanarityRestraint{move(atoms), p.esd});
 		}
-		catch (const exception& ex)
+		catch (const std::exception& ex)
 		{
 			if (cif::VERBOSE)
-				cerr << "While processing planarity restraints: " << ex.what() << endl;
+				std::cerr << "While processing planarity restraints: " << ex.what() << std::endl;
 			continue;
 		}
 	}
@@ -702,14 +701,14 @@ void Minimizer::printStats()
 	double nbcScore = rmsz(loc, mNonBondedContactRestraints);
 	double densityScore = mDensityRestraint->f(loc);
 
-	cerr << "  Bonds:              " << bondScore << endl
-		 << "  Angles:             " << angleScore << endl
-		 << "  Torsion:            " << torsionScore << endl
-		 << "  Chirality:          " << chiralityVolumeScore << endl
-		 << "  Planarity:          " << planarityScore << endl
-		 << "  Transpeptide:       " << transpeptideScore << endl
-		 << "  Non-Bonded-Contact: " << nbcScore << endl
-		 << "  Density:            " << densityScore << endl;
+	std::cerr << "  Bonds:              " << bondScore << std::endl
+		 << "  Angles:             " << angleScore << std::endl
+		 << "  Torsion:            " << torsionScore << std::endl
+		 << "  Chirality:          " << chiralityVolumeScore << std::endl
+		 << "  Planarity:          " << planarityScore << std::endl
+		 << "  Transpeptide:       " << transpeptideScore << std::endl
+		 << "  Non-Bonded-Contact: " << nbcScore << std::endl
+		 << "  Density:            " << densityScore << std::endl;
 }
 
 double Minimizer::score()
@@ -725,7 +724,7 @@ double Minimizer::score(const AtomLocationProvider& loc)
 		result += r->f(loc);
 	
 	if (cif::VERBOSE > 3)
-		cout << "score: " << result << endl;
+		std::cout << "score: " << result << std::endl;
 
 	return result;
 }
@@ -738,8 +737,8 @@ double Minimizer::score(const AtomLocationProvider& loc)
 class GSLAtomLocation : public AtomLocationProvider
 {
   public:
-	GSLAtomLocation(vector<Atom>& atoms, const vector<Point>& fixedAtoms,
-		const vector<size_t>& index, const gsl_vector* v)
+	GSLAtomLocation(std::vector<Atom>& atoms, const std::vector<Point>& fixedAtoms,
+		const std::vector<size_t>& index, const gsl_vector* v)
 		: AtomLocationProvider(atoms), mFixedLocations(fixedAtoms), mIndex(index), mV(v)
 	{
 		assert(mIndex.size() == mFixedLocations.size());
@@ -758,7 +757,7 @@ class GSLAtomLocation : public AtomLocationProvider
 					gsl_vector_get(mV, ri * 3 + 2)
 				};
 		
-				cout << mAtoms[i] << p << endl;
+				std::cout << mAtoms[i] << p << std::endl;
 			}
 		}
 	}
@@ -768,8 +767,8 @@ class GSLAtomLocation : public AtomLocationProvider
 	void storeLocations();
 
   private:
-	const vector<Point>& mFixedLocations;
-	const vector<size_t>& mIndex;
+	const std::vector<Point>& mFixedLocations;
+	const std::vector<size_t>& mIndex;
 	const gsl_vector* mV;
 };
 
@@ -812,7 +811,7 @@ void GSLAtomLocation::storeLocations()
 class GSLDFCollector : public DFCollector
 {
   public:
-	GSLDFCollector(const vector<mmcif::Atom>& atoms, const vector<size_t>& index, gsl_vector* df)
+	GSLDFCollector(const std::vector<mmcif::Atom>& atoms, const std::vector<size_t>& index, gsl_vector* df)
 		: mAtoms(atoms), mIndex(index), mDF(df)
 	{
 		for (size_t ix: mIndex)
@@ -833,15 +832,15 @@ class GSLDFCollector : public DFCollector
   private:
 
 	// for debugging
-	string label(AtomRef atom) const
+	std::string label(AtomRef atom) const
 	{
-		string atomName = " " + mAtoms[atom].labelAtomID();
-		atomName += string(5 - atomName.length(), ' ');
-		return to_string(mAtoms[atom].labelSeqID()) + atomName;
+		std::string atomName = " " + mAtoms[atom].labelAtomID();
+		atomName += std::string(5 - atomName.length(), ' ');
+		return std::to_string(mAtoms[atom].labelSeqID()) + atomName;
 	}
 
-	const vector<mmcif::Atom>& mAtoms;
-	const vector<size_t>& mIndex;
+	const std::vector<mmcif::Atom>& mAtoms;
+	const std::vector<size_t>& mIndex;
 	gsl_vector* mDF;
 };
 
@@ -849,8 +848,8 @@ GSLDFCollector::~GSLDFCollector()
 {
 	if (cif::VERBOSE > 1)
 	{
-		cerr << string(cif::get_terminal_width(), '-') << endl
-			 << "Collected gradient: " << endl;
+		std::cerr << std::string(cif::get_terminal_width(), '-') << std::endl
+			 << "Collected gradient: " << std::endl;
 		
 		for (size_t i = 0; i < mAtoms.size(); ++i)
 		{
@@ -862,10 +861,10 @@ GSLDFCollector::~GSLDFCollector()
 			double dy = gsl_vector_get(mDF, ix * 3 + 1);
 			double dz = gsl_vector_get(mDF, ix * 3 + 2);
 			
-			cerr << "atom: " << label(i) << " d: " << setprecision(10) << dx << " " << dy << " " << dz << endl;
+			std::cerr << "atom: " << label(i) << " d: " << std::setprecision(10) << dx << " " << dy << " " << dz << std::endl;
 		}
 
-		cerr << string(cif::get_terminal_width(), '-') << endl;
+		std::cerr << std::string(cif::get_terminal_width(), '-') << std::endl;
 	}
 }
 
@@ -881,7 +880,7 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 		gsl_vector_set(mDF, ix * 3 + 2, gsl_vector_get(mDF, ix * 3 + 2) + dz);
 		
 		if (cif::VERBOSE > 1)
-			cerr << "atom: " << label(atom) << " d: " << setprecision(10) << dx << ", " << dy << ", " << dz << endl;
+			std::cerr << "atom: " << label(atom) << " d: " << std::setprecision(10) << dx << ", " << dy << ", " << dz << std::endl;
 	}
 }
 
@@ -905,7 +904,7 @@ class GSLMinimizer : public Minimizer
 	}
 	
 	virtual double refine(bool storeAtoms);
-	virtual vector<pair<string,mmcif::Point>> getAtoms() const;
+	virtual std::vector<std::pair<std::string,mmcif::Point>> getAtoms() const;
 	virtual void storeAtomLocations();
 
   private:
@@ -918,7 +917,7 @@ class GSLMinimizer : public Minimizer
 	void Df(const gsl_vector* v, gsl_vector* df);
 	void Fdf (const gsl_vector *x, double *f, gsl_vector *df);
 
-	vector<Point> mFixedLocations;
+	std::vector<Point> mFixedLocations;
 	gsl_multimin_fdfminimizer* m_s = nullptr;
 };
 
@@ -963,9 +962,9 @@ double GSLMinimizer::refine(bool storeAtoms)
 		if (status != 0)
 		{
 			if (status != GSL_ENOPROG)
-				cerr << "Unexpected result from gsl_multimin_fdfminimizer_iterate: " << status << endl;
+				std::cerr << "Unexpected result from gsl_multimin_fdfminimizer_iterate: " << status << std::endl;
 			else if (cif::VERBOSE)
-				cerr << "Minimizer stopped at iteration " << i << " at " << m_s->f << endl;
+				std::cerr << "Minimizer stopped at iteration " << i << " at " << m_s->f << std::endl;
 			break;
 		}
 
@@ -974,15 +973,15 @@ double GSLMinimizer::refine(bool storeAtoms)
 		if (cif::VERBOSE > 1)
 		{
 			double norm = gsl_blas_dnrm2(m_s->gradient);
-			cout << "iteration number " << i << " with f: " << m_s->f
+			std::cout << "iteration number " << i << " with f: " << m_s->f
 			      << " status from gsl_multimin_test_gradient() " << status << " for norm "
-			      << norm << endl;
+			      << norm << std::endl;
 		}
 		
 		if (status == GSL_SUCCESS)
 		{
 			if (cif::VERBOSE)
-				cerr << "Minimum found at iteration " << i << " at " << m_s->f << endl;
+				std::cerr << "Minimum found at iteration " << i << " at " << m_s->f << std::endl;
 			break;
 		}
 		
@@ -998,9 +997,9 @@ double GSLMinimizer::refine(bool storeAtoms)
 	return m_s->f;
 }
 
-vector<pair<string,mmcif::Point>> GSLMinimizer::getAtoms() const
+std::vector<std::pair<std::string,mmcif::Point>> GSLMinimizer::getAtoms() const
 {
-	vector<pair<string,mmcif::Point>> result;
+	std::vector<std::pair<std::string,mmcif::Point>> result;
 
 	for (size_t i = 0; i < mRef2AtomIndex.size(); ++i)
 	{
@@ -1044,7 +1043,7 @@ void GSLMinimizer::Fdf(const gsl_vector* v, void* params, double* f, gsl_vector*
 	self->Fdf(v, f, df);
 
 	if (cif::VERBOSE > 1)
-		cout << "FDF => " << setprecision(10) << *f << endl;
+		std::cout << "FDF => " << std::setprecision(10) << *f << std::endl;
 }
 
 double GSLMinimizer::F(const gsl_vector* v)
@@ -1054,7 +1053,7 @@ double GSLMinimizer::F(const gsl_vector* v)
 //	return score(loc);
 	auto F = score(loc);
 	if (cif::VERBOSE > 1)
-		cout << "F => " << setprecision(10) << F << endl;
+		std::cout << "F => " << std::setprecision(10) << F << std::endl;
 	return F;
 }
 
@@ -1080,7 +1079,7 @@ void GSLMinimizer::Fdf (const gsl_vector *x, double *f, gsl_vector *df)
 
 // --------------------------------------------------------------------
 
-Minimizer* Minimizer::create(const string& algorithm,	
+Minimizer* Minimizer::create(const std::string& algorithm,	
 	const Polymer& poly, int first, int last, const BondMap& bonds,
 	const XMap& xMap, float mapWeight, float plane5AtomsESD)
 {
@@ -1089,7 +1088,7 @@ Minimizer* Minimizer::create(const string& algorithm,
 	if (algorithm == "gsl")
 		result = new GSLMinimizer(poly, first, last, bonds, xMap, mapWeight, plane5AtomsESD);
 	else
-		throw runtime_error("Unknown algorithm: " + algorithm);
+		throw std::runtime_error("Unknown algorithm: " + algorithm);
 	
 	return result;
 }

@@ -46,7 +46,6 @@
 
 #include "pr-server.hpp"
 
-using namespace std;
 
 namespace zh = zeep::http;
 

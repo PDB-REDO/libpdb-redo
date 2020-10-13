@@ -70,7 +70,6 @@
 
 #include "svm++.h"
 
-using namespace std;
 using namespace clipper;
 using data32::Flag;
 using data32::F_phi;
@@ -90,46 +89,46 @@ namespace c = mmcif;
 class ChironHelper
 {
   public:
-	ChironHelper(const mmcif::Compound& compound, const string& centre)
+	ChironHelper(const mmcif::Compound& compound, const std::string& centre)
 		: mCompound(compound), mCentre(centre)
 		, mAtoms(mCompound.atoms()), mBonds(mCompound.bonds())
 	{
 	}
 	
-	bool canSwapChains(vector<tuple<string,string>>& swapAtoms);
-	bool canSwapIsomers(const mmcif::Residue& res, string& swapCompound, vector<tuple<string,string>>& swapAtoms);
+	bool canSwapChains(std::vector<std::tuple<std::string,std::string>>& swapAtoms);
+	bool canSwapIsomers(const mmcif::Residue& res, std::string& swapCompound, std::vector<std::tuple<std::string,std::string>>& swapAtoms);
 	bool canPullThroughPlane(const mmcif::Residue& r, mmcif::Point& newCoordinates);
 	
   private:
 
-	bool canSwapChains(const string& atom1, const string& atom2,
-		vector<tuple<string,string>>& swapAtoms);
+	bool canSwapChains(const std::string& atom1, const std::string& atom2,
+		std::vector<std::tuple<std::string,std::string>>& swapAtoms);
 
-	bool canSwapSubChain(string atom1, string atom2,
-		set<string> visited1, set<string> visited2,
-		vector<tuple<string,string>>& swapAtoms);
+	bool canSwapSubChain(std::string atom1, std::string atom2,
+		std::set<std::string> visited1, std::set<std::string> visited2,
+		std::vector<std::tuple<std::string,std::string>>& swapAtoms);
 
-	const mmcif::CompoundAtom& atomForID(const string& id) const
+	const mmcif::CompoundAtom& atomForID(const std::string& id) const
 	{
 		auto i = find_if(mAtoms.begin(), mAtoms.end(),
 			[&](const mmcif::CompoundAtom& a) { return a.id == id; });
 		if (i == mAtoms.end())
-			throw runtime_error("Could not find atom " + id + " in compound " + mCompound.id());
+			throw std::runtime_error("Could not find atom " + id + " in compound " + mCompound.id());
 		return *i;
 	}
 
 	size_t countChiralErrors(const mmcif::Residue& res, const mmcif::Compound& c) const
 	{
-		vector<tuple<string,string>> remapped;
+		std::vector<std::tuple<std::string,std::string>> remapped;
 		return countChiralErrors(res, c, remapped);
 	}
 	
-	size_t countChiralErrors(const mmcif::Residue& res, const mmcif::Compound& c, const vector<tuple<string,string>>& remapped) const;
+	size_t countChiralErrors(const mmcif::Residue& res, const mmcif::Compound& c, const std::vector<std::tuple<std::string,std::string>>& remapped) const;
 
 	const mmcif::Compound&			mCompound;
-	string							mCentre;
-	vector<mmcif::CompoundAtom>	mAtoms;
-	vector<mmcif::CompoundBond>	mBonds;
+	std::string							mCentre;
+	std::vector<mmcif::CompoundAtom>	mAtoms;
+	std::vector<mmcif::CompoundBond>	mBonds;
 };
 
 bool ChironHelper::canPullThroughPlane(const mmcif::Residue& r, mmcif::Point& newCoordinates)
@@ -137,10 +136,10 @@ bool ChironHelper::canPullThroughPlane(const mmcif::Residue& r, mmcif::Point& ne
 	bool result = false;
 
 	// see if one of the bonds is to a hydrogen
-	vector<string> l;
+	std::vector<std::string> l;
 	for (auto& b: mBonds)
 	{
-		string linked;
+		std::string linked;
 		
 		if (b.atomID[0] == mCentre)
 			linked = b.atomID[1];
@@ -162,7 +161,7 @@ bool ChironHelper::canPullThroughPlane(const mmcif::Residue& r, mmcif::Point& ne
 
 		auto centre = r.atomByID(mCentre).location();
 		
-		// Normal vector on the plane is:
+		// Normal std::vector on the plane is:
 		auto p1 = r.atomByID(l[0]).location();
 		auto p2 = r.atomByID(l[1]).location();
 		auto p3 = r.atomByID(l[2]).location();
@@ -192,9 +191,9 @@ bool ChironHelper::canPullThroughPlane(const mmcif::Residue& r, mmcif::Point& ne
 	return result;
 }
 
-bool ChironHelper::canSwapChains(vector<tuple<string,string>>& swapAtoms)
+bool ChironHelper::canSwapChains(std::vector<std::tuple<std::string,std::string>>& swapAtoms)
 {
-	vector<string> l;
+	std::vector<std::string> l;
 	
 	for (auto& b: mBonds)
 	{
@@ -221,10 +220,10 @@ bool ChironHelper::canSwapChains(vector<tuple<string,string>>& swapAtoms)
 	return result;
 }
 
-bool ChironHelper::canSwapChains(const string& atom1, const string& atom2,
-		vector<tuple<string,string>>& swapAtoms)
+bool ChironHelper::canSwapChains(const std::string& atom1, const std::string& atom2,
+		std::vector<std::tuple<std::string,std::string>>& swapAtoms)
 {
-	set<string> v1, v2;
+	std::set<std::string> v1, v2;
 	
 	v1.insert(mCentre);
 	v2.insert(mCentre);
@@ -232,7 +231,7 @@ bool ChironHelper::canSwapChains(const string& atom1, const string& atom2,
 	return canSwapSubChain(atom1, atom2, v1, v2, swapAtoms);
 }
 
-bool ChironHelper::canSwapIsomers(const mmcif::Residue& res, string& swapCompound, vector<tuple<string,string>>& swapAtoms)
+bool ChironHelper::canSwapIsomers(const mmcif::Residue& res, std::string& swapCompound, std::vector<std::tuple<std::string,std::string>>& swapAtoms)
 {
 	bool result = false;
 	
@@ -246,24 +245,24 @@ bool ChironHelper::canSwapIsomers(const mmcif::Residue& res, string& swapCompoun
 			auto chiralErr = chiralErrInitial;
 			
 			if (cif::VERBOSE > 1)
-				cerr << "Trying to swap isomers, initial error count is " << chiralErrInitial << endl;
+				std::cerr << "Trying to swap isomers, initial error count is " << chiralErrInitial << std::endl;
 			
 			for (auto i: isomers)
 			{
 				auto c = mmcif::Compound::create(i);
 				
-				vector<tuple<string,string>> m = c->mapToIsomer(mCompound);
+				std::vector<std::tuple<std::string,std::string>> m = c->mapToIsomer(mCompound);
 				
 				if (cif::VERBOSE > 2)
 				{
 					for (auto& a: m)
-						cerr << "  " << get<0>(a) << " => " << get<1>(a) << endl;
+						std::cerr << "  " << std::get<0>(a) << " => " << std::get<1>(a) << std::endl;
 				}
 				
 				auto err = countChiralErrors(res, *c, m);
 	
 				if (cif::VERBOSE > 1)
-					cerr << "isomer " << i << " has " << err << " errors" << endl;
+					std::cerr << "isomer " << i << " has " << err << " errors" << std::endl;
 	
 				if (chiralErr > err)
 				{
@@ -273,7 +272,7 @@ bool ChironHelper::canSwapIsomers(const mmcif::Residue& res, string& swapCompoun
 					swap(swapAtoms, m);
 					
 					if (cif::VERBOSE > 1)
-						cerr << "Err count decreased to " << chiralErr << endl; 
+						std::cerr << "Err count decreased to " << chiralErr << std::endl; 
 	
 					if (chiralErr == 0)	 // we're done.
 						break;
@@ -283,7 +282,7 @@ bool ChironHelper::canSwapIsomers(const mmcif::Residue& res, string& swapCompoun
 			if (result and mCompound.isSugar())
 			{
 				if (cif::VERBOSE)
-					cerr << "Since residue " << res.compoundID() << " is a sugar, it will not be swapped with " << swapCompound << endl;
+					std::cerr << "Since residue " << res.compoundID() << " is a sugar, it will not be swapped with " << swapCompound << std::endl;
 				result = false;
 			}
 		}
@@ -292,7 +291,7 @@ bool ChironHelper::canSwapIsomers(const mmcif::Residue& res, string& swapCompoun
 	return result;
 }
 
-size_t ChironHelper::countChiralErrors(const mmcif::Residue& res, const mmcif::Compound& c, const vector<tuple<string,string>>& mapping) const
+size_t ChironHelper::countChiralErrors(const mmcif::Residue& res, const mmcif::Compound& c, const std::vector<std::tuple<std::string,std::string>>& mapping) const
 {
 	size_t result = 0;
 	
@@ -301,19 +300,19 @@ size_t ChironHelper::countChiralErrors(const mmcif::Residue& res, const mmcif::C
 		if (cc.volumeSign == mmcif::both)
 			continue;
 		
-		auto rename = [&](const string& name) -> string
+		auto rename = [&](const std::string& name) -> std::string
 		{
-			string result;
+			std::string result;
 			
-			auto i = find_if(mapping.begin(), mapping.end(), [&](auto& m) { return get<0>(m) == name; });
+			auto i = find_if(mapping.begin(), mapping.end(), [&](auto& m) { return std::get<0>(m) == name; });
 			if (i == mapping.end())
 			{
 //				if (cif::VERBOSE > 1 and not mapping.empty())
-//					cerr << "no mapping found for atom " << name << " in " << c.id() << endl;
+//					std::cerr << "no mapping found for atom " << name << " in " << c.id() << std::endl;
 				 result = name;
 			}
 			else
-				result = get<1>(*i);
+				result = std::get<1>(*i);
 
 			return result;
 		};
@@ -332,24 +331,24 @@ size_t ChironHelper::countChiralErrors(const mmcif::Residue& res, const mmcif::C
 				(chiralVolume > 0 and cc.volumeSign == mmcif::negativ))
 			{
 				if (cif::VERBOSE > 1)
-					cerr << "chiral error in " << c.id() << " around " << cc.atomIDCentre << " with volume: " << chiralVolume << endl;
+					std::cerr << "chiral error in " << c.id() << " around " << cc.atomIDCentre << " with volume: " << chiralVolume << std::endl;
 				
 				++result;
 			}
 		}
-		catch (const exception& ex)
+		catch (const std::exception& ex)
 		{
 			if (cif::VERBOSE)
-				cerr << "Missing atom in counting chiral errors: " << ex.what() << endl;
+				std::cerr << "Missing atom in counting chiral errors: " << ex.what() << std::endl;
 		}
 	}
 	
 	return result;
 }
 
-bool ChironHelper::canSwapSubChain(string atom1, string atom2,
-		set<string> visited1, set<string> visited2,
-		vector<tuple<string,string>>& swapAtoms)
+bool ChironHelper::canSwapSubChain(std::string atom1, std::string atom2,
+		std::set<std::string> visited1, std::set<std::string> visited2,
+		std::vector<std::tuple<std::string,std::string>>& swapAtoms)
 {
 	auto& a1 = atomForID(atom1);
 	auto& a2 = atomForID(atom2);
@@ -366,7 +365,7 @@ bool ChironHelper::canSwapSubChain(string atom1, string atom2,
 			break;
 		}
 
-		vector<pair<string,mmcif::BondType>> l1, l2;
+		std::vector<std::pair<std::string,mmcif::BondType>> l1, l2;
 		
 		visited1.insert(atom1);
 		visited2.insert(atom2);
@@ -374,20 +373,20 @@ bool ChironHelper::canSwapSubChain(string atom1, string atom2,
 		for (auto& b: mBonds)
 		{
 			if (atom1 == b.atomID[0] and not visited1.count(b.atomID[1]))
-				l1.push_back(make_pair(b.atomID[1], b.type));
+				l1.push_back(std::make_pair(b.atomID[1], b.type));
 			else if (atom1 == b.atomID[1] and not visited1.count(b.atomID[0]))
-				l1.push_back(make_pair(b.atomID[0], b.type));
+				l1.push_back(std::make_pair(b.atomID[0], b.type));
 
 			if (atom2 == b.atomID[0] and not visited2.count(b.atomID[1]))
-				l2.push_back(make_pair(b.atomID[1], b.type));
+				l2.push_back(std::make_pair(b.atomID[1], b.type));
 			else if (atom2 == b.atomID[1] and not visited2.count(b.atomID[0]))
-				l2.push_back(make_pair(b.atomID[0], b.type));
+				l2.push_back(std::make_pair(b.atomID[0], b.type));
 		}
 		
 		if (l1.size() != l2.size())
 			break;
 		
-		vector<tuple<string,string>> subSwap;		
+		std::vector<std::tuple<std::string,std::string>> subSwap;		
 		
 		auto test = [&](int a, int b) -> bool
 		{
@@ -398,7 +397,7 @@ bool ChironHelper::canSwapSubChain(string atom1, string atom2,
 			return result;
 		};
 		
-		auto add = [&](initializer_list<pair<int,int>> l)
+		auto add = [&](std::initializer_list<std::pair<int,int>> l)
 		{
 			if (atom1 != atom2)
 				swapAtoms.emplace_back(atom1, atom2);
@@ -414,44 +413,44 @@ bool ChironHelper::canSwapSubChain(string atom1, string atom2,
 			
 			case 1:
 				if (test(0, 0))
-					add({ make_pair(0, 0) });
+					add({ std::make_pair(0, 0) });
 				break;
 			
 			case 2:
 				if (test(0, 0) and test(1, 1))
-					add({ make_pair(0, 0), make_pair(1, 1) });
+					add({ std::make_pair(0, 0), std::make_pair(1, 1) });
 				else if (test(0, 1) and test(1, 0))
-					add({ make_pair(0, 1), make_pair(1, 0) });
+					add({ std::make_pair(0, 1), std::make_pair(1, 0) });
 				break;
 			
 			case 3:
 				if (test(0, 0))
 				{
-					if (test(1, 1) and test(2, 2)) 			add({ make_pair(0, 0), make_pair(1, 1), make_pair(2, 2) });
-					else if (test(1, 2) and test(2, 1))		add({ make_pair(0, 0), make_pair(1, 2), make_pair(2, 1) });
+					if (test(1, 1) and test(2, 2)) 			add({ std::make_pair(0, 0), std::make_pair(1, 1), std::make_pair(2, 2) });
+					else if (test(1, 2) and test(2, 1))		add({ std::make_pair(0, 0), std::make_pair(1, 2), std::make_pair(2, 1) });
 				}
 				else if (test(0, 1))
 				{
-					if (test(1, 2) and test(2, 0))			add({ make_pair(0, 1), make_pair(1, 2), make_pair(2, 0) });
-					else if (test(1, 0) and test(2, 2))		add({ make_pair(0, 1), make_pair(1, 0), make_pair(2, 2) });
+					if (test(1, 2) and test(2, 0))			add({ std::make_pair(0, 1), std::make_pair(1, 2), std::make_pair(2, 0) });
+					else if (test(1, 0) and test(2, 2))		add({ std::make_pair(0, 1), std::make_pair(1, 0), std::make_pair(2, 2) });
 				}
 				else if (test(0, 2))
 				{
-					if (test(1, 0) and test(2, 1))			add({ make_pair(0, 2), make_pair(1, 0), make_pair(2, 1) });
-					else if (test(1, 1) and test(2, 0))		add({ make_pair(0, 2), make_pair(1, 1), make_pair(2, 0) });
+					if (test(1, 0) and test(2, 1))			add({ std::make_pair(0, 2), std::make_pair(1, 0), std::make_pair(2, 1) });
+					else if (test(1, 1) and test(2, 0))		add({ std::make_pair(0, 2), std::make_pair(1, 1), std::make_pair(2, 0) });
 				}
 	
 				break;
 			
 			default:
-				throw runtime_error("unimplemented number of bonds");
+				throw std::runtime_error("unimplemented number of bonds");
 		}
 
 		break;
 	}
 
 	if (cif::VERBOSE > 2)
-		cerr << "canSwap(" << atom1 << ", " << atom2 << ") => " << boolalpha << result << endl;
+		std::cerr << "canSwap(" << atom1 << ", " << atom2 << ") => " << std::boolalpha << result << std::endl;
 
 	return result;
 }
@@ -463,7 +462,7 @@ int Process(mmcif::Structure& structure, const mmcif::Residue& res, const mmcif:
 	int result = 0;
 	
 	if (cif::VERBOSE > 1)
-		cerr << "Process " << res.compoundID() << " " << res.asymID() << res.seqID() << endl;
+		std::cerr << "Process " << res.compoundID() << " " << res.asymID() << res.seqID() << std::endl;
 	
 	for (auto cc: compound.chiralCentres())
 	{
@@ -482,41 +481,41 @@ int Process(mmcif::Structure& structure, const mmcif::Residue& res, const mmcif:
 
 			if (cif::VERBOSE)
 			{
-				cerr << "chiral volume for " << res.compoundID() << " " << res.asymID() << res.seqID()
+				std::cerr << "chiral volume for " << res.compoundID() << " " << res.asymID() << res.seqID()
 					 << " with centre " << cc.atomIDCentre
 					 << " is " << chiralVolume << " and should be "
-					 << (cc.volumeSign == mmcif::positiv ? "positive" : "negative") << endl;
+					 << (cc.volumeSign == mmcif::positiv ? "positive" : "negative") << std::endl;
 			}
 
 			if ((chiralVolume < 0 and cc.volumeSign == mmcif::positiv) or
 				(chiralVolume > 0 and cc.volumeSign == mmcif::negativ))
 			{
-				cerr << "Error in chiral volume for " << res.compoundID() << " " << res.asymID() << res.seqID()
+				std::cerr << "Error in chiral volume for " << res.compoundID() << " " << res.asymID() << res.seqID()
 					 << " with centre " << cc.atomIDCentre;
 				
 				if (chiralVolume < 0)
-					cerr << " volume should be positive but is negative: " << chiralVolume << endl;
+					std::cerr << " volume should be positive but is negative: " << chiralVolume << std::endl;
 				else
-					cerr << " volume should be negative but is positive: " << chiralVolume << endl;
+					std::cerr << " volume should be negative but is positive: " << chiralVolume << std::endl;
 
 				ChironHelper test(compound, cc.atomIDCentre);
 				
-				vector<tuple<string,string>> swapAtoms;
-				string swapCompound;
+				std::vector<std::tuple<std::string,std::string>> swapAtoms;
+				std::string swapCompound;
 				mmcif::Point newCoordinates;
 				
 				if (test.canSwapChains(swapAtoms))
 				{
 					++result;
 					
-					cerr << "Flipping labels: ";
+					std::cerr << "Flipping labels: ";
 					
 					for (auto p: swapAtoms)
 					{
-						string na1, na2;
-						tie(na1, na2) = p;
+						std::string na1, na2;
+						std::tie(na1, na2) = p;
 						
-						cerr << "{ " << na1 << " and " << na2 << " }, ";
+						std::cerr << "{ " << na1 << " and " << na2 << " }, ";
 
 						auto a1 = res.atomByID(na1);
 						auto a2 = res.atomByID(na2);
@@ -524,28 +523,28 @@ int Process(mmcif::Structure& structure, const mmcif::Residue& res, const mmcif:
 						structure.swapAtoms(a1, a2);
 					}
 
-					cerr << endl;
+					std::cerr << std::endl;
 				}
 				else if (test.canSwapIsomers(res, swapCompound, swapAtoms))
 				{
 					++result;
-					cerr << "Replacing with isomer " << swapCompound;
+					std::cerr << "Replacing with isomer " << swapCompound;
 
 					if (swapAtoms.empty())
-						cerr << endl;
+						std::cerr << std::endl;
 					else
 					{
-						cerr << ", swapping atom labels: ";
+						std::cerr << ", swapping atom labels: ";
 
 						for (auto p: swapAtoms)
 						{
-							string na1, na2;
-							tie(na1, na2) = p;
+							std::string na1, na2;
+							std::tie(na1, na2) = p;
 							
-							cerr << "{ " << na1 << " -> " << na2 << " }, ";
+							std::cerr << "{ " << na1 << " -> " << na2 << " }, ";
 						}
 
-						cerr << endl;
+						std::cerr << std::endl;
 					}
 					
 					structure.changeResidue(res, swapCompound, swapAtoms);
@@ -559,17 +558,17 @@ int Process(mmcif::Structure& structure, const mmcif::Residue& res, const mmcif:
 					chiralVolume = DotProduct(atom1.location() - newCoordinates,
 						CrossProduct(atom2.location() - newCoordinates, atom3.location() - newCoordinates));
 		
-					cerr << "Pulling it through the plane from " << centre.location() << " to " << newCoordinates << endl
-						 << "  new chiral volume is " << chiralVolume << endl;
+					std::cerr << "Pulling it through the plane from " << centre.location() << " to " << newCoordinates << std::endl
+						 << "  new chiral volume is " << chiralVolume << std::endl;
 				}
 				else
-					cerr << "Cannot fix this problem" << endl;
+					std::cerr << "Cannot fix this problem" << std::endl;
 			}
 		}
-		catch (const runtime_error& ex)
+		catch (const std::runtime_error& ex)
 		{
 			if (cif::VERBOSE)
-				cerr << ex.what() << endl;
+				std::cerr << ex.what() << std::endl;
 			
 			continue;
 		}
@@ -620,8 +619,8 @@ int pr_main(int argc, char* argv[])
 {
 	po::options_description visible_options(fs::path(argv[0]).filename().string() + " options");
 	visible_options.add_options()
-		("xyzin",				po::value<string>(),	"coordinates file")
-		("output,o",			po::value<string>(),	"Write output to this file instead of stdout")
+		("xyzin",				po::value<std::string>(),	"coordinates file")
+		("output,o",			po::value<std::string>(),	"Write output to this file instead of stdout")
 		("help,h",										"Display help message")
 		("version",										"Print version")
 		("verbose,v",									"Verbose output")
@@ -645,13 +644,13 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("xyzin") == 0)
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(1);
 	}
 	
@@ -659,7 +658,7 @@ int pr_main(int argc, char* argv[])
 	if (vm.count("debug"))
 		cif::VERBOSE = vm["debug"].as<int>();
 
-	mmcif::File f(vm["xyzin"].as<string>());
+	mmcif::File f(vm["xyzin"].as<std::string>());
 	mmcif::Structure structure(f);
 
 	int result = Process(structure);
@@ -667,9 +666,9 @@ int pr_main(int argc, char* argv[])
 	if (result)
 	{
 		if (vm.count("output"))
-			structure.getFile().save(vm["output"].as<string>());
+			structure.getFile().save(vm["output"].as<std::string>());
 		else
-			structure.getFile().file().save(cout);
+			structure.getFile().file().save(std::cout);
 	}
 	
 	return result;

@@ -36,7 +36,6 @@
 
 #include "svm++.h"
 
-using namespace std;
 
 namespace cif {
 extern int VERBOSE;
@@ -47,16 +46,16 @@ namespace svm
 
 // --------------------------------------------------------------------
 
-vector<pair<value_type,value_type>> Matrix::Scale()
+std::vector<std::pair<value_type,value_type>> Matrix::Scale()
 {
-	vector<pair<value_type,value_type>> result;
+	std::vector<std::pair<value_type,value_type>> result;
 	
 	// collect min/max pairs for each column
 	for (auto& v: m_data)
 	{
 		if (result.size() < v.size())
 			result.insert(result.end(), v.size() - result.size(),
-				make_pair(numeric_limits<float>::max(), numeric_limits<float>::lowest()));
+				std::make_pair(std::numeric_limits<float>::max(), std::numeric_limits<float>::lowest()));
 		
 		for (size_t i = 0; i < v.size(); ++i)
 		{
@@ -87,8 +86,8 @@ class View : public Data
 
 	View(const View& rhs)
 		: m_m(rhs.m_m), m_p(rhs.m_p) {}
-	View(const Data& m, const vector<size_t>& perm)
-		: m_m(const_cast<Data&>(m)), m_p(const_cast<vector<size_t>&>(perm)) {}
+	View(const Data& m, const std::vector<size_t>& perm)
+		: m_m(const_cast<Data&>(m)), m_p(const_cast<std::vector<size_t>&>(perm)) {}
 	
 	virtual Vector& operator[](size_t row)				{ return m_m[m_p[row]]; }
 	virtual const Vector& operator[](size_t row) const	{ return m_m[m_p[row]]; }
@@ -109,7 +108,7 @@ class View : public Data
 
   private:
 	Data&			m_m;
-	vector<size_t>	m_p;
+	std::vector<size_t>	m_p;
 };
 
 // --------------------------------------------------------------------
@@ -125,7 +124,7 @@ class QMatrix<C_SVC, K>
   public:
 	typedef Kernel<K>		kernel_type;
 
-	QMatrix(const vector<int8_t>& y, const Data& x, const typename kernel_type::param_type& params)
+	QMatrix(const std::vector<int8_t>& y, const Data& x, const typename kernel_type::param_type& params)
 		: m_y(y), m_K(x, params) {}
 	
 	double operator()(size_t i, size_t j) const
@@ -134,7 +133,7 @@ class QMatrix<C_SVC, K>
 	}
 	
   private:
-	const vector<int8_t>&	m_y;
+	const std::vector<int8_t>&	m_y;
 	kernel_type 		m_K;
 };
 
@@ -159,12 +158,12 @@ class Solver
 	Solver(const QM& Q, double eps, double tau, double C)
 		: m_Q(Q), m_eps(eps), m_tau(tau), m_C(C) {}
 	
-	tuple<vector<double>,double,double> Solve(const vector<label_type>& y)
+	std::tuple<std::vector<double>,double,double> Solve(const std::vector<label_type>& y)
 	{
 		size_t len = y.size();
 		
-		vector<double> A(len, 0);
-		vector<double> G(len, -1);
+		std::vector<double> A(len, 0);
+		std::vector<double> G(len, -1);
 		
 		size_t iteration = 0;
 		size_t max_iteration = 10000000;
@@ -172,7 +171,7 @@ class Solver
 		while (++iteration < max_iteration)
 		{
 			int32_t i, j;
-			tie(i, j) = selectB(y, A, G);
+			std::tie(i, j) = selectB(y, A, G);
 
 			if (j == -1)
 				break;
@@ -204,7 +203,7 @@ class Solver
 		}
 		
 		if (cif::VERBOSE > 1)
-			cout << "optimization finished in " << iteration << " iterations" << endl;
+			std::cout << "optimization finished in " << iteration << " iterations" << std::endl;
 		
 		double sum = 0, v = 0;
 		size_t n = 0;
@@ -220,15 +219,15 @@ class Solver
 		double rho = sum / n;
 		double obj = v / 2;
 		
-		return make_tuple(A, rho, obj);
+		return std::make_tuple(A, rho, obj);
 	}
 	
-	tuple<int32_t,int32_t> selectB(const vector<int8_t>& y, const vector<double>& A,
-		const vector<double>& G)
+	std::tuple<int32_t,int32_t> selectB(const std::vector<int8_t>& y, const std::vector<double>& A,
+		const std::vector<double>& G)
 	{
 		// select i
 		int32_t i = -1;
-		double Gmax = numeric_limits<double>::lowest();
+		double Gmax = std::numeric_limits<double>::lowest();
 		for (size_t t = 0; t < y.size(); ++t)
 		{
 			if ((y[t] == +1 and A[t] < m_C) or
@@ -244,8 +243,8 @@ class Solver
 		
 		// select j
 		int32_t j = -1;
-		double Gmin = numeric_limits<double>::max();
-		double objMin = numeric_limits<double>::max();
+		double Gmin = std::numeric_limits<double>::max();
+		double objMin = std::numeric_limits<double>::max();
 		for (size_t t = 0; t < y.size(); ++t)
 		{
 			if ((y[t] == +1 and A[t] > 0) or
@@ -271,7 +270,7 @@ class Solver
 		if (Gmax - Gmin < m_eps)
 			i = j = -1;
 		
-		return make_tuple(i, j);
+		return std::make_tuple(i, j);
 	}
 	
 	
@@ -341,7 +340,7 @@ ModelBase::ModelBase(zeep::xml::element& config)
 	for (auto sv: config.find("svm-node"))
 	{
 		auto sv_coef = sv->find("sv_coef");
-		vector<double> sv_coef_v;
+		std::vector<double> sv_coef_v;
 		for (auto svc: sv_coef)
 			sv_coef_v.push_back(stod(svc->str()));
 		m_sv_coef.push_back(sv_coef_v);
@@ -355,7 +354,7 @@ ModelBase::ModelBase(zeep::xml::element& config)
 			row[index] = v;
 		}
 		
-		m_sv.push_back(move(row));
+		m_sv.push_back(std::move(row));
 	} 
 }
 
@@ -365,8 +364,8 @@ ModelBase* ModelBase::Create(zeep::xml::element& n)
 	if (config->name() != "svm-config")
 		config = n.find_first("svm-config");
 
-	string svmType = config->get_attribute("svm-type");
-	string kernelType = config->get_attribute("kernel-type");
+	std::string svmType = config->get_attribute("svm-type");
+	std::string kernelType = config->get_attribute("kernel-type");
 
 	ModelBase* result = nullptr;
 
@@ -379,10 +378,10 @@ ModelBase* ModelBase::Create(zeep::xml::element& n)
 	return result;
 }
 
-vector<double> ModelBase::PredictWithProbability(const Vector& v) const
+std::vector<double> ModelBase::PredictWithProbability(const Vector& v) const
 {
-	throw runtime_error("This SVM does not implement probabilities");
-	return vector<double>();
+	throw std::runtime_error("This SVM does not implement probabilities");
+	return std::vector<double>();
 }
 
 zeep::xml::element* ModelBase::GetConfig()
@@ -393,27 +392,27 @@ zeep::xml::element* ModelBase::GetConfig()
 	
 	for (auto rho: m_rho)
 	{
-		auto e = new element("rho");
-		e->content(to_string(rho));
-		config->append(e);
+		element e("rho");
+		e.set_content(std::to_string(rho));
+		config->push_back(std::move(e));
 	}
 	
 	for (auto ci: m_class)
 	{
-		auto e = new element("class");
-		e->set_attribute("label", to_string(ci.label));
-		e->set_attribute("nr_sv", to_string(ci.nr_sv));
-		config->append(e);
+		element e("class");
+		e.set_attribute("label", std::to_string(ci.label));
+		e.set_attribute("nr_sv", std::to_string(ci.nr_sv));
+		config->push_back(std::move(e));
 	}
 	
 	for (size_t i = 0; i < m_sv.size(); ++i)
 	{
-		auto e = new element("svm-node");
+		element e("svm-node");
 		for (auto sv_coef: m_sv_coef[i])
 		{
-			auto svc = new element("sv_coef");
-			svc->content(to_string(sv_coef));
-			e->append(svc);
+			element svc("sv_coef");
+			svc.set_content(std::to_string(sv_coef));
+			e.push_back(std::move(svc));
 		}
 		
 		auto& row = m_sv[i];
@@ -422,13 +421,13 @@ zeep::xml::element* ModelBase::GetConfig()
 			if (not row.contains(j))
 				continue;
 			
-			auto sv = new element("sv");
-			sv->set_attribute("index", to_string(j));
-			sv->content(to_string(row[j]));
-			e->append(sv);
+			element sv("sv");
+			sv.set_attribute("index", std::to_string(j));
+			sv.set_content(std::to_string(row[j]));
+			e.push_back(std::move(sv));
 		}
 		
-		config->append(e);
+		config->push_back(std::move(e));
 	}
 
 	return config;
@@ -459,15 +458,15 @@ zeep::xml::element* Model<K,C_SVC>::GetConfig()
 }
 
 template<KernelType K>
-void Model<K, C_SVC>::Predict(const Vector& x, vector<double>& sums) const
+void Model<K, C_SVC>::Predict(const Vector& x, std::vector<double>& sums) const
 {
 	size_t nr_class = this->m_class.size();
 	
-	vector<double> kvalue;
+	std::vector<double> kvalue;
 	for (auto& sv: this->m_sv)
 		kvalue.push_back(kernel_type::f(x, sv, m_params));
 				
-	vector<size_t> start(nr_class);
+	std::vector<size_t> start(nr_class);
 	start[0] = 0;
 	for (size_t i = 1; i < nr_class; ++i)
 		start[i] = start[i - 1] + this->m_class[i - 1].nr_sv;
@@ -503,10 +502,10 @@ label_type Model<K, C_SVC>::Predict(const Vector& x) const
 {
 	size_t nr_class = this->m_class.size();
 
-	vector<double> sums;
+	std::vector<double> sums;
 	Predict(x, sums);
 
-	vector<int> vote(nr_class, 0);
+	std::vector<int> vote(nr_class, 0);
 	
 	int p = 0;
 	for (size_t i = 0; i < nr_class; ++i)
@@ -527,7 +526,7 @@ label_type Model<K, C_SVC>::Predict(const Vector& x) const
 }
 
 // Platt's binary SVM Probablistic Output: an improvement from Lin et al.
-tuple<double,double> SigmoidTrain(const vector<double>& dec_value, const vector<label_type>& labels)
+std::tuple<double,double> SigmoidTrain(const std::vector<double>& dec_value, const std::vector<label_type>& labels)
 {
 	size_t l = dec_value.size();
 	
@@ -542,7 +541,7 @@ tuple<double,double> SigmoidTrain(const vector<double>& dec_value, const vector<
 	double eps = 1e-5;
 	double hiTarget = (prior1 + 1.0) / (prior1 + 2.0);
 	double loTarget = 1 / (prior0 + 2.0);
-	vector<double> t(l);
+	std::vector<double> t(l);
 	double fApB;
 	
 	// Initial Point and Initial Fun Value
@@ -637,15 +636,15 @@ tuple<double,double> SigmoidTrain(const vector<double>& dec_value, const vector<
 
 		if (stepsize < min_step)
 		{
-			cerr << "Line search fails in two-class probability estimates" << endl;
+			std::cerr << "Line search fails in two-class probability estimates" << std::endl;
 			break;
 		}
 	}
 
 	if (iter >= max_iter)
-		cerr << "Reaching maximal iterations in two-class probability estimates" << endl;
+		std::cerr << "Reaching maximal iterations in two-class probability estimates" << std::endl;
 
-	return make_tuple(A, B);
+	return std::make_tuple(A, B);
 }
 
 double SigmoidPredict(double decision_value, double A, double B)
@@ -659,15 +658,15 @@ double SigmoidPredict(double decision_value, double A, double B)
 }
 
 // Method 2 from the multiclass_prob paper by Wu, Lin, and Weng
-vector<double> MultiClassProbability(size_t k, const vector<vector<double>>& r)
+std::vector<double> MultiClassProbability(size_t k, const std::vector<std::vector<double>>& r)
 {
 	size_t max_iter = 100;
 	if (max_iter < k)
 		max_iter = k;
 
-	vector<vector<double>> Q(k, vector<double>(k));
-	vector<double> Qp(k);
-	vector<double> p(k);
+	std::vector<std::vector<double>> Q(k, std::vector<double>(k));
+	std::vector<double> Qp(k);
+	std::vector<double> p(k);
 
 	double eps = 0.005 / k;
 	
@@ -728,23 +727,23 @@ vector<double> MultiClassProbability(size_t k, const vector<vector<double>>& r)
 	}
 
 	if (iter >= max_iter)
-		cerr << "Exceeds max_iter in multiclass_prob" << endl;
+		std::cerr << "Exceeds max_iter in multiclass_prob" << std::endl;
 
 	return p;
 }
 
 template<KernelType K>
-vector<double> Model<K, C_SVC>::PredictWithProbability(const Vector& x) const
+std::vector<double> Model<K, C_SVC>::PredictWithProbability(const Vector& x) const
 {
 	size_t nr_class = this->m_class.size();
 
-	vector<double> sums;
+	std::vector<double> sums;
 	sums.reserve(nr_class * (nr_class - 1) / 2);
 	
 	Predict(x, sums);
 	
 	double min_prob = 1e-7;
-	vector<vector<double>> pairwise_prob(nr_class, vector<double>(nr_class));
+	std::vector<std::vector<double>> pairwise_prob(nr_class, std::vector<double>(nr_class));
 	
 	for (size_t i = 0, k = 0; i < nr_class; ++i)
 	{
@@ -764,7 +763,7 @@ vector<double> Model<K, C_SVC>::PredictWithProbability(const Vector& x) const
 	}
 	
 	return MultiClassProbability(nr_class, pairwise_prob);
-//	vector<double> result = MultiClassProbability(nr_class, pairwise_prob);
+//	std::vector<double> result = MultiClassProbability(nr_class, pairwise_prob);
 //
 //	auto voted = distance(result.begin(),
 //		max_element(result.begin(), result.end()));
@@ -773,50 +772,50 @@ vector<double> Model<K, C_SVC>::PredictWithProbability(const Vector& x) const
 }
 
 template<KernelType K>
-ModelBase* SVM<K,C_SVC>::Train(const vector<label_type>& y, const Data& m)
+ModelBase* SVM<K,C_SVC>::Train(const std::vector<label_type>& y, const Data& m)
 {
 	size_t l = y.size();
 	
-	vector<label_type> label;
-	vector<size_t> perm, count, start;
+	std::vector<label_type> label;
+	std::vector<size_t> perm, count, start;
 	
 	GroupClasses(y, label, count, start, perm);
 
 	if (cif::VERBOSE > 2)
 	{
-		cout << "Nr of classes: " << label.size() << endl
+		std::cout << "Nr of classes: " << label.size() << std::endl
 			 << " => { ";
 		for (auto l: label)
-			cout << int32_t(l) << ' ';
-		cout << '}' << endl;
+			std::cout << int32_t(l) << ' ';
+		std::cout << '}' << std::endl;
 	}
 	
 	size_t nr_class = label.size();
 	size_t N = nr_class * (nr_class - 1) / 2;
 	
 	if (nr_class == 1)
-		throw runtime_error("Training data in only one class");
+		throw std::runtime_error("Training data in only one class");
 	
 	View x(m, perm);
 	
-	vector<double> weighted_C(nr_class, this->m_params.C);
+	std::vector<double> weighted_C(nr_class, this->m_params.C);
 	for (auto weight: m_weight)
 	{
 		auto i = find(label.begin(), label.end(), weight.label);
 		if (i == label.end())
-			throw runtime_error("Class label " + to_string(weight.label) + " specified in weight is not found");
+			throw std::runtime_error("Class label " + std::to_string(weight.label) + " specified in weight is not found");
 		weighted_C[i - label.begin()] *= weight.weight;
 	}
 	
-	vector<bool> nonzero(l, false);
-	vector<decision_function> f(N);
+	std::vector<bool> nonzero(l, false);
+	std::vector<decision_function> f(N);
 	
-	vector<double> probA, probB;
+	std::vector<double> probA, probB;
 	
 	if (this->m_params.probability)
 	{
-		probA = vector<double>(N);
-		probB = vector<double>(N);
+		probA = std::vector<double>(N);
+		probB = std::vector<double>(N);
 	}
 	
 	size_t p = 0;
@@ -829,8 +828,8 @@ ModelBase* SVM<K,C_SVC>::Train(const vector<label_type>& y, const Data& m)
 			
 			size_t l = ci * cj;
 			
-			View sx(x, vector<size_t>());	sx.reserve(l);
-			vector<label_type> sy;				sy.reserve(l);
+			View sx(x, std::vector<size_t>());	sx.reserve(l);
+			std::vector<label_type> sy;				sy.reserve(l);
 			
 			for (size_t k = 0; k < ci; ++k)
 			{
@@ -845,7 +844,7 @@ ModelBase* SVM<K,C_SVC>::Train(const vector<label_type>& y, const Data& m)
 			}
 			
 			if (this->m_params.probability)
-				tie(probA[p], probB[p]) = BinarySSVCProbability(sy, sx, weighted_C[i], weighted_C[j]);
+				std::tie(probA[p], probB[p]) = BinarySSVCProbability(sy, sx, weighted_C[i], weighted_C[j]);
 			
 			f[p] = TrainOne(sy, sx, weighted_C[i], weighted_C[j]);
 			
@@ -865,13 +864,13 @@ ModelBase* SVM<K,C_SVC>::Train(const vector<label_type>& y, const Data& m)
 		}
 	}
 	
-	vector<double> rho(N);
+	std::vector<double> rho(N);
 	transform(f.begin(), f.end(), rho.begin(),
 		[](const decision_function& df) -> double { return df.rho; });
 
 	// build model
 	typedef ModelBase::ClassInfo class_info_type;
-	vector<class_info_type> classes;
+	std::vector<class_info_type> classes;
 	
 	size_t totalSV = 0;
 	for (size_t i = 0; i < nr_class; ++i)
@@ -889,7 +888,7 @@ ModelBase* SVM<K,C_SVC>::Train(const vector<label_type>& y, const Data& m)
 	}
 	
 //		if (cif::VERBOSE > 1)
-//			cout << "Total nSV = " << totalSV << endl;
+//			std::cout << "Total nSV = " << totalSV << std::endl;
 
 	Matrix sv;
 	for (size_t i = 0; i < l; ++i)
@@ -898,11 +897,11 @@ ModelBase* SVM<K,C_SVC>::Train(const vector<label_type>& y, const Data& m)
 			sv.push_back(x[i]);
 	}
 	
-	vector<size_t> nz_start({ 0 });
+	std::vector<size_t> nz_start({ 0 });
 	for (size_t i = 1; i < nr_class; ++i)
 		nz_start.push_back(nz_start.back() + classes[i - 1].nr_sv);
 	
-	vector<vector<double>> sv_coef(totalSV, vector<double>(nr_class - 1));
+	std::vector<std::vector<double>> sv_coef(totalSV, std::vector<double>(nr_class - 1));
 	
 	p = 0;
 	for (size_t i = 0; i < nr_class; ++i)
@@ -935,19 +934,19 @@ ModelBase* SVM<K,C_SVC>::Train(const vector<label_type>& y, const Data& m)
 // Cross-validation decision values for probability estimates
 
 template<KernelType K>
-tuple<double,double> SVM<K,C_SVC>::BinarySSVCProbability(
-	const vector<label_type>& y, const Data& x, double Cp, double Cn)
+std::tuple<double,double> SVM<K,C_SVC>::BinarySSVCProbability(
+	const std::vector<label_type>& y, const Data& x, double Cp, double Cn)
 {
 	size_t l = y.size();
 	const size_t nr_fold = 5;
 	
-	vector<size_t> perm(l);
+	std::vector<size_t> perm(l);
 	iota(perm.begin(), perm.end(), 0);
 	
 	mt19937 rng(m_rd());
 	shuffle(perm.begin(), perm.end(), rng);
 	
-	vector<double> dec_value(l);
+	std::vector<double> dec_value(l);
 	
 	for (size_t i = 0; i < nr_fold; ++i)
 	{
@@ -955,8 +954,8 @@ tuple<double,double> SVM<K,C_SVC>::BinarySSVCProbability(
 		auto end = (i + 1) * l / nr_fold;
 		
 		auto subl = l - (end - begin);
-		View subx(x, vector<size_t>());
-		vector<label_type> suby;
+		View subx(x, std::vector<size_t>());
+		std::vector<label_type> suby;
 		suby.reserve(subl);
 		
 		for (size_t j = 0; j < begin; ++j)
@@ -996,7 +995,7 @@ tuple<double,double> SVM<K,C_SVC>::BinarySSVCProbability(
 			params.probability = false;
 			
 			SVM sub_svm(params);
-			sub_svm.m_weight = vector<weight_type>(
+			sub_svm.m_weight = std::vector<weight_type>(
 				{
 					{ +1, Cp },
 					{ -1, Cn }
@@ -1007,7 +1006,7 @@ tuple<double,double> SVM<K,C_SVC>::BinarySSVCProbability(
 			
 			for (size_t j = begin; j < end; ++j)
 			{
-				vector<double> sdv;
+				std::vector<double> sdv;
 				submodel->Predict(x[perm[j]], sdv);
 				
 				assert(sdv.size() == 1);
@@ -1020,7 +1019,7 @@ tuple<double,double> SVM<K,C_SVC>::BinarySSVCProbability(
 }
 
 template<KernelType K>
-vector<label_type> SVM<K,C_SVC>::CrossValidation(const vector<label_type>& y, 
+std::vector<label_type> SVM<K,C_SVC>::CrossValidation(const std::vector<label_type>& y, 
 	const Matrix& x, size_t nr_fold)
 {
 	size_t l = x.size();
@@ -1028,22 +1027,22 @@ vector<label_type> SVM<K,C_SVC>::CrossValidation(const vector<label_type>& y,
 	if (nr_fold > l)
 	{
 		nr_fold = l;
-		cerr << "WARNING: # folds > # data. Will use # folds = # data instead (i.e., leave-one-out cross validation)" << endl;
+		std::cerr << "WARNING: # folds > # data. Will use # folds = # data instead (i.e., leave-one-out cross validation)" << std::endl;
 	}
 	
-	vector<label_type> result(l);
+	std::vector<label_type> result(l);
 
 	mt19937 rng(m_rd());
 	
-	vector<label_type> label;
-	vector<size_t> perm, count, start;
+	std::vector<label_type> label;
+	std::vector<size_t> perm, count, start;
 	
 	GroupClasses(y, label, count, start, perm);
 
 	size_t nr_class = label.size();
 	
 	// we shuffle the indices for the various classes and take nr_fold samples out of them
-	vector<size_t> index = perm;
+	std::vector<size_t> index = perm;
 	for (size_t c = 0; c < nr_class; ++c)
 		shuffle(index.begin() + start[c], index.begin() + start[c] + count[c], rng);
 	
@@ -1074,8 +1073,8 @@ vector<label_type> SVM<K,C_SVC>::CrossValidation(const vector<label_type>& y,
 		auto begin = fold_start;
 		auto end = fold_start + fold_count;
 		
-		View sx(x, vector<size_t>());
-		vector<label_type> sy;
+		View sx(x, std::vector<size_t>());
+		std::vector<label_type> sy;
 		
 		for (size_t j = 0; j < begin; ++j)
 		{
@@ -1100,13 +1099,13 @@ vector<label_type> SVM<K,C_SVC>::CrossValidation(const vector<label_type>& y,
 }
 
 template<KernelType K>
-void SVM<K,C_SVC>::GroupClasses(const vector<label_type>& y,
-	vector<label_type>& label, vector<size_t>& count,
-	vector<size_t>& start, vector<size_t>& perm)
+void SVM<K,C_SVC>::GroupClasses(const std::vector<label_type>& y,
+	std::vector<label_type>& label, std::vector<size_t>& count,
+	std::vector<size_t>& start, std::vector<size_t>& perm)
 {
 	size_t l = y.size();
 	
-	vector<size_t> data_label;
+	std::vector<size_t> data_label;
 	
 	for (auto ly: y)
 	{
@@ -1134,12 +1133,12 @@ void SVM<K,C_SVC>::GroupClasses(const vector<label_type>& y,
 			[](size_t& s) { s = (s == 0 ? 1 : 0); });
 	}
 	
-	start = vector<size_t>(nr_class);
+	start = std::vector<size_t>(nr_class);
 	start[0] = 0;
 	for (size_t i = 1; i < nr_class; ++i)
 		start[i] = start[i - 1] + count[i - 1];
 	
-	perm = vector<size_t>(l);
+	perm = std::vector<size_t>(l);
 	for (size_t i = 0; i < l; ++i)
 	{
 		perm[start[data_label[i]]] = i;
@@ -1152,13 +1151,13 @@ void SVM<K,C_SVC>::GroupClasses(const vector<label_type>& y,
 }
 
 template<KernelType K>
-typename SVMBase<K>::decision_function SVM<K,C_SVC>::TrainOne(const vector<label_type>& y, const Data& x,
+typename SVMBase<K>::decision_function SVM<K,C_SVC>::TrainOne(const std::vector<label_type>& y, const Data& x,
 	double Cp, double Cn)
 {
 	size_t l = x.size();
 	
-	decision_function result = { vector<double>(l, 0) };
-	vector<int8_t> ny(l);
+	decision_function result = { std::vector<double>(l, 0) };
+	std::vector<int8_t> ny(l);
 	
 	transform(y.begin(), y.end(), ny.begin(),
 		[](label_type l) -> int8_t { return l > 0 ? +1 : -1; });
@@ -1172,13 +1171,13 @@ const double tau = 1e-12;
 	Solver<QM> s(Q, eps, tau, this->m_params.C);
 	
 	double obj;
-	tie(result.alpha, result.rho, obj) = s.Solve(y);
+	std::tie(result.alpha, result.rho, obj) = s.Solve(y);
 	
 	if (cif::VERBOSE > 1 and Cp == Cn)
 	{
 		double sum_alpha = accumulate(
 			result.alpha.begin(), result.alpha.end(), 0.0);
-		cout << "nu = " << (sum_alpha / (Cp * l)) << endl;
+		std::cout << "nu = " << (sum_alpha / (Cp * l)) << std::endl;
 	}
 	
 	size_t nSV = 0, nBSV = 0;
@@ -1198,8 +1197,8 @@ const double tau = 1e-12;
 	}
 	
 	if (cif::VERBOSE > 1)
-		cout << "obj = " << obj << ", rho = " << result.rho << endl
-			 << "nSV = " << nSV << ", nBSV = " << nBSV << endl; 
+		std::cout << "obj = " << obj << ", rho = " << result.rho << std::endl
+			 << "nSV = " << nSV << ", nBSV = " << nBSV << std::endl; 
 
 	return result;
 }

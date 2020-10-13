@@ -34,8 +34,6 @@
 #include "DistanceMap.hpp"
 #include "ClipperWrapper.hpp"
 
-using namespace std;
-
 //#define DEBUG_VOOR_BART
 
 namespace mmcif
@@ -43,7 +41,7 @@ namespace mmcif
 
 // --------------------------------------------------------------------
 
-inline ostream& operator<<(ostream& os, const Atom& a)
+inline std::ostream& operator<<(std::ostream& os, const Atom& a)
 {
 	os << a.labelAsymID() << ':' << a.labelSeqID() << '/' << a.labelAtomID();
 	
@@ -57,12 +55,12 @@ clipper::Coord_orth DistanceMap::CalculateOffsetForCell(const Structure& p, cons
 	auto& atoms = p.atoms();
 	size_t dim = atoms.size();
 	
-	vector<clipper::Coord_orth> locations;
+	std::vector<clipper::Coord_orth> locations;
 	locations.reserve(dim);
 	
 	// bounding box
-	Point pMin(numeric_limits<float>::max(), numeric_limits<float>::max(), numeric_limits<float>::max()),
-		  pMax(numeric_limits<float>::min(), numeric_limits<float>::min(), numeric_limits<float>::min());
+	Point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
+		  pMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 	
 	for (auto& atom: atoms)
 	{
@@ -85,7 +83,7 @@ clipper::Coord_orth DistanceMap::CalculateOffsetForCell(const Structure& p, cons
 	};
 	
 	// correct locations so that the median of x, y and z are inside the cell
-	vector<float> c(dim);
+	std::vector<float> c(dim);
 	auto median = [&]()
 	{
 		return dim % 1 == 0
@@ -106,7 +104,7 @@ clipper::Coord_orth DistanceMap::CalculateOffsetForCell(const Structure& p, cons
 	float mz = median();
 
 	if (cif::VERBOSE > 1)
-		cerr << "median position of atoms: " << Point(mx, my, mz) << endl;
+		std::cerr << "median position of atoms: " << Point(mx, my, mz) << std::endl;
 	
 	auto calculateD = [&](float m, float c)
 	{
@@ -124,7 +122,7 @@ clipper::Coord_orth DistanceMap::CalculateOffsetForCell(const Structure& p, cons
 	Point D;
 
 	if (cell.a() == 0 or cell.b() == 0 or cell.c() == 0)
-		throw runtime_error("Invalid cell, contains a dimension that is zero");
+		throw std::runtime_error("Invalid cell, contains a dimension that is zero");
 
 	D.mX = calculateD(mx, cell.a());
 	D.mY = calculateD(my, cell.b());
@@ -133,7 +131,7 @@ clipper::Coord_orth DistanceMap::CalculateOffsetForCell(const Structure& p, cons
 	if (D.mX != 0 or D.mY != 0 or D.mZ != 0)
 	{
 		if (cif::VERBOSE)
-			cerr << "moving coorinates by " << D.mX << ", " << D.mY << " and " << D.mZ << endl;
+			std::cerr << "moving coorinates by " << D.mX << ", " << D.mY << " and " << D.mZ << std::endl;
 	}
 
 	return D;	
@@ -141,10 +139,10 @@ clipper::Coord_orth DistanceMap::CalculateOffsetForCell(const Structure& p, cons
 
 // --------------------------------------------------------------------
 
-vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spacegroup& spacegroup,
+std::vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spacegroup& spacegroup,
 	const clipper::Cell& cell)
 {
-	vector<clipper::RTop_orth> result;
+	std::vector<clipper::RTop_orth> result;
 	
 	// to make the operation at index 0 equal to identity
 	result.push_back(clipper::RTop_orth::identity());
@@ -164,7 +162,7 @@ vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spacegro
 							symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w)
 						).rtop_orth(cell);
 
-					result.push_back(move(rtop));
+					result.push_back(std::move(rtop));
 				}
 	}
 	
@@ -180,11 +178,11 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	auto& atoms = p.atoms();
 	dim = atoms.size();
 	
-	vector<clipper::Coord_orth> locations(dim);
+	std::vector<clipper::Coord_orth> locations(dim);
 	
 	// bounding box
-	Point pMin(numeric_limits<float>::max(), numeric_limits<float>::max(), numeric_limits<float>::max()),
-		  pMax(numeric_limits<float>::min(), numeric_limits<float>::min(), numeric_limits<float>::min());
+	Point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
+		  pMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 	
 	for (auto& atom: atoms)
 	{
@@ -212,7 +210,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	};
 	
 	// correct locations so that the median of x, y and z are inside the cell
-	vector<float> c(locations.size());
+	std::vector<float> c(locations.size());
 	auto median = [&]()
 	{
 		return dim % 1 == 0
@@ -233,7 +231,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	float mz = median();
 
 	if (cif::VERBOSE > 1)
-		cerr << "median position of atoms: " << Point(mx, my, mz) << endl;
+		std::cerr << "median position of atoms: " << Point(mx, my, mz) << std::endl;
 	
 	auto calculateD = [&](float m, float c)
 	{
@@ -254,7 +252,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	if (mD.mX != 0 or mD.mY != 0 or mD.mZ != 0)
 	{
 		if (cif::VERBOSE)
-			cerr << "moving coorinates by " << mD.mX << ", " << mD.mY << " and " << mD.mZ << endl;
+			std::cerr << "moving coorinates by " << mD.mX << ", " << mD.mY << " and " << mD.mZ << std::endl;
 		
 		for_each(locations.begin(), locations.end(), [&](auto& p) { p += mD; });
 	}
@@ -266,7 +264,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	
 	DistMap dist;
 	
-	vector<const Residue*> residues;
+	std::vector<const Residue*> residues;
 	residues.reserve(p.residues().size());
 	for (auto& r: p.residues())
 	{
@@ -276,7 +274,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 		AddDistancesForAtoms(r, r, dist, 0);
 	}
 	
-	cif::Progress progress(residues.size() * residues.size(), "Creating distance map");
+	cif::Progress progress(residues.size() * residues.size(), "Creating distance std::map");
 	
 	for (size_t i = 0; i + 1 < residues.size(); ++i)
 	{
@@ -284,7 +282,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 		
 		Point centerI;
 		float radiusI;
-		tie(centerI, radiusI) = ri.centerAndRadius();
+		std::tie(centerI, radiusI) = ri.centerAndRadius();
 		
 		for (size_t j = i + 1; j < residues.size(); ++j)
 		{
@@ -296,7 +294,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 			
 			Point centerJ;
 			float radiusJ;
-			tie(centerJ, radiusJ) = rj.centerAndRadius();
+			std::tie(centerJ, radiusJ) = rj.centerAndRadius();
 			
 			auto d = Distance(centerI, centerJ) - radiusI - radiusJ;
 			if (d < mMaxDistance)
@@ -345,7 +343,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	for (auto& di: dist)
 	{
 		size_t c, r;
-		tie(r, c) = di.first;
+		std::tie(r, c) = di.first;
 
 		if (r != lastR)	// new row
 		{
@@ -389,8 +387,8 @@ void DistanceMap::AddDistancesForAtoms(const Residue& a, const Residue& b, DistM
 
 			size_t ixb = index[bb.id()];
 
-			dm[make_tuple(ixa, ixb)] = make_tuple(d, rtix);
-			dm[make_tuple(ixb, ixa)] = make_tuple(d, -rtix);
+			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, rtix);
+			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, -rtix);
 		}
 	}
 }
@@ -403,18 +401,18 @@ float DistanceMap::operator()(const Atom& a, const Atom& b) const
 	{
 		ixa = index.at(a.id());
 	}
-	catch (const out_of_range& ex)
+	catch (const std::out_of_range& ex)
 	{
-		throw runtime_error("atom " + a.id() + " not found in distance map");
+		throw std::runtime_error("atom " + a.id() + " not found in distance std::map");
 	}
 		
 	try
 	{
 		ixb = index.at(b.id());
 	}
-	catch (const out_of_range& ex)
+	catch (const std::out_of_range& ex)
 	{
-		throw runtime_error("atom " + b.id() + " not found in distance map");
+		throw std::runtime_error("atom " + b.id() + " not found in distance std::map");
 	}
 	
 //	if (ixb < ixa)
@@ -428,7 +426,7 @@ float DistanceMap::operator()(const Atom& a, const Atom& b) const
 		size_t i = (L + R) / 2;
 
 		if (mJA[i] == ixb)
-			return get<0>(mA[i]);
+			return std::get<0>(mA[i]);
 
 		if (mJA[i] < ixb)
 			L = i + 1;
@@ -439,29 +437,29 @@ float DistanceMap::operator()(const Atom& a, const Atom& b) const
 	return 100.f;
 }
 
-vector<Atom> DistanceMap::near(const Atom& a, float maxDistance) const
+std::vector<Atom> DistanceMap::near(const Atom& a, float maxDistance) const
 {
 	assert(maxDistance <= mMaxDistance);
 	if (maxDistance > mMaxDistance)
-		throw runtime_error("Invalid max distance in DistanceMap::near");
+		throw std::runtime_error("Invalid max distance in DistanceMap::near");
 	
 	size_t ixa;
 	try
 	{
 		ixa = index.at(a.id());
 	}
-	catch (const out_of_range& ex)
+	catch (const std::out_of_range& ex)
 	{
-		throw runtime_error("atom " + a.id() + " not found in distance map");
+		throw std::runtime_error("atom " + a.id() + " not found in distance std::map");
 	}
 
-	vector<Atom> result;
+	std::vector<Atom> result;
 	
 	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
 	{
 		float d;
 		int32_t rti;
-		tie(d, rti) = mA[i];
+		std::tie(d, rti) = mA[i];
 
 		if (d > maxDistance)
 			continue;

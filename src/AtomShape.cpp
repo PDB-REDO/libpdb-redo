@@ -37,7 +37,6 @@
 
 #include <newuoa.h>
 
-using namespace std;
 
 namespace mmcif
 {
@@ -165,14 +164,14 @@ class DensityIntegration
 
 	static DensityIntegration& instance(float resolutionLow, float resolutionHigh);
 
-	double integrateRadius(float perc, float occupancy, double yi, const vector<double>& fst) const;
-	double integrateDensity(double r, int ks, const vector<double>& fst) const;
+	double integrateRadius(float perc, float occupancy, double yi, const std::vector<double>& fst) const;
+	double integrateDensity(double r, int ks, const std::vector<double>& fst) const;
 	
 	float a() const								{ return mA; }
 	float b() const								{ return mB; }
-	const vector<double>&	st() const			{ return mST; }
-	const vector<double>&	sts() const			{ return mSTS; }
-	const vector<double>&	wa() const			{ return mWA; }
+	const std::vector<double>&	st() const		{ return mST; }
+	const std::vector<double>&	sts() const		{ return mSTS; }
+	const std::vector<double>&	wa() const		{ return mWA; }
 		
   private:
 
@@ -180,16 +179,16 @@ class DensityIntegration
 	int		mM;
 
 	// Gauss-Legendre quadrature weights and abscissae
-	vector<double>	mWA, mST, mSTS;
-	static list<DensityIntegration>	sInstances;
+	std::vector<double>	mWA, mST, mSTS;
+	static std::list<DensityIntegration>	sInstances;
 };
 
-list<DensityIntegration> DensityIntegration::sInstances;
+std::list<DensityIntegration> DensityIntegration::sInstances;
 
 DensityIntegration& DensityIntegration::instance(float resolutionLow, float resolutionHigh)
 {
-	static mutex m;
-	lock_guard<mutex> lock(m);
+	static std::mutex m;
+	std::lock_guard lock(m);
 	
 	float a = 0.5f / resolutionLow, b = 0.5f / resolutionHigh;
 
@@ -220,9 +219,9 @@ DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh
 	double xh = .5 * xr;
 	double xm = 0.5 * (mB + mA);
 
-	mWA = vector<double>(N, 0);
-	mST = vector<double>(N, 0);
-	mSTS = vector<double>(N, 0);
+	mWA = std::vector<double>(N, 0);
+	mST = std::vector<double>(N, 0);
+	mSTS = std::vector<double>(N, 0);
 	
 	for (int i = 1, j = N; i <= mM; ++i, --j)
 	{
@@ -261,7 +260,7 @@ DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh
 // Calculate Radius integral over r of calculated density
 // code inspired by radint.f in edstats
 
-double DensityIntegration::integrateDensity(double r, int ks, const vector<double>& fst) const
+double DensityIntegration::integrateDensity(double r, int ks, const std::vector<double>& fst) const
 {
 	double y = 0;
 	
@@ -284,7 +283,7 @@ double DensityIntegration::integrateDensity(double r, int ks, const vector<doubl
 	return ks * y;
 }
 
-double DensityIntegration::integrateRadius(float perc, float occupancy, double yi, const vector<double>& fst) const
+double DensityIntegration::integrateRadius(float perc, float occupancy, double yi, const std::vector<double>& fst) const
 {
 	double yt = perc * 0.25 * mmcif::kPI * occupancy * yi;
 	double initialValue = 0.25;
@@ -374,7 +373,7 @@ struct AtomShapeImpl
 		auto wa = mIntegrator.wa();
 		
 		mYi = 0;
-		mFst = vector<double>(st.size(), 0);
+		mFst = std::vector<double>(st.size(), 0);
 	
 		auto& D = 
 			mElectronScattering ? AtomTypeTraits(symbol).elsf() : AtomTypeTraits(symbol).wksf(charge);
@@ -419,7 +418,7 @@ struct AtomShapeImpl
 
 	const DensityIntegration&	mIntegrator;
 	double				mYi;
-	vector<double>		mFst;
+	std::vector<double>	mFst;
 	float				mAW[6], mBW[6];
 	
 	float integratedRadius(float perc) const
@@ -493,7 +492,7 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 	}
 	
 	clipper::U_aniso_orth mAnisoU;
-	array<clipper::Mat33sym<>,6> mAnisoInv;
+	std::array<clipper::Mat33sym<>,6> mAnisoInv;
 };
 	
 // --------------------------------------------------------------------

@@ -40,7 +40,6 @@
 #include "cif++/Structure.hpp"
 #include "cif++/TlsParser.hpp"
 
-using namespace std;
 namespace po = boost::program_options;
 namespace ba = boost::algorithm;
 namespace fs = std::filesystem;
@@ -52,8 +51,8 @@ int pr_main(int argc, char* argv[])
 {
 	po::options_description visible_options("available tls-interpreter options");
 	visible_options.add_options()
-		("input,i",		po::value<string>(),	"Input PDB or mmCIF file. Can be compressed.")
-		("output,o",	po::value<string>(),	"Output file, will write mmCIF unless extension is .pdb. Add .gz or .bz2 extension to create compressed file.")
+		("input,i",		po::value<std::string>(),	"Input PDB or mmCIF file. Can be compressed.")
+		("output,o",	po::value<std::string>(),	"Output file, will write mmCIF unless extension is .pdb. Add .gz or .bz2 extension to create compressed file.")
 
 		("mmcif-namespace",						"By default the TLS specification is interpreted as being in PDB namespace, with this option you can interpret the TLS specification as begin in mmCIF namespace")
 
@@ -78,15 +77,15 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("input") == 0)
 	{
-		cout << "Usage: tls-interpreter [options] input-file [output-file]" << endl
-			 << endl
-			 << visible_options << endl;
+		std::cout << "Usage: tls-interpreter [options] input-file [output-file]" << std::endl
+			 << std::endl
+			 << visible_options << std::endl;
 		exit(1);
 	}
 
@@ -96,90 +95,90 @@ int pr_main(int argc, char* argv[])
 
 	bool cifNamespace = vm.count("mmcif-namespace") != 0;
 
-	fs::path input = vm["input"].as<string>();
+	fs::path input = vm["input"].as<std::string>();
 	c::File pdb(input);
 //	c::structure structure(pdb, 1);
 	
 	auto& db = pdb.data();
 	
-	string program;
+	std::string program;
 	
 	for (auto p: db["software"].find(cif::Key("classification") == "refinement"))
 	{
-		program = p["name"].as<string>();
+		program = p["name"].as<std::string>();
 		break;
 	}
 
 	if (program.empty())
-		cout << "No program specified when looking for _software.name with classification == refinement" << endl;
+		std::cout << "No program specified when looking for _software.name with classification == refinement" << std::endl;
 	else
-		cout << "Parsing selection details for program " << program << endl;
+		std::cout << "Parsing selection details for program " << program << std::endl;
 	
 	uint32_t group_id = 1;
 
 	for (auto tls: db["pdbx_refine_tls"])
 	{
-		string refine_id, refine_tls_id;
+		std::string refine_id, refine_tls_id;
 		
 		cif::tie(refine_id, refine_tls_id) = tls.get("pdbx_refine_id", "id");
 
-		std::vector<tuple<std::string,int,int>> ranges;
+		std::vector<std::tuple<std::string,int,int>> ranges;
 		
 		for (auto t: db["pdbx_refine_tls_group"].find(cif::Key("refine_tls_id") == refine_tls_id))
 		{
-			string selection = t["selection_details"].as<string>();
+			std::string selection = t["selection_details"].as<std::string>();
 			
 			if (selection.empty())
 				continue;
 
 			if (t["beg_auth_asym_id"].empty() == false)
 			{
-				cout << "beg_auth_asym_id already filled in, ignoring" << endl;
+				std::cout << "beg_auth_asym_id already filled in, ignoring" << std::endl;
 				continue;
 			}
 
-			cout << " --> " << selection << endl;
+			std::cout << " --> " << selection << std::endl;
 		
 			auto s = cif::ParseSelectionDetails(program, selection);
 	
 			if (s == nullptr)
 			{
-				cerr << "Unable to parse" << endl
-					 << endl;
+				std::cerr << "Unable to parse" << std::endl
+					 << std::endl;
 				
 				continue;
 			}
 
 			for (auto r: s->GetRanges(db, not cifNamespace))
 			{
-				string chainID;
+				std::string chainID;
 				int from, to;
-				tie(chainID, from, to) = r;
+				std::tie(chainID, from, to) = r;
 				
-				cout << "RANGE  '" << chainID;
+				std::cout << "RANGE  '" << chainID;
 				
 				if (from == cif::kNoSeqNum)
-					cout << "    ";
+					std::cout << "    ";
 				else
-					cout << setw(4) << from;
+					std::cout << std::setw(4) << from;
 				
-				cout << ".' '" << chainID;
+				std::cout << ".' '" << chainID;
 				
 				if (to == cif::kNoSeqNum)
-					cout << "    ";
+					std::cout << "    ";
 				else
-					cout << setw(4) << to;
-				cout << ".' ALL" << endl;
+					std::cout << std::setw(4) << to;
+				std::cout << ".' ALL" << std::endl;
 				
 				ranges.push_back(r);
 			}
 			
-			cout << endl;
+			std::cout << std::endl;
 		}
 		
 		if (ranges.empty())
 		{
-			cout << "Empty range for TLS " << refine_tls_id << endl;
+			std::cout << "Empty range for TLS " << refine_tls_id << std::endl;
 			continue;
 		}
 
@@ -187,25 +186,25 @@ int pr_main(int argc, char* argv[])
 		
 		for (auto r: ranges)
 		{
-			string asym_id;
+			std::string asym_id;
 			int from, to;
 			
-			tie(asym_id, from, to) = r;
+			std::tie(asym_id, from, to) = r;
 
-			string from_s, to_s;
+			std::string from_s, to_s;
 			if (from != cif::kNoSeqNum)
-				from_s = to_string(from);
+				from_s = std::to_string(from);
 			else	
 				from_s = ".";
 			
 			if (to != cif::kNoSeqNum)
-				to_s = to_string(to);
+				to_s = std::to_string(to);
 			else
 				to_s = ".";
 
 			db["pdbx_refine_tls_group"].emplace({
 				{ "pdbx_refine_id", refine_id },
-				{ "id", "id_" + to_string(group_id++) },
+				{ "id", "id_" + std::to_string(group_id++) },
 				{ "refine_tls_id", refine_tls_id },
 				{ "beg_label_asym_id", asym_id },
 				{ "beg_label_seq_id", from_s },
@@ -216,7 +215,7 @@ int pr_main(int argc, char* argv[])
 	}
 	
 	if (vm.count("output"))
-		pdb.save(vm["output"].as<string>());
+		pdb.save(vm["output"].as<std::string>());
 	
 	return 0;
 }

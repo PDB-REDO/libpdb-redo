@@ -30,7 +30,6 @@
 
 #include "cif++/Point.hpp"
 
-using namespace std;
 
 namespace mmcif
 {

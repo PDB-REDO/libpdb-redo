@@ -46,7 +46,6 @@
 #include "cif++/Compound.hpp"
 #include "cif++/Structure.hpp"
 
-using namespace std;
 namespace po = boost::program_options;
 namespace ba = boost::algorithm;
 namespace fs = std::filesystem;
@@ -54,18 +53,18 @@ namespace io = boost::iostreams;
 namespace c = mmcif;
 namespace zx = zeep::xml;
 
-void SwapFields(cif::Row& r, string fld1, string fld2)
+void SwapFields(cif::Row& r, std::string fld1, std::string fld2)
 {
-	string v = r[fld1].as<string>();
-	r[fld1] = r[fld2].as<string>();
+	std::string v = r[fld1].as<std::string>();
+	r[fld1] = r[fld2].as<std::string>();
 	r[fld2] = v;
 }
 
 // returns <asymId,compId,seqId>
-tuple<string,string,string> MapResidue(cif::Datablock& db, string chainID,
-	string compID, int seqNum, string iCode)
+std::tuple<std::string,std::string,std::string> MapResidue(cif::Datablock& db, std::string chainID,
+	std::string compID, int seqNum, std::string iCode)
 {
-	string asymId, compId, seqId;
+	std::string asymId, compId, seqId;
 
 	auto r = db["pdbx_poly_seq_scheme"][
 		cif::Key("pdb_strand_id") == chainID and
@@ -84,19 +83,19 @@ tuple<string,string,string> MapResidue(cif::Datablock& db, string chainID,
 			cif::Key("pdb_ins_code") == iCode];
 
 		if (r.empty())
-			throw runtime_error("Could not map residue " + chainID + to_string(seqNum) + iCode);
+			throw std::runtime_error("Could not std::map residue " + chainID + std::to_string(seqNum) + iCode);
 		
 		cif::tie(asymId, compId) = r.get("asym_id", "mon_id");
 	}
 
-	return make_tuple(asymId, compId, seqId);
+	return std::make_tuple(asymId, compId, seqId);
 }
 
 // returns <chainID,compId,seqNum,iCode>
-tuple<char,string,int,char> MapBackResidue(cif::Datablock& db, string asymId,
-	string compId, string seqId)
+std::tuple<char,std::string,int,char> MapBackResidue(cif::Datablock& db, std::string asymId,
+	std::string compId, std::string seqId)
 {
-	string chainID, iCode;
+	std::string chainID, iCode;
 	int seqNum;
 
 	auto r = db["pdbx_poly_seq_scheme"][
@@ -114,29 +113,29 @@ tuple<char,string,int,char> MapBackResidue(cif::Datablock& db, string asymId,
 			cif::Key("seq_id") == seqId];
 
 		if (r.empty())
-			throw runtime_error("Could not map residue " + asymId + ":" + seqId);
+			throw std::runtime_error("Could not std::map residue " + asymId + ":" + seqId);
 		
 		cif::tie(chainID, compId, seqNum, iCode) =
 			r.get("pdb_strand_id", "pdb_mon_id", "pdb_seq_num", "pdb_ins_code");
 	}
 
-	return make_tuple(chainID[0], compId, seqNum, iCode[0] ? iCode[0] : ' ');
+	return std::make_tuple(chainID[0], compId, seqNum, iCode[0] ? iCode[0] : ' ');
 }
 
 // returns <atomId,asymId,monId,seqId>
-tuple<string,string,string,string> MapAtom(cif::Datablock& db, string PDB_atomStr)
+std::tuple<std::string,std::string,std::string,std::string> MapAtom(cif::Datablock& db, std::string PDB_atomStr)
 {
-	string atomId = PDB_atomStr.substr(0, 4);		ba::trim(atomId);
-	string monId = PDB_atomStr.substr(5, 3);		ba::trim(monId);
-	string chainId = PDB_atomStr.substr(9, 1);
+	std::string atomId = PDB_atomStr.substr(0, 4);		ba::trim(atomId);
+	std::string monId = PDB_atomStr.substr(5, 3);		ba::trim(monId);
+	std::string chainId = PDB_atomStr.substr(9, 1);
 	int seqNum = stoi(PDB_atomStr.substr(10, 4));
-	string insCode = PDB_atomStr.substr(14, 1);	ba::trim(insCode);
+	std::string insCode = PDB_atomStr.substr(14, 1);	ba::trim(insCode);
 	
-	string asymId, seqId;
+	std::string asymId, seqId;
 	
-	tie(asymId, monId, seqId) = MapResidue(db, chainId, monId, seqNum, insCode);
+	std::tie(asymId, monId, seqId) = MapResidue(db, chainId, monId, seqNum, insCode);
 	
-	return make_tuple(atomId, asymId, monId, seqId);
+	return std::make_tuple(atomId, asymId, monId, seqId);
 }
 
 
@@ -146,7 +145,7 @@ int pr_main(int argc, char* argv[])
 	
 	po::options_description visible_options("flipper " + VERSION_STRING + " [options] file]" );
 	visible_options.add_options()
-		("output,o",	po::value<string>(),	"The output file")
+		("output,o",	po::value<std::string>(),	"The output file")
 
 		("dict",		po::value<std::vector<std::string>>(),
 												"Dictionary file containing restraints for residues in this specific target, can be specified multiple times.")
@@ -158,7 +157,7 @@ int pr_main(int argc, char* argv[])
 
 	po::options_description hidden_options("hidden options");
 	hidden_options.add_options()
-		("input,i",		po::value<string>(),	"Input files")
+		("input,i",		po::value<std::string>(),	"Input files")
 		("debug,d",		po::value<int>(),		"Debug level (for even more verbose output)");
 
 	po::options_description cmdline_options;
@@ -186,13 +185,13 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("input") == 0)
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(1);
 	}
 
@@ -210,19 +209,19 @@ int pr_main(int argc, char* argv[])
 
 	// --------------------------------------------------------------------
 
-	fs::path input = vm["input"].as<string>();
+	fs::path input = vm["input"].as<std::string>();
 	c::File pdb(input);
 	c::Structure structure(pdb);
 	
 	auto& db = pdb.data();
 
-	const set<string> kDEFY{"TYR", "PHE", "ASP", "GLU"};
+	const std::set<std::string> kDEFY{"TYR", "PHE", "ASP", "GLU"};
 
 	for (auto& poly: structure.polymers())
 	{
 		for (auto& res: poly)
 		{
-			string resType = res.compoundID();
+			std::string resType = res.compoundID();
 
 			if (not kDEFY.count(resType))
 				continue;
@@ -246,7 +245,7 @@ int pr_main(int argc, char* argv[])
 			
 			//
 
-			cerr << "Need to flip " << res.compoundID() << ' ' << res.asymID() << ':' << res.seqID() << endl;
+			std::cerr << "Need to flip " << res.compoundID() << ' ' << res.asymID() << ':' << res.seqID() << std::endl;
 			
 			if (resType == "TYR" or resType == "PHE")
 			{
@@ -290,8 +289,8 @@ int pr_main(int argc, char* argv[])
 
 		if (d == 0)
 		{
-			string asymIDa = a["label_asym_id"].as<string>();
-			string asymIDb = b["label_asym_id"].as<string>();
+			std::string asymIDa = a["label_asym_id"].as<std::string>();
+			std::string asymIDb = b["label_asym_id"].as<std::string>();
 
 			d = asymIDa.length() - asymIDb.length();
 			if (d == 0)
@@ -307,8 +306,8 @@ int pr_main(int argc, char* argv[])
 
 		if (d == 0)
 		{
-			string asymIDa = a["label_asym_id"].as<string>();
-			string asymIDb = b["label_asym_id"].as<string>();
+			std::string asymIDa = a["label_asym_id"].as<std::string>();
+			std::string asymIDb = b["label_asym_id"].as<std::string>();
 			d = asymIDa.compare(asymIDb);
 		}
 
@@ -320,7 +319,7 @@ int pr_main(int argc, char* argv[])
 	{
 		
 		
-		pdb.save(vm["output"].as<string>());
+		pdb.save(vm["output"].as<std::string>());
 	}
 
 	return result;

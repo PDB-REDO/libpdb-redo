@@ -51,7 +51,6 @@
 
 #include "ResolutionCalculator.hpp"
 
-using namespace std;
 namespace po = boost::program_options;
 namespace ba = boost::algorithm;
 namespace fs = std::filesystem;
@@ -71,9 +70,9 @@ struct s1
 		: val(db[fld].as<float>()), w(w), p(p) {}
 };
 
-ostream& operator<<(ostream& os, const s1& v)
+std::ostream& operator<<(std::ostream& os, const s1& v)
 {
-	os << fixed << right << setw(v.w) << setprecision(v.p) << v.val;
+	os << std::fixed << std::right << std::setw(v.w) << std::setprecision(v.p) << v.val;
 	return os;
 };
 
@@ -88,16 +87,16 @@ int pr_main(int argc, char* argv[])
 		("help,h",								"Display help message")
 		("version",								"Print version")
 		("verbose,v",							"Verbose output")
-		("output,o",	po::value<string>(),	"The output file, default is stdout")
-		("tls-out",		po::value<string>(),	"Name for the TLS file to create, default is calculated based on input file")
-		("pdb-redo-data",po::value<string>(),	"The PDB-REDO dat file" /*, default is the built in one"*/)
-		("dict",		po::value<string>(),	"Dictionary file containing restraints for residues in this specific target")
+		("output,o",	po::value<std::string>(),	"The output file, default is stdout")
+		("tls-out",		po::value<std::string>(),	"Name for the TLS file to create, default is calculated based on input file")
+		("pdb-redo-data",po::value<std::string>(),	"The PDB-REDO dat file" /*, default is the built in one"*/)
+		("dict",		po::value<std::string>(),	"Dictionary file containing restraints for residues in this specific target")
 		;
 
 	po::options_description hidden_options("hidden options");
 	hidden_options.add_options()
-		("coordinates",	po::value<string>(),	"Coordinates file")
-		("reflections",	po::value<string>(),	"Reflections file")
+		("coordinates",	po::value<std::string>(),	"Coordinates file")
+		("reflections",	po::value<std::string>(),	"Reflections file")
 		("debug,d",		po::value<int>(),		"Debug level (for even more verbose output)");
 
 	po::options_description cmdline_options;
@@ -113,22 +112,22 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("coordinates") == 0 or vm.count("reflections") == 0)
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(1);
 	}
 	
 	fs::path pdbRedoDataFile = "pdb-redo-data.cif";
 	if (vm.count("pdb-redo-data"))
-		pdbRedoDataFile = vm["pdb-redo-data"].as<string>();
+		pdbRedoDataFile = vm["pdb-redo-data"].as<std::string>();
 	std::ifstream pdbRedoData(pdbRedoDataFile);
 	if (not pdbRedoData.is_open())
-		throw runtime_error("Could not open pdb-redo-data file");
+		throw std::runtime_error("Could not open pdb-redo-data file");
 	cif::File pdbRedoDataCif(pdbRedoData);
 	auto& redoDB = pdbRedoDataCif["PDB_REDO_DAT"];
 
@@ -139,25 +138,25 @@ int pr_main(int argc, char* argv[])
 	// Load dict, if any
 	
 	if (vm.count("dict"))
-		c::CompoundFactory::instance().pushDictionary(vm["dict"].as<string>());
+		c::CompoundFactory::instance().pushDictionary(vm["dict"].as<std::string>());
 
 	// Input coordinates file
 	
-	fs::path coordinates = vm["coordinates"].as<string>();
+	fs::path coordinates = vm["coordinates"].as<std::string>();
 	c::File coordFile(coordinates);
 	c::Structure structure(coordFile, 1);
 	auto& coord = coordFile.data();
 	
-	string entryId = coord["entry"].front()["id"].as<string>();
+	std::string entryId = coord["entry"].front()["id"].as<std::string>();
 	if (entryId.empty())
 	{
 		coordFile.save("/tmp/dump.cif");
-		throw runtime_error("Missing _entry.id in coordinates file");
+		throw std::runtime_error("Missing _entry.id in coordinates file");
 	}
 	
 	// Input reflections file
 	
-	fs::path reflections = vm["reflections"].as<string>();
+	fs::path reflections = vm["reflections"].as<std::string>();
 	cif::File reflnFile;
 	reflnFile.load(reflections);
 	auto& refln = reflnFile.firstDatablock();
@@ -169,7 +168,7 @@ int pr_main(int argc, char* argv[])
 	
 	fs::path outputStem = coordinatesFileName.stem();
 	if (vm.count("output") > 0)
-		outputStem = vm["output"].as<string>();
+		outputStem = vm["output"].as<std::string>();
 	
 	fs::path output = outputStem;
 	output += ".extracted";
@@ -179,7 +178,7 @@ int pr_main(int argc, char* argv[])
 	tlsout += ".tls";
 	
 	if (vm.count("tls-out"))
-		tlsout = vm["tls-out"].as<string>();
+		tlsout = vm["tls-out"].as<std::string>();
 	
 	std::ofstream tlsoutFile(tlsout);
 	
@@ -205,21 +204,21 @@ int pr_main(int argc, char* argv[])
 
 	auto refine = coord["refine"][cif::Key("entry_id") == entryId];
 	if (refine.empty())
-		throw runtime_error("No refinement data found");
+		throw std::runtime_error("No refinement data found");
 	
 	double reso, hires = 99, lowres = 0;
 	cif::tie(reso, hires, lowres) = refine.get("ls_d_res_high", "ls_d_res_high", "ls_d_res_low");
 	
-	string spacegroup = coord["symmetry"]
+	std::string spacegroup = coord["symmetry"]
 		[cif::Key("entry_id") == entryId]
-		["space_group_name_H-M"].as<string>();
+		["space_group_name_H-M"].as<std::string>();
 	
 	if (spacegroup == "P 1-")
 		spacegroup = "P -1";
 	else if (spacegroup == "P 21 21 2 A")
 		spacegroup = "P 21 21 2 (a)";
 	else if (spacegroup.empty())
-		throw runtime_error("No spacegroup, cannot continue");
+		throw std::runtime_error("No spacegroup, cannot continue");
 	
 	float wavelength = 0;
 	for (auto s: coord["diffrn_source"])
@@ -266,8 +265,8 @@ int pr_main(int argc, char* argv[])
 	for (auto fld: { "_refine.ls_R_factor_R_work", "_refine.ls_R_factor_obs",
 		"_pdbx_refine.R_factor_obs_no_cutoff", "_pdbx_refine.R_factor_obs_4sig_cutoff" })
 	{
-		string category, tag;
-		tie(category, tag) = cif::splitTagName(fld);
+		std::string category, tag;
+		std::tie(category, tag) = cif::splitTagName(fld);
 		
 		auto r = coord[category][cif::Key("entry_id") == entryId];
 		
@@ -280,8 +279,8 @@ int pr_main(int argc, char* argv[])
 		
 	for (auto fld: { "_refine.ls_R_factor_R_free" })
 	{
-		string category, tag;
-		tie(category, tag) = cif::splitTagName(fld);
+		std::string category, tag;
+		std::tie(category, tag) = cif::splitTagName(fld);
 		
 		auto r = coord[category][cif::Key("entry_id") == entryId];
 		
@@ -307,10 +306,10 @@ int pr_main(int argc, char* argv[])
 	double bAvg = bTotal / count;
 	
 	// refinement program
-	string program;
+	std::string program;
 	for (auto p: coord["software"].find(cif::Key("classification") == "refinement"))
 	{
-		program = p["name"].as<string>();
+		program = p["name"].as<std::string>();
 		break;
 	}
 
@@ -338,16 +337,16 @@ int pr_main(int argc, char* argv[])
 	
 	for (auto tls: coord["pdbx_refine_tls"])
 	{
-		string refineTlsId = tls["id"].as<string>();
+		std::string refineTlsId = tls["id"].as<std::string>();
 		
-		stringstream tlsGroup;
+		std::stringstream tlsGroup;
 
 		bool hasRanges = false;
-		tlsGroup << "TLS    Group " << setw(3) << right << refineTlsId << endl; 
+		tlsGroup << "TLS    Group " << std::setw(3) << std::right << refineTlsId << std::endl; 
 
 		for (auto t: coord["pdbx_refine_tls_group"].find(cif::Key("refine_tls_id") == refineTlsId))
 		{
-			string selectionDetails = t["selection_details"].as<string>();
+			std::string selectionDetails = t["selection_details"].as<std::string>();
 
 			if (not selectionDetails.empty())
 			{
@@ -358,11 +357,11 @@ int pr_main(int argc, char* argv[])
 				
 				for (auto r: s->GetRanges(coord, true))
 				{
-					string chainID;
+					std::string chainID;
 					int from, to;
-					tie(chainID, from, to) = r;
+					std::tie(chainID, from, to) = r;
 					
-					tlsGroup << "RANGE  '" << chainID << setw(4) << from << ".' '" << chainID << setw(4) << to << ".' ALL" << endl;
+					tlsGroup << "RANGE  '" << chainID << std::setw(4) << from << ".' '" << chainID << std::setw(4) << to << ".' ALL" << std::endl;
 
 					hasRanges = true;
 				}
@@ -372,20 +371,20 @@ int pr_main(int argc, char* argv[])
 			
 			// collect the auth based range, not the label one. 
 			
-			string begAsymId, endAsymId;
+			std::string begAsymId, endAsymId;
 			int begSeqId, endSeqId;
 			
 			cif::tie(begAsymId, begSeqId, endAsymId, endSeqId)
 				= t.get("beg_auth_asym_id", "beg_auth_seq_id", "end_auth_asym_id", "end_auth_seq_id");
 				
-			tlsGroup << "RANGE  '" << begAsymId << setw(4) << begSeqId << ".' '" << endAsymId << setw(4) << endSeqId << ".' ALL" << endl;
+			tlsGroup << "RANGE  '" << begAsymId << std::setw(4) << begSeqId << ".' '" << endAsymId << std::setw(4) << endSeqId << ".' ALL" << std::endl;
 			hasRanges = true;
 		}
 		
 		if (not hasRanges)
 		{
 			if (cif::VERBOSE)
-				cout << "Skipping TLS group " << refineTlsId << " since selection is empty" << endl;
+				std::cout << "Skipping TLS group " << refineTlsId << " since selection is empty" << std::endl;
 			
 			continue;
 		}
@@ -395,15 +394,15 @@ int pr_main(int argc, char* argv[])
 		
 		tlsoutFile << tlsGroup.str();
 		
-		tlsoutFile << "ORIGIN " << s1(tls, "origin_x") << ' ' << s1(tls, "origin_y") << ' ' << s1(tls, "origin_z") << endl
-				   << "T   " << s1(tls, "T[1][1]") << ' ' << s1(tls, "T[2][2]") << ' ' << s1(tls, "T[3][3]") << ' ' << s1(tls, "T[1][2]") << ' ' << s1(tls, "T[1][3]") << ' ' << s1(tls, "T[2][3]") << endl
-				   << "L   " << s1(tls, "L[1][1]") << ' ' << s1(tls, "L[2][2]") << ' ' << s1(tls, "L[3][3]") << ' ' << s1(tls, "L[1][2]") << ' ' << s1(tls, "L[1][3]") << ' ' << s1(tls, "L[2][3]") << endl 
-				   << "S   " << fixed << right << setw(9) << setprecision(4) << s22ms11 << ' '
-				   			 << fixed << right << setw(9) << setprecision(4) << s11ms33 << ' '
+		tlsoutFile << "ORIGIN " << s1(tls, "origin_x") << ' ' << s1(tls, "origin_y") << ' ' << s1(tls, "origin_z") << std::endl
+				   << "T   " << s1(tls, "T[1][1]") << ' ' << s1(tls, "T[2][2]") << ' ' << s1(tls, "T[3][3]") << ' ' << s1(tls, "T[1][2]") << ' ' << s1(tls, "T[1][3]") << ' ' << s1(tls, "T[2][3]") << std::endl
+				   << "L   " << s1(tls, "L[1][1]") << ' ' << s1(tls, "L[2][2]") << ' ' << s1(tls, "L[3][3]") << ' ' << s1(tls, "L[1][2]") << ' ' << s1(tls, "L[1][3]") << ' ' << s1(tls, "L[2][3]") << std::endl 
+				   << "S   " << std::fixed << std::right << std::setw(9) << std::setprecision(4) << s22ms11 << ' '
+				   			 << std::fixed << std::right << std::setw(9) << std::setprecision(4) << s11ms33 << ' '
 				   			 << s1(tls, "S[1][2]") << ' ' << s1(tls, "S[1][3]") << ' ' << s1(tls, "S[2][3]") << ' '
 				   			 << s1(tls, "S[2][1]") << ' ' << s1(tls, "S[3][1]") << ' ' << s1(tls, "S[3][2]")
-				   			 << endl
-				   << endl;
+				   			 << std::endl
+				   << std::endl;
 	}
 	
 	const cif::iset kBackBoneAtoms = { "N", "CA", "C", "O", "OXT" };
@@ -411,9 +410,9 @@ int pr_main(int argc, char* argv[])
 	// No build list
 	for (auto l: coord["struct_conn"])
 	{
-		for (string prefix: { "ptnr1_", "ptnr2_" })
+		for (std::string prefix: { "ptnr1_", "ptnr2_" })
 		{
-			string atomId, asymId, monId, authSeqId;
+			std::string atomId, asymId, monId, authSeqId;
 			int seqId;
 
 			cif::tie(atomId, asymId, monId, seqId, authSeqId) = l.get(
@@ -426,10 +425,10 @@ int pr_main(int argc, char* argv[])
 			if (not c::kAAMap.count(monId) and not iequals(monId, "HOH"))
 				continue;
 
-			string atomId2 = l[prefix == "ptnr1_" ? 
-					"ptnr2_label_atom_id" : "ptnr1_label_atom_id"].as<string>();
+			std::string atomId2 = l[prefix == "ptnr1_" ? 
+					"ptnr2_label_atom_id" : "ptnr1_label_atom_id"].as<std::string>();
 	
-			string special;
+			std::string special;
 			
 			if (iequals(monId, "HOH"))
 				special = "H2O-keep";
@@ -443,10 +442,10 @@ int pr_main(int argc, char* argv[])
 			if (special.empty())
 				continue;
 			
-			string pdbStrandId, pdbMonId, pdbInsCode;
+			std::string pdbStrandId, pdbMonId, pdbInsCode;
 			int pdbSeqNum;
 
-			tie(pdbStrandId, pdbSeqNum, pdbMonId, pdbInsCode) =
+			std::tie(pdbStrandId, pdbSeqNum, pdbMonId, pdbInsCode) =
 				structure.MapLabelToPDB(asymId, seqId, monId, authSeqId);
 			
 			extractedDb["res_info"].emplace({
@@ -464,10 +463,10 @@ int pr_main(int argc, char* argv[])
 		}		
 	}
 	
-	vector<cif::Row> residues;
+	std::vector<cif::Row> residues;
 	cif::iset resIgnore;
 	for (auto r: redoDB["res_hetero_ignore"])
-		resIgnore.insert(r["name"].as<string>());
+		resIgnore.insert(r["name"].as<std::string>());
 	
 	// Write out ligand list
 	for (auto r: coord["pdbx_poly_seq_scheme"])
@@ -478,7 +477,7 @@ int pr_main(int argc, char* argv[])
 
 	for (auto r: residues)
 	{
-		string asymId, seqId, monId, pdbStrandId, pdbMonId, pdbInsCode;
+		std::string asymId, seqId, monId, pdbStrandId, pdbMonId, pdbInsCode;
 		int pdbSeqNum;
 
 		cif::tie(asymId, monId, seqId, pdbStrandId, pdbMonId, pdbSeqNum, pdbInsCode) =

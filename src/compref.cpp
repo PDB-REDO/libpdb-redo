@@ -40,15 +40,12 @@
 
 #include <boost/program_options.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/thread.hpp>
 
 #include "cif++/Secondary.hpp"
 #include "cif++/CifUtils.hpp"
 
 #include "minimizer.h"
 #include "ramachandran.h"
-
-using namespace std;
 
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
@@ -69,12 +66,12 @@ using clipper::Coord_frac;
 
 void Compare(Structure& a, Structure& b)
 {
-	vector<Atom> atomsA = a.atoms(), atomsB = b.atoms();
+	std::vector<Atom> atomsA = a.atoms(), atomsB = b.atoms();
 
 	if (atomsA.size() != atomsB.size())
-		throw runtime_error("Ongelijk aantal atomen");
+		throw std::runtime_error("Ongelijk aantal atomen");
 
-	vector<double> dists;
+	std::vector<double> dists;
 	
 	for (size_t i = 0; i < atomsA.size(); ++i)
 	{
@@ -94,9 +91,9 @@ void Compare(Structure& a, Structure& b)
 	else if (not dists.empty())
 		median = (dists[dists.size() / 2 - 1] + dists[dists.size() / 2]) / 2;
 	
-	cout << "Number of differing atom positions: " << dists.size() << endl
-		 << "Average distance: " << accumulate(dists.begin(), dists.end(), 0.0) / dists.size() << endl
-		 << "Median distance: " << median << endl;
+	std::cout << "Number of differing atom positions: " << dists.size() << std::endl
+		 << "Average distance: " << accumulate(dists.begin(), dists.end(), 0.0) / dists.size() << std::endl
+		 << "Median distance: " << median << std::endl;
 }
 
 // --------------------------------------------------------------------
@@ -105,8 +102,8 @@ int pr_main(int argc, char* argv[])
 {
 	po::options_description visible_options(fs::path(argv[0]).filename().string() + " options");
 	visible_options.add_options()
-		("xyzin-1",				po::value<string>(),	"coordinates file")
-		("xyzin-2",				po::value<string>(),	"coordinates file")
+		("xyzin-1",				po::value<std::string>(),	"coordinates file")
+		("xyzin-2",				po::value<std::string>(),	"coordinates file")
 
 		("help,h",										"Display help message")
 		("version",										"Print version")
@@ -135,26 +132,26 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help"))
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(0);
 	}
 	
 	if (vm.count("xyzin-1") == 0 or vm.count("xyzin-2") == 0)
 	{
-		cerr << "Input files not specified" << endl;
+		std::cerr << "Input files not specified" << std::endl;
 		exit(1);
 	}
 
-	mmcif::File f1(vm["xyzin-1"].as<string>());
+	mmcif::File f1(vm["xyzin-1"].as<std::string>());
 	Structure s1(f1);
 	
-	mmcif::File f2(vm["xyzin-2"].as<string>());
+	mmcif::File f2(vm["xyzin-2"].as<std::string>());
 	Structure s2(f2);
 
 	Compare(s1, s2);

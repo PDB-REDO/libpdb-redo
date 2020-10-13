@@ -52,7 +52,6 @@
 #include "skiplist.h"
 #include "utils.hpp"
 
-using namespace std;
 
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
@@ -90,18 +89,18 @@ const double
 
 struct PFRes
 {
-	PFRes(int seqID, string compoundID, string entityID, string asymID, string authID, bool tryFlip)
+	PFRes(int seqID, std::string compoundID, std::string entityID, std::string asymID, std::string authID, bool tryFlip)
 		: mSeqID(seqID), mCompoundID(compoundID), mEntityID(entityID), mAsymID(asymID), mAuthID(authID), mTryFlip(tryFlip) {}
 	
 	int			mSeqID;
-	string		mCompoundID, mEntityID, mAsymID, mAuthID;
+	std::string		mCompoundID, mEntityID, mAsymID, mAuthID;
 	float		mTryAngle = 180;
 	bool		mTrust = false;
 	bool		mTryFlip;
 	bool		mFlipped = false;
 };
 
-ostream& operator<<(ostream& os, const PFRes& r)
+std::ostream& operator<<(std::ostream& os, const PFRes& r)
 {
 	os << r.mCompoundID << ' ' << r.mAsymID << r.mSeqID << " (" << r.mAuthID << ')';
 	return os;
@@ -109,9 +108,9 @@ ostream& operator<<(ostream& os, const PFRes& r)
 
 // --------------------------------------------------------------------
 
-ostream& operator<<(ostream& os, const Atom& a);
+std::ostream& operator<<(std::ostream& os, const Atom& a);
 
-ostream& operator<<(ostream& os, const RamachandranScore& s)
+std::ostream& operator<<(std::ostream& os, const RamachandranScore& s)
 {
 	switch (s)
 	{
@@ -133,10 +132,10 @@ class AtomLocationSaver
 		: mCommitted(false)
 	{
 		for (auto& a: r.atoms())
-			mAtoms.emplace_back(make_pair(a, a.location()));
+			mAtoms.emplace_back(std::make_pair(a, a.location()));
 	}
 
-	AtomLocationSaver(mmcif::Structure& s, const string& asymID, int seqFirst, int seqLast)
+	AtomLocationSaver(mmcif::Structure& s, const std::string& asymID, int seqFirst, int seqLast)
 		: mCommitted(false)
 	{
 		for (auto& a: s.atoms())
@@ -144,7 +143,7 @@ class AtomLocationSaver
 			if (a.labelAsymID() != asymID or a.labelSeqID() < seqFirst or a.labelSeqID() > seqLast)
 				continue;
 			
-			mAtoms.emplace_back(make_pair(a, a.location()));
+			mAtoms.emplace_back(std::make_pair(a, a.location()));
 		}
 	}
 	
@@ -159,7 +158,7 @@ class AtomLocationSaver
 	
 	void commit() { mCommitted = true; }
 	
-	void storeAtomPositions(vector<pair<string,Point>>& atoms) const
+	void storeAtomPositions(std::vector<std::pair<std::string,Point>>& atoms) const
 	{
 		atoms.reserve(mAtoms.size());
 		for (auto& a: mAtoms)
@@ -167,17 +166,17 @@ class AtomLocationSaver
 	}
 	
   private:
-	vector<pair<mmcif::Atom,mmcif::Point>> mAtoms;
+	std::vector<std::pair<mmcif::Atom,mmcif::Point>> mAtoms;
 	bool mCommitted;
 };
 
 // --------------------------------------------------------------------
 
-void TrustBasedOnSS(Structure& structure, vector<PFRes>& residues)
+void TrustBasedOnSS(Structure& structure, std::vector<PFRes>& residues)
 {
 	mmcif::DSSP dssp(structure, 3, false);
 	
-	const set<mmcif::SecondaryStructureType> kTrustedDSSPTypes = {
+	const std::set<mmcif::SecondaryStructureType> kTrustedDSSPTypes = {
 			mmcif::ssAlphahelix, mmcif::ssHelix_3, mmcif::ssHelix_5, mmcif::ssStrand };
 	const int kBufferSS = 1;
 	
@@ -210,13 +209,13 @@ void TrustBasedOnSS(Structure& structure, vector<PFRes>& residues)
 						for (auto j = b + kBufferSS; j < i - kBufferSS - 2; ++j)
 						{
 							if (cif::VERBOSE)
-								cerr << residues[j] << "  - trusted based on secondary structure (" << char(cur) << ')' << endl;
+								std::cerr << residues[j] << "  - trusted based on secondary structure (" << char(cur) << ')' << std::endl;
 							if (not dssp.isAlphaHelixEndBeforeStart(residues[j].mAsymID, residues[j].mSeqID))
 								residues[j].mTrust = true;
 						}
 
 						if (cif::VERBOSE)
-							cerr << residues[i - kBufferSS - 2] << "  - n-term of secondary structure (" << char(cur) << "). It will be considered for flips" << endl;
+							std::cerr << residues[i - kBufferSS - 2] << "  - n-term of secondary structure (" << char(cur) << "). It will be considered for flips" << std::endl;
 					}
 					
 					state = LOOP;
@@ -255,7 +254,7 @@ class Rotation
 	mmcif::quaternion mQ;
 };
 
-tuple<double,double,float,float> ScorePotentialFlips(MapMaker& mm, const Monomer& r1, const Monomer& r2, initializer_list<float> angles)
+std::tuple<double,double,float,float> ScorePotentialFlips(MapMaker& mm, const Monomer& r1, const Monomer& r2, std::initializer_list<float> angles)
 {
 	double bestScoreB = 0, bestScoreD = 0;
 	float bestAngleB = 0, bestAngleD = 0;
@@ -302,12 +301,12 @@ tuple<double,double,float,float> ScorePotentialFlips(MapMaker& mm, const Monomer
 		}
 	}
 	
-	return make_tuple(bestScoreB, bestScoreD, bestAngleB, bestAngleD);
+	return std::make_tuple(bestScoreB, bestScoreD, bestAngleB, bestAngleD);
 }
 
 // --------------------------------------------------------------------
 
-void CheckDensity(Structure& structure, vector<PFRes>& residues, MapMaker& mm)
+void CheckDensity(Structure& structure, std::vector<PFRes>& residues, MapMaker& mm)
 {
 	const double kMinRatioOrigFlip = 0.9;
 
@@ -326,7 +325,7 @@ void CheckDensity(Structure& structure, vector<PFRes>& residues, MapMaker& mm)
 			continue;
 		}
 
-		string asymID = cur.mAsymID;
+		std::string asymID = cur.mAsymID;
 		auto poly = find_if(polymers.begin(), polymers.end(), [&](auto& p) { return p.asymID() == asymID; });
 		assert(poly != polymers.end());
 		
@@ -335,7 +334,7 @@ void CheckDensity(Structure& structure, vector<PFRes>& residues, MapMaker& mm)
 
 		if (cur.mTrust or not cur.mTryFlip)
 		{
-			cout << cur << "  - residue excluded from peptide flips" << endl;
+			std::cout << cur << "  - residue excluded from peptide flips" << std::endl;
 			cur.mTryFlip = false;
 			continue;
 		}
@@ -344,7 +343,7 @@ void CheckDensity(Structure& structure, vector<PFRes>& residues, MapMaker& mm)
 		
 		if (not Monomer::areBonded(r1, r2))
 		{
-			cout << cur << "  - Distance between this CA and the next CA doesn't correspond with a peptide bond" << endl;
+			std::cout << cur << "  - Distance between this CA and the next CA doesn't correspond with a peptide bond" << std::endl;
 			continue;
 		}
 		
@@ -353,30 +352,30 @@ void CheckDensity(Structure& structure, vector<PFRes>& residues, MapMaker& mm)
 			double scoreBBefore, scoreBAfter, scoreDBefore, scoreDAfter;
 			float angleBAfter, angleDAfter;
 
-			tie(scoreBBefore, scoreDBefore, ignore, ignore) = ScorePotentialFlips(mm, r1, r2, { 330, 0, 30 });
-			tie(scoreBAfter, scoreDAfter, angleBAfter, angleDAfter) = ScorePotentialFlips(mm, r1, r2, { 150, 180, 210 });
+			std::tie(scoreBBefore, scoreDBefore, std::ignore, std::ignore) = ScorePotentialFlips(mm, r1, r2, { 330, 0, 30 });
+			std::tie(scoreBAfter, scoreDAfter, angleBAfter, angleDAfter) = ScorePotentialFlips(mm, r1, r2, { 150, 180, 210 });
 			
 			if (scoreBAfter > kMinRatioOrigFlip * scoreBBefore)
 			{
-				cout << cur << "  - might need to be flipped based on the density fit, before: " << scoreBBefore << " after: " << scoreBAfter << endl;
+				std::cout << cur << "  - might need to be flipped based on the density fit, before: " << scoreBBefore << " after: " << scoreBAfter << std::endl;
 				cur.mTryFlip = true;
 				cur.mTryAngle = angleBAfter;
 				++potentialFlipCount;
 			}
 			else if (scoreDAfter > scoreDBefore)
 			{
-				cout << cur << "  - might need to be flipped based on the difference density fit, before: " << scoreDBefore << " after: " << scoreDAfter << endl;
+				std::cout << cur << "  - might need to be flipped based on the difference density fit, before: " << scoreDBefore << " after: " << scoreDAfter << std::endl;
 				cur.mTryFlip = true;
 				cur.mTryAngle = angleDAfter;
 				++potentialFlipCount;
 			}
 			else
-				cout << cur << "  - no reason to flip this peptide based on the density" << endl;
+				std::cout << cur << "  - no reason to flip this peptide based on the density" << std::endl;
 		}
-		catch (const exception& ex)
+		catch (const std::exception& ex)
 		{
-			cerr << "Error processing " << cur << endl
-				 << ex.what() << endl;	
+			std::cerr << "Error processing " << cur << std::endl
+				 << ex.what() << std::endl;	
 		}
 	}
 }
@@ -423,7 +422,7 @@ void CheckDensity(Structure& structure, vector<PFRes>& residues, MapMaker& mm)
 //			}
 //
 //			if (cif::VERBOSE)
-//				cerr << "HBond between " << a << " and " << a2 << endl;
+//				std::cerr << "HBond between " << a << " and " << a2 << std::endl;
 //			
 //			result += 1;
 //		}
@@ -437,7 +436,7 @@ void CheckDensity(Structure& structure, vector<PFRes>& residues, MapMaker& mm)
 struct PepFlipScore
 {
 	size_t			fpix;
-	string			id;
+	std::string			id;
 	float			angle;
 	mmcif::Point	c;
 	bool			refined;
@@ -448,7 +447,7 @@ struct PepFlipScore
 		RamachandranScore z1, z2;
 //		int hbonds;
 	} orig, flip;
-	vector<pair<string,Point>> atoms;
+	std::vector<std::pair<std::string,Point>> atoms;
 
 	bool improved() const
 	{
@@ -481,9 +480,9 @@ struct PepFlipScore
 template<typename T>
 inline auto best(const T& v, bool best, int prec)
 {
-	stringstream s;
-	s << fixed << setprecision(prec) << setw(8) << v;
-	string vs = s.str();
+	std::stringstream s;
+	s << std::fixed << std::setprecision(prec) << std::setw(8) << v;
+	std::string vs = s.str();
 	return best ?
 		coloured(vs.c_str(), cif::scCYAN, cif::scBLUE) :
 		coloured(vs.c_str(), cif::scNONE, cif::scNONE, false);
@@ -492,9 +491,9 @@ inline auto best(const T& v, bool best, int prec)
 template<>
 inline auto best(const RamachandranScore& v, bool best, int prec)
 {
-	stringstream s;
+	std::stringstream s;
 	s << v;
-	string vs = s.str();
+	std::string vs = s.str();
 	return best ?
 		coloured(vs.c_str(), cif::scCYAN, cif::scBLUE) :
 		coloured(vs.c_str(), cif::scNONE, cif::scNONE, false);
@@ -503,7 +502,7 @@ inline auto best(const RamachandranScore& v, bool best, int prec)
 template<>
 inline auto best(const int& v, bool best, int prec)
 {
-	string s = to_string(v);
+	std::string s = std::to_string(v);
 	return best ?
 		coloured(s.c_str(), cif::scCYAN, cif::scBLUE) :
 		coloured(s.c_str(), cif::scNONE, cif::scNONE, false);
@@ -512,7 +511,7 @@ inline auto best(const int& v, bool best, int prec)
 struct headers1 {};
 struct headers2 {};
 
-ostream& operator<<(ostream& os, const headers1&)
+std::ostream& operator<<(std::ostream& os, const headers1&)
 {
 	os << "Angle    "
 	   << "Score             "
@@ -523,7 +522,7 @@ ostream& operator<<(ostream& os, const headers1&)
 	return os;
 }
 
-ostream& operator<<(ostream& os, const headers2)
+std::ostream& operator<<(std::ostream& os, const headers2)
 {
 	os << "         "
 	   << "Original Flipped  "
@@ -534,7 +533,7 @@ ostream& operator<<(ostream& os, const headers2)
 	return os;
 }
 
-ostream& operator<<(ostream& os, const PepFlipScore& rhs)
+std::ostream& operator<<(std::ostream& os, const PepFlipScore& rhs)
 {
 	os << best(rhs.angle, abs(rhs.angle) > 90.0f, 1) << ' '
 
@@ -562,8 +561,8 @@ ostream& operator<<(ostream& os, const PepFlipScore& rhs)
 }
 
 PepFlipScore FlipPeptide(Structure& structure, const Polymer& poly,
-	const vector<PFRes>& residues, size_t i, StatsCollector& sc, MapMaker& mm,
-	mmcif::BondMap& bm, const string& algorithm, float mapWeight, float plane5AtomsESD,
+	const std::vector<PFRes>& residues, size_t i, StatsCollector& sc, MapMaker& mm,
+	mmcif::BondMap& bm, const std::string& algorithm, float mapWeight, float plane5AtomsESD,
 	bool testMode)
 {
 	auto& r1 = poly.getBySeqID(residues[i].mSeqID);
@@ -580,7 +579,7 @@ PepFlipScore FlipPeptide(Structure& structure, const Polymer& poly,
 	
 	AtomLocationSaver s(structure, r1.asymID(), r1.seqID() - 1, r2.seqID() + 1);
 
-	PepFlipScore result = { i, boost::lexical_cast<string>(residues[i]) };
+	PepFlipScore result = { i, boost::lexical_cast<std::string>(residues[i]) };
 
 	auto prePro = [&](size_t i)
 	{
@@ -597,7 +596,7 @@ PepFlipScore FlipPeptide(Structure& structure, const Polymer& poly,
 
 	result.c = c.location();
 
-	unique_ptr<Minimizer> origMinimizer(Minimizer::create(algorithm, poly, r1.seqID() - 1, r2.seqID() + 1, bm, mm.fb(), mapWeight, plane5AtomsESD));
+	std::unique_ptr<Minimizer> origMinimizer(Minimizer::create(algorithm, poly, r1.seqID() - 1, r2.seqID() + 1, bm, mm.fb(), mapWeight, plane5AtomsESD));
 	result.orig.score = origMinimizer->refine(false);
 
 	result.orig.rsccsRes = sc.collect({ &r1, &r2 }).RSCCS;
@@ -620,7 +619,7 @@ PepFlipScore FlipPeptide(Structure& structure, const Polymer& poly,
 	if (testMode)
 		structure.getFile().save("unrefined-" + r1.labelID() + ".pdb");
 
-	unique_ptr<Minimizer> flipMinimizer(Minimizer::create(algorithm, poly, r1.seqID() - 1, r2.seqID() + 1, bm, mm.fb(), mapWeight, plane5AtomsESD));
+	std::unique_ptr<Minimizer> flipMinimizer(Minimizer::create(algorithm, poly, r1.seqID() - 1, r2.seqID() + 1, bm, mm.fb(), mapWeight, plane5AtomsESD));
 
 	double unrefinedScore = flipMinimizer->score();
 	result.flip.score = flipMinimizer->refine(true);
@@ -641,26 +640,26 @@ PepFlipScore FlipPeptide(Structure& structure, const Polymer& poly,
 	result.flip.z2 = calculateRamachandranScore(r2.compoundID(), prePro(i + 1), r2.phi(), r2.psi());
 //	result.flip.hbonds = CalculateHBondsForAtoms(structure, { o, n });
 
-//cout << residues[i] << endl;
+//std::cout << residues[i] << std::endl;
 	if (result.improved())
 		result.atoms = flipMinimizer->getAtoms();
 
 	return result;
 }
 
-vector<size_t> CombineTrustBasedOnNCS(const list<Polymer>& polymers, vector<PFRes>& residues)
+std::vector<size_t> CombineTrustBasedOnNCS(const std::list<Polymer>& polymers, std::vector<PFRes>& residues)
 {
-	typedef vector<PFRes>::iterator PFResIter;
+	typedef std::vector<PFRes>::iterator PFResIter;
 	
-	set<string> entities;
+	std::set<std::string> entities;
 	for (auto& p: polymers)
 		entities.insert(p.entityID());
 	
-	vector<size_t> result;
+	std::vector<size_t> result;
 	
-	for (const string& entityID: entities)
+	for (const std::string& entityID: entities)
 	{
-		vector<pair<PFResIter,PFResIter>> pri;
+		std::vector<std::pair<PFResIter,PFResIter>> pri;
 		
 		for (auto ri = residues.begin(); ri != residues.end(); ++ri)
 		{
@@ -677,7 +676,7 @@ vector<size_t> CombineTrustBasedOnNCS(const list<Polymer>& polymers, vector<PFRe
 		}
 
 		int seqID = 0;
-		vector<PFResIter> tri;
+		std::vector<PFResIter> tri;
 
 		while (pri.size() > 1)
 		{
@@ -717,8 +716,8 @@ vector<size_t> CombineTrustBasedOnNCS(const list<Polymer>& polymers, vector<PFRe
 }
 
 void JoinFlips(Structure& structure, const Polymer& poly, MapMaker& mm, mmcif::BondMap& bm,
-	const string& algorithm, float mapWeight, float plane5AtomsESD,
-	const vector<PFRes>& residues, vector<PepFlipScore>& flipped, size_t f1, size_t f2)
+	const std::string& algorithm, float mapWeight, float plane5AtomsESD,
+	const std::vector<PFRes>& residues, std::vector<PepFlipScore>& flipped, size_t f1, size_t f2)
 {
 	size_t ri1 = flipped[f1].fpix;
 	size_t ri2 = flipped[f2].fpix;
@@ -726,7 +725,7 @@ void JoinFlips(Structure& structure, const Polymer& poly, MapMaker& mm, mmcif::B
 	int s1 = residues[ri1].mSeqID - 1;
 	int s2 = residues[ri2].mSeqID + 1;
 	
-	cout << "Joining flips from " << residues[ri1] << " to " << residues[ri2] << endl;
+	std::cout << "Joining flips from " << residues[ri1] << " to " << residues[ri2] << std::endl;
 	
 	// Eerste poging, gewoon alles flippen en dan verfijnen...
 	
@@ -754,7 +753,7 @@ void JoinFlips(Structure& structure, const Polymer& poly, MapMaker& mm, mmcif::B
 		flipped[fi].atoms.clear();
 	}
 	
-	unique_ptr<Minimizer> flipMinimizer(Minimizer::create(algorithm, poly,
+	std::unique_ptr<Minimizer> flipMinimizer(Minimizer::create(algorithm, poly,
 		s1, s2, bm, mm.fb(), mapWeight, plane5AtomsESD));
 
 	double unrefinedScore = flipMinimizer->score();
@@ -762,24 +761,24 @@ void JoinFlips(Structure& structure, const Polymer& poly, MapMaker& mm, mmcif::B
 
 	if (refinedScore > unrefinedScore)
 	{
-		cerr << "Oeps, deze verfijnde niet" << endl;
+		std::cerr << "Oeps, deze verfijnde niet" << std::endl;
 		
 		for (size_t fi = f1; fi <= f2; ++fi)
 			flipped[fi].refined = false;
 	}
 }
 
-void FlipPeptides(Structure& structure, const string& asymID,
+void FlipPeptides(Structure& structure, const std::string& asymID,
 	int resFirst, int resLast, const SkipList& skip,
 	MapMaker& mm, bool trustDSSP,
-	const string& algorithm, float mapWeight, float plane5AtomsESD,
-	ofstream& cootScript, bool testMode)
+	const std::string& algorithm, float mapWeight, float plane5AtomsESD,
+	std::ofstream& cootScript, bool testMode)
 {
 	StatsCollector sc(mm, structure, false /*electronScattering*/);
 
 	auto& polymers = structure.polymers();
 	
-	vector<PFRes> residues;
+	std::vector<PFRes> residues;
 	for (auto& p: polymers)
 	{
 		for (auto& m: p)
@@ -796,33 +795,33 @@ void FlipPeptides(Structure& structure, const string& asymID,
 	if (trustDSSP)
 	{
 		if (cif::VERBOSE)
-			cerr << endl
-				 << "Calculating DSSP" << endl;
+			std::cerr << std::endl
+				 << "Calculating DSSP" << std::endl;
 	
 		TrustBasedOnSS(structure, residues);
 
 		if (cif::VERBOSE)
-			cerr << "DSSP done" << endl;
+			std::cerr << "DSSP done" << std::endl;
 	}
 
 	if (cif::VERBOSE)
-		cerr << endl
-			 << "Initial check" << endl;
+		std::cerr << std::endl
+			 << "Initial check" << std::endl;
 
-	auto df = async(launch::async, bind(CheckDensity, ref(structure), ref(residues), ref(mm)));
+	auto df = std::async(std::launch::async, std::bind(CheckDensity, std::ref(structure), std::ref(residues), std::ref(mm)));
 
 	mmcif::BondMap bm(structure);
 	
 	df.wait();
 
-	cout << endl
-	     << "Potential number of flips: " << accumulate(residues.begin(), residues.end(), 0, [](int sum, auto& r) { return sum + (r.mTryFlip ? 1 : 0); }) << endl
-	     << endl;
+	std::cout << std::endl
+	     << "Potential number of flips: " << accumulate(residues.begin(), residues.end(), 0, [](int sum, auto& r) { return sum + (r.mTryFlip ? 1 : 0); }) << std::endl
+	     << std::endl;
 
-	vector<PepFlipScore> flipped;
+	std::vector<PepFlipScore> flipped;
 	flipped.reserve(residues.size());
 	
-	unique_ptr<cif::Progress> p;
+	std::unique_ptr<cif::Progress> p;
 	if (not cif::VERBOSE)
 		p.reset(new cif::Progress(residues.size(), "Flipping, 1st round"));
 	
@@ -836,7 +835,7 @@ void FlipPeptides(Structure& structure, const string& asymID,
 			if (residues[i].mTrust or not residues[i].mTryFlip)
 				continue;
 	
-			string asymID = residues[i].mAsymID;
+			std::string asymID = residues[i].mAsymID;
 			auto poly = find_if(polymers.begin(), polymers.end(), [&](auto& p) { return p.asymID() == asymID; });
 			assert(poly != polymers.end());
 	
@@ -846,9 +845,9 @@ void FlipPeptides(Structure& structure, const string& asymID,
 					FlipPeptide(structure, *poly, residues, i, sc, mm, bm, algorithm, mapWeight, plane5AtomsESD, testMode));
 				residues[i].mFlipped = flipped.back().improved();
 			}
-			catch (const exception& ex)
+			catch (const std::exception& ex)
 			{
-				cerr << "Error processing " << residues[i] << ": " << ex.what() << endl;
+				std::cerr << "Error processing " << residues[i] << ": " << ex.what() << std::endl;
 				continue;
 			}
 		}
@@ -856,8 +855,8 @@ void FlipPeptides(Structure& structure, const string& asymID,
 	else
 	{
 		std::list<std::thread> t;
-		atomic<size_t> next(0);
-		mutex m;
+		std::atomic<size_t> next(0);
+		std::mutex m;
 		
 		for (size_t ti = 0; ti < NTHREADS; ++ti)
 			t.emplace_back([&]()
@@ -879,7 +878,7 @@ void FlipPeptides(Structure& structure, const string& asymID,
 					if (residues[i].mTrust or not residues[i].mTryFlip)
 						continue;
 			
-					string asymID = residues[i].mAsymID;
+					std::string asymID = residues[i].mAsymID;
 					auto poly = find_if(polymers.begin(), polymers.end(), [&](auto& p) { return p.asymID() == asymID; });
 					assert(poly != polymers.end());
 			
@@ -888,12 +887,12 @@ void FlipPeptides(Structure& structure, const string& asymID,
 						auto flipResult = FlipPeptide(s, *poly, residues, i, sc, mm, bm, algorithm, mapWeight, plane5AtomsESD, testMode);
 						residues[i].mFlipped = flipResult.improved();
 						
-						unique_lock<mutex> lock(m);
-						flipped.emplace_back(move(flipResult));
+						std::unique_lock lock(m);
+						flipped.emplace_back(std::move(flipResult));
 					}
-					catch (const exception& ex)
+					catch (const std::exception& ex)
 					{
-						cerr << "Error processing " << residues[i] << ": " << ex.what() << endl;
+						std::cerr << "Error processing " << residues[i] << ": " << ex.what() << std::endl;
 						continue;
 					}
 				}
@@ -909,7 +908,7 @@ void FlipPeptides(Structure& structure, const string& asymID,
 	if (p)
 		p->progress(residues.size());
 
-	cout << endl;
+	std::cout << std::endl;
 
 	// second round, flip any residue whose NCS copy was flipped
 	if (asymID.empty())
@@ -917,17 +916,17 @@ void FlipPeptides(Structure& structure, const string& asymID,
 		auto residuesRound2 = CombineTrustBasedOnNCS(polymers, residues);
 		if (not residuesRound2.empty())
 		{
-			cout << endl
-				 << "Potential number of flips in second round (NCS copies): " << residuesRound2.size() << endl
-				 << endl;
+			std::cout << std::endl
+				 << "Potential number of flips in second round (NCS copies): " << residuesRound2.size() << std::endl
+				 << std::endl;
 			
-			unique_ptr<cif::Progress> p;
+			std::unique_ptr<cif::Progress> p;
 			if (not cif::VERBOSE)
 				p.reset(new cif::Progress(residuesRound2.size(), "Flipping, 2nd round"));
 			
 			for (size_t i: residuesRound2)
 			{
-				string asymID = residues[i].mAsymID;
+				std::string asymID = residues[i].mAsymID;
 				auto poly = find_if(polymers.begin(), polymers.end(), [&](auto& p) { return p.asymID() == asymID; });
 				assert(poly != polymers.end());
 		
@@ -937,9 +936,9 @@ void FlipPeptides(Structure& structure, const string& asymID,
 						FlipPeptide(structure, *poly, residues, i, sc, mm, bm, algorithm, mapWeight, plane5AtomsESD, testMode));
 					residues[i].mFlipped = flipped.back().improved();
 				}
-				catch (const exception& ex)
+				catch (const std::exception& ex)
 				{
-					cerr << "Error processing " << residues[i] << ": " << ex.what() << endl;
+					std::cerr << "Error processing " << residues[i] << ": " << ex.what() << std::endl;
 					continue;
 				}
 	
@@ -955,7 +954,7 @@ void FlipPeptides(Structure& structure, const string& asymID,
 		if (not flipped[i].improved())
 			continue;
 		
-		string asymID = residues[flipped[i].fpix].mAsymID;
+		std::string asymID = residues[flipped[i].fpix].mAsymID;
 		int firstSeq = residues[flipped[i].fpix].mSeqID - 1;
 		int lastSeq = firstSeq + 3;
 		
@@ -978,29 +977,29 @@ void FlipPeptides(Structure& structure, const string& asymID,
 		if (idLen < s.id.length())
 			idLen = s.id.length();
 	
-	cout << endl
-		 << string(idLen + 8, ' ') << headers1() << endl
-		 << string(idLen + 8, ' ') << headers2() << endl
-		 << string(cif::get_terminal_width(), '-') << endl;
+	std::cout << std::endl
+		 << std::string(idLen + 8, ' ') << headers1() << std::endl
+		 << std::string(idLen + 8, ' ') << headers2() << std::endl
+		 << std::string(cif::get_terminal_width(), '-') << std::endl;
 	
-	vector<string> flippedIDs;
+	std::vector<std::string> flippedIDs;
 	for (auto& score: flipped)
 	{
-		string id = score.id + string(idLen - score.id.length(), ' ');
+		std::string id = score.id + std::string(idLen - score.id.length(), ' ');
 
 		auto red = [](const char* s){ return cif::coloured(s, cif::scWHITE, cif::scRED); };
 		
 		if (not score.improved())
 		{
-			cout << id << " " << "noflip" << " " << score << endl;
+			std::cout << id << " " << "noflip" << " " << score << std::endl;
 			continue;
 		}
 
-		cout << id << " " << red("flip") << "   " << score << endl;
+		std::cout << id << " " << red("flip") << "   " << score << std::endl;
 
 		if (cootScript.is_open())
 			cootScript << "(list \"Flipped " << score.id << "\" "
-					   << score.c.mX << ' ' << score.c.mY << ' ' << score.c.mZ << " )" << endl;
+					   << score.c.mX << ' ' << score.c.mY << ' ' << score.c.mZ << " )" << std::endl;
 		
 		for (auto a: score.atoms)
 			structure.getAtomByID(a.first).location(a.second);
@@ -1008,10 +1007,10 @@ void FlipPeptides(Structure& structure, const string& asymID,
 		flippedIDs.push_back(score.id);
 	}
 
-	cout << endl
-		 << string(cif::get_terminal_width(), '-') << endl
-		 << "Summary: Flipped " << flippedIDs.size() << " peptides" << endl
-		 << ba::join(flippedIDs, ", ") << endl;
+	std::cout << std::endl
+		 << std::string(cif::get_terminal_width(), '-') << std::endl
+		 << "Summary: Flipped " << flippedIDs.size() << " peptides" << std::endl
+		 << ba::join(flippedIDs, ", ") << std::endl;
 }
 
 // --------------------------------------------------------------------
@@ -1020,24 +1019,24 @@ int pr_main(int argc, char* argv[])
 {
 	po::options_description visible_options(fs::path(argv[0]).filename().string() + " options");
 	visible_options.add_options()
-		("hklin",				po::value<string>(),	"reflections file")
-		("xyzin",				po::value<string>(),	"coordinates file")
-		("xyzout,o",			po::value<string>(),	"output coordinates to this file")
+		("hklin",				po::value<std::string>(),	"reflections file")
+		("xyzin",				po::value<std::string>(),	"coordinates file")
+		("xyzout,o",			po::value<std::string>(),	"output coordinates to this file")
 		
-		("log",					po::value<string>(),	"Write verbose output to log file")
+		("log",					po::value<std::string>(),	"Write verbose output to log file")
 		
-		("asym-id",				po::value<string>(),	"Asymetric unit to pepflip")
-		("algorithm",			po::value<string>(),	"Refinement algorithm to use, can be sa or gsl")
+		("asym-id",				po::value<std::string>(),	"Asymetric unit to pepflip")
+		("algorithm",			po::value<std::string>(),	"Refinement algorithm to use, can be sa or gsl")
 		("res-first",			po::value<int>(),		"Sequence number for first residue to pepflip, default = 1")
 		("res-last",			po::value<int>(),		"Sequence number for last residue to pepflip, default is last in sequence")
-		("dict",				po::value<vector<string>>(),
+		("dict",				po::value<std::vector<std::string>>(),
 														"Dictionary file containing restraints for residues in this specific target, can be specified multiple times.")
 
 		("no-dssp",										"By default, residues in helix and strand are trusted, use this switch to turn this off")
 
-		("skip",				po::value<string>(),	"File containing the skip list: the residues that should not be flipped")
+		("skip",				po::value<std::string>(),	"File containing the skip list: the residues that should not be flipped")
 
-		("map-weight",			po::value<float>(),		"Map weight in minimisation, default is 60")
+		("std::map-weight",			po::value<float>(),		"Map weight in minimisation, default is 60")
 
 		("minimal-angle",		po::value<float>(),		"Minimal angle for flip in degrees")
 		("minimal-rscc",		po::value<float>(),		"Minimal RSCC score for the two residues")
@@ -1089,19 +1088,19 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help"))
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(0);
 	}
 	
 	if (vm.count("xyzin") == 0 or vm.count("hklin") == 0)
 	{
-		cerr << "Input files not specified" << endl;
+		std::cerr << "Input files not specified" << std::endl;
 		exit(1);
 	}
 
@@ -1111,12 +1110,12 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("log"))
 	{
-		string logFile = vm["log"].as<string>();
+		std::string logFile = vm["log"].as<std::string>();
 		
 	    // open the log file
 	    int fd = open(logFile.c_str(), O_CREAT|O_APPEND|O_RDWR, 0644);
 	    if (fd < 0)
-	        throw runtime_error("Opening log file " + logFile + " failed: " + strerror(errno));
+	        throw std::runtime_error("Opening log file " + logFile + " failed: " + strerror(errno));
 	
 	    // redirect stdout and stderr to the log file
 	    dup2(fd, STDOUT_FILENO);
@@ -1134,14 +1133,14 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("dict"))
 	{
-		for (auto dict: vm["dict"].as<vector<string>>())
+		for (auto dict: vm["dict"].as<std::vector<std::string>>())
 			mmcif::CompoundFactory::instance().pushDictionary(dict);
 	}
 
-	mmcif::File f(vm["xyzin"].as<string>());
+	mmcif::File f(vm["xyzin"].as<std::string>());
 	Structure structure(f);
 	
-	fs::path mtzFile = vm["hklin"].as<string>();
+	fs::path mtzFile = vm["hklin"].as<std::string>();
 
 	float samplingRate = 1.5;
 	if (vm.count("sampling-rate"))
@@ -1150,21 +1149,21 @@ int pr_main(int argc, char* argv[])
 	MapMaker mm;
 	mm.loadMTZ(mtzFile, samplingRate);
 
-	string asymID;
+	std::string asymID;
 	if (vm.count("asym-id"))
-		asymID = vm["asym-id"].as<string>();
+		asymID = vm["asym-id"].as<std::string>();
 		
 	int resFirst = 1;
 	if (vm.count("res-first"))
 		resFirst = vm["res-first"].as<int>();
 	
-	int resLast = numeric_limits<int>::max();
+	int resLast = std::numeric_limits<int>::max();
 	if (vm.count("res-last"))
 		resLast = vm["res-last"].as<int>();
 
-	string algorithm = "gsl";
+	std::string algorithm = "gsl";
 	if (vm.count("algorithm"))
-		algorithm = vm["algorithm"].as<string>();
+		algorithm = vm["algorithm"].as<std::string>();
 
 	if (vm.count("minimal-angle"))	gMinAngle = vm["minimal-angle"].as<float>();
 	if (vm.count("minimal-rscc"))	gMinRSCC = vm["minimal-rscc"].as<float>();
@@ -1183,10 +1182,10 @@ int pr_main(int argc, char* argv[])
 	
 	fs::path xyzout;
 	if (vm.count("xyzout"))
-		xyzout = vm["xyzout"].as<string>();
+		xyzout = vm["xyzout"].as<std::string>();
 	else
 	{
-		xyzout = vm["xyzin"].as<string>();
+		xyzout = vm["xyzin"].as<std::string>();
 		if (xyzout.extension() == ".gz")
 			xyzout = xyzout.stem();
 		xyzout = xyzout.parent_path() / (xyzout.filename().stem().string() + "-flipped.cif");
@@ -1203,10 +1202,10 @@ int pr_main(int argc, char* argv[])
 		cootScript.open(cs);
 		
 		if (not cootScript.is_open())	
-			throw runtime_error("Failed to open coot script " + cs.string());
+			throw std::runtime_error("Failed to open coot script " + cs.string());
 		
-		cootScript << "(interesting-things-gui \"Pepflips\"" << endl
-				   << "(list" << endl;
+		cootScript << "(interesting-things-gui \"Pepflips\"" << std::endl
+				   << "(list" << std::endl;
 	}
 	
 	bool testMode = false;
@@ -1226,14 +1225,14 @@ int pr_main(int argc, char* argv[])
 	
 	SkipList skip;
 	if (vm.count("skip"))
-		skip = readSkipList(vm["skip"].as<string>(), structure);
+		skip = readSkipList(vm["skip"].as<std::string>(), structure);
 	
 	FlipPeptides(structure, asymID,
 		resFirst, resLast, skip, mm, trustDSSP, algorithm, mapWeight, plane5AtomsESD, cootScript, testMode);
 	
 	if (cootScript.is_open())
 	{
-		cootScript << "))" << endl;
+		cootScript << "))" << std::endl;
 		cootScript.close();
 	}
 

@@ -45,7 +45,6 @@
 
 // --------------------------------------------------------------------
 
-using namespace std;
 
 // --------------------------------------------------------------------
 
@@ -54,17 +53,17 @@ class RamachandranTables
   public:
 	static RamachandranTables& instance()
 	{
-		lock_guard<mutex> lock(sMutex);
+		std::lock_guard lock(sMutex);
 		
 		static RamachandranTables sInstance;
 		return sInstance;
 	}
 	
-	clipper::Ramachandran& table(const string& aa, bool prePro)
+	clipper::Ramachandran& table(const std::string& aa, bool prePro)
 	{
-		lock_guard<mutex> lock(sMutex);
+		std::lock_guard lock(sMutex);
 		
-		auto i = mTables.find(make_tuple(aa, prePro));
+		auto i = mTables.find(std::make_tuple(aa, prePro));
 		if (i == mTables.end())
 		{
 			clipper::Ramachandran::TYPE type;
@@ -77,26 +76,26 @@ class RamachandranTables
 									type = clipper::Ramachandran::PrePro2;
 			else					type = clipper::Ramachandran::NoGPIVpreP2;
 			
-			i = mTables.emplace(make_pair(make_tuple(aa, prePro), clipper::Ramachandran(type))).first;
+			i = mTables.emplace(make_pair(std::make_tuple(aa, prePro), clipper::Ramachandran(type))).first;
 		}
 		
 		return i->second;
 	}
 	
   private:
-	map<tuple<string,int>,clipper::Ramachandran> mTables;
-	static mutex sMutex;
+	std::map<std::tuple<std::string,int>,clipper::Ramachandran> mTables;
+	static std::mutex sMutex;
 };
 
-mutex RamachandranTables::sMutex;
+std::mutex RamachandranTables::sMutex;
 
-float calculateRamachandranZScore(const string& aa, bool prePro, float phi, float psi)
+float calculateRamachandranZScore(const std::string& aa, bool prePro, float phi, float psi)
 {
 	auto& table = RamachandranTables::instance().table(aa, prePro);
 	return table.probability(phi * mmcif::kPI / 180, psi * mmcif::kPI / 180);
 }
 
-RamachandranScore calculateRamachandranScore(const string& aa, bool prePro, float phi, float psi)
+RamachandranScore calculateRamachandranScore(const std::string& aa, bool prePro, float phi, float psi)
 {
 	auto& table = RamachandranTables::instance().table(aa, prePro);
 
@@ -166,7 +165,7 @@ RamachandranScore calculateRamachandranScore(const string& aa, bool prePro, floa
 //
 //// --------------------------------------------------------------------
 //
-//float calculateRamachandranZScore(const string& aa, RamachandranSecondaryStructureType ss,
+//float calculateRamachandranZScore(const std::string& aa, RamachandranSecondaryStructureType ss,
 //	float phi, float psi)
 //{
 //	float result = -999;

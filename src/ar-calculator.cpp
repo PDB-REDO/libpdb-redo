@@ -40,8 +40,6 @@
 
 #include "progress.h"
 
-using namespace std;
-
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
 namespace c = mmcif;

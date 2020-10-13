@@ -64,15 +64,15 @@
 #include "cif++/Compound.hpp"
 //#include "cif++/Edia.hpp"
 #include "cif++/CifUtils.hpp"
-#include "cif++/DistanceMap.hpp"
-#include "cif++/BondMap.hpp"
-#include "cif++/MapMaker.hpp"
+
+#include "DistanceMap.hpp"
+#include "BondMap.hpp"
+#include "MapMaker.hpp"
 
 #include "HBondTraits.h"
 
 #include "svm++.h"
 
-using namespace std;
 
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
@@ -111,7 +111,7 @@ enum WaterFeaturesEnum {
 	kNrOfFeatures
 };
 
-typedef array<float,kNrOfFeatures> FeatureScoreArray;
+typedef std::array<float,kNrOfFeatures> FeatureScoreArray;
 
 // --------------------------------------------------------------------
 
@@ -123,7 +123,7 @@ struct CentrifugeParameters
 	float					maxWaterDistance;
 	float					waterSphereRadius;
 	float					waterDensityRadiusCutOff;
-	vector<string>			mtzColumns;
+	std::vector<std::string>			mtzColumns;
 	float					featureScales[kNrOfFeatures];
 	float					featureOffsets[kNrOfFeatures];
 	
@@ -171,7 +171,7 @@ clipper::Mat33<float> normalize(M m)
 
 // --------------------------------------------------------------------
 
-void CalculateIntegrationBox(const clipper::Xmap<float>& xmap, const vector<c::Atom>& atoms,
+void CalculateIntegrationBox(const clipper::Xmap<float>& xmap, const std::vector<c::Atom>& atoms,
 	clipper::Coord_grid& gridMin, clipper::Coord_grid& gridMax,
 	float inflationFactor, float uniformRadius, float uniformBFactor)
 {
@@ -179,13 +179,13 @@ void CalculateIntegrationBox(const clipper::Xmap<float>& xmap, const vector<c::A
 	
 	clipper::Coord_orth oMin, oMax;
 	
-	oMin[0] = oMin[1] = oMin[2] = numeric_limits<float>::max();
-	oMax[0] = oMax[1] = oMax[2] = numeric_limits<float>::lowest();
+	oMin[0] = oMin[1] = oMin[2] = std::numeric_limits<float>::max();
+	oMax[0] = oMax[1] = oMax[2] = std::numeric_limits<float>::lowest();
 	
 	for (auto& atom: atoms)
 	{
 		float x, y, z;
-		tie(x, y, z) = atom.location();
+		std::tie(x, y, z) = atom.location();
 		
 		if (isnan(x) or isnan(y) or isnan(z))
 			continue;
@@ -223,7 +223,7 @@ void CalculateIntegrationBox(const clipper::Xmap<float>& xmap, const vector<c::A
 
 void GetGridOrthoCoordinates(clipper::Xmap<float>& xmap,
 	clipper::Coord_grid& gridMin, clipper::Coord_grid& gridMax, 
-	vector<clipper::Coord_orth>& coords)
+	std::vector<clipper::Coord_orth>& coords)
 {
 	auto dim = gridMax - gridMin;
 	size_t numOfGridPoints = (dim[0] + 1) * (dim[1] + 1) * (dim[2] + 1);
@@ -241,17 +241,17 @@ void GetGridOrthoCoordinates(clipper::Xmap<float>& xmap,
 				coords.push_back(iw.coord_orth());
 }
 
-//void RemoveAtoms(clipper::Xmap<float>& xmap, const vector<c::Atom>& atoms,
+//void RemoveAtoms(clipper::Xmap<float>& xmap, const std::vector<c::Atom>& atoms,
 //	float inflationFactor, float uniformRadius = 0, float uniformBFactor = 0)
 //{
 //	clipper::Coord_grid gridMin, gridMax;
 //	
 //	CalculateIntegrationBox(xmap, atoms, gridMin, gridMax, inflationFactor, uniformRadius, uniformBFactor);
 //
-//	vector<clipper::Coord_orth> coordinates;
+//	std::vector<clipper::Coord_orth> coordinates;
 //	GetGridOrthoCoordinates(xmap, gridMin, gridMax, coordinates);
 //
-//	vector<float> modDensity(coordinates.size(), 0.0f);
+//	std::vector<float> modDensity(coordinates.size(), 0.0f);
 //	
 //	for (const c::Atom& atom: atoms)
 //	{
@@ -264,7 +264,7 @@ void GetGridOrthoCoordinates(clipper::Xmap<float>& xmap,
 //		for (auto c: coordinates)
 //		{
 //			float x, y, z;
-//			tie(x, y, z) = atom.location();
+//			std::tie(x, y, z) = atom.location();
 //
 //			float d2 =
 //				(x - c[0]) * (x - c[0]) +
@@ -304,7 +304,7 @@ void GetGridOrthoCoordinates(clipper::Xmap<float>& xmap,
 
 // --------------------------------------------------------------------
 
-float CalculateDensity(const clipper::Xmap<float>& xmap, const vector<c::Atom>& atoms,
+float CalculateDensity(const clipper::Xmap<float>& xmap, const std::vector<c::Atom>& atoms,
 	float inflationFactor, float uniformRadius, float uniformBFactor)
 {
 	clipper::Coord_grid gridMin, gridMax;
@@ -332,7 +332,7 @@ float CalculateDensity(const clipper::Xmap<float>& xmap, const vector<c::Atom>& 
 					auto c = iw.coord_orth();
 					
 					float x, y, z;
-					tie(x, y, z) = atom.location();
+					std::tie(x, y, z) = atom.location();
 
 					float d2 =
 						(x - c[0]) * (x - c[0]) +
@@ -389,7 +389,7 @@ float InterpolateDensityRadius(const clipper::Xmap<float>& xmap, const c::Atom& 
 	{
 		float radius = sample.radius;
 
-		vector<double> d;
+		std::vector<double> d;
 		d.reserve(dots.size());
 		double sum = 0;
 		
@@ -419,11 +419,11 @@ float InterpolateDensityRadius(const clipper::Xmap<float>& xmap, const c::Atom& 
 		sample.sd = sqrt(sum2 / dots.size());
 		
 		if (cif::VERBOSE > 1)
-			cout << "For r = " << radius << " avg: " << sample.avg << " and sd " << sample.sd << endl;
+			std::cout << "For r = " << radius << " avg: " << sample.avg << " and sd " << sample.sd << std::endl;
 	}
 	
 	if (cif::VERBOSE > 1)
-		cout << endl;
+		std::cout << std::endl;
 
 	// Use linear interpolation for now
 
@@ -457,7 +457,7 @@ float DensityStandardDeviationAtRadius(const clipper::Xmap<float>& xmap, const c
 {
 	static const c::SphericalDots_50 dots;
 
-	vector<double> d;
+	std::vector<double> d;
 	d.reserve(dots.size());
 	double sum = 0;
 		
@@ -507,7 +507,7 @@ float DensityStandardDeviationAtRadius(const clipper::Xmap<float>& xmap, const c
 //		float dp = xmap.interp<clipper::Interp_cubic>(cf);
 //		
 //		float x, y, z;
-//		tie(x, y, z) = p;
+//		std::tie(x, y, z) = p;
 //		
 //		If[0] += dp * (y * y + z * z);	// 11
 //		If[1] += dp * (x * x + z * z);	// 22
@@ -534,7 +534,7 @@ clipper::Mat33<float> CalculateInertiaTensor(const clipper::Xmap<float>& xmap,
 	auto c= atom.location();
 	
 	float x, y, z;
-	tie(x, y, z) = c;
+	std::tie(x, y, z) = c;
 
 	// calculate min and max orthogonal coordinates first, based on atom position, radius and bfactor
 	clipper::Coord_orth oMin = { x - radius * 2, y - radius * 2, z - radius * 2},
@@ -562,7 +562,7 @@ clipper::Mat33<float> CalculateInertiaTensor(const clipper::Xmap<float>& xmap,
 				if (dp < densityCutoff)	
 					continue;
 					
-				tie(x, y, z) = c::Point(iw.coord_orth());
+				std::tie(x, y, z) = c::Point(iw.coord_orth());
 				
 				If[0] += dp * (y * y + z * z);	// 11
 				If[1] += dp * (x * x + z * z);	// 22
@@ -628,7 +628,7 @@ clipper::Mat33<float> CalculateInertiaTensor2(const clipper::Xmap<float>& xmap, 
 
 // --------------------------------------------------------------------
 
-tuple<float,float> AxialityAndRhombicity(const clipper::Mat33<float>& m)
+std::tuple<float,float> AxialityAndRhombicity(const clipper::Mat33<float>& m)
 {
 	clipper::Matrix<float> M(3, 3);
 
@@ -641,14 +641,14 @@ tuple<float,float> AxialityAndRhombicity(const clipper::Mat33<float>& m)
 	M(0, 2) = M(2, 0) = mn(0, 2);
 	M(1, 2) = M(2, 1) = mn(1, 2);
 	
-	vector<float> eigenValues = M.eigen();
+	std::vector<float> eigenValues = M.eigen();
 				
 	sort(eigenValues.begin(), eigenValues.end());
 
 	float axiality = 2 * eigenValues[2] - (eigenValues[0] + eigenValues[1]);
 	float rhombicity = eigenValues[1] - eigenValues[0];
 	
-	return make_tuple(axiality, rhombicity);
+	return std::make_tuple(axiality, rhombicity);
 }
 
 // --------------------------------------------------------------------
@@ -665,18 +665,18 @@ void SaveMap(clipper::Xmap<float>& xmap, fs::path f)
 
 struct score
 {
-	string						name;
+	std::string						name;
 	c::Point					loc;
 	float						density, densityIntegrated;
 	float						interpolatedWaterRadius;
 	clipper::Mat33<float>		inertiaTensor;
 	float						axiality, rhombicity;
-	vector<pair<string,float>>	bumps, hbondpairs;
+	std::vector<std::pair<std::string,float>>	bumps, hbondpairs;
 	float						edia;
 	
-	static string columnHeaders()
+	static std::string columnHeaders()
 	{
-		stringstream s;
+		std::stringstream s;
 		s << "Name" << '\t'
 		  << "Loc" << '\t'
 		  << "Density" << '\t'
@@ -691,7 +691,7 @@ struct score
 	}
 };
 
-ostream& operator<<(ostream& os, const score& sc)
+std::ostream& operator<<(std::ostream& os, const score& sc)
 {
 	os << sc.name << '\t'
 	   << sc.loc << '\t'
@@ -722,7 +722,7 @@ FeatureScoreArray CalculateScoresForWater(const c::Atom& water, const c::Structu
 	NotAHBondSet& notAHBond, const CentrifugeParameters& params)
 {
 	if (cif::VERBOSE)
-		cout << string(cif::get_terminal_width(), '-') << endl;
+		std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
 
 //	if (not water.isWater())
 //		throw runtime_error("Invalid water (" + water.mChainID + to_string(water.mResSeq) + "), not an oxygen or resname is not HOH");
@@ -734,7 +734,7 @@ FeatureScoreArray CalculateScoresForWater(const c::Atom& water, const c::Structu
 	sc.fill(0);
 	
 	sc[kFeatureDensity] = xmap.interp<clipper::Interp_cubic>(cf);
-	sc[kFeatureDensityIntegrated] = CalculateDensity(xmap, vector<c::Atom>({ water }),
+	sc[kFeatureDensityIntegrated] = CalculateDensity(xmap, std::vector<c::Atom>({ water }),
 		kInflationFactor, params.uniformAtomRadius, params.uniformBFactor);
 	
 //	sc[kFeatureEDIA] = CalculateEDIA(water, xmap, resolution, meanDensity, rmsDensity, distances, bonds);
@@ -753,7 +753,7 @@ FeatureScoreArray CalculateScoresForWater(const c::Atom& water, const c::Structu
 		sc[kFeatureDensitySDAtRadius] = DensityStandardDeviationAtRadius(xmap, water, radius);
 	
 		auto inertiaTensor = CalculateInertiaTensor(xmap, water, radius, params.waterDensityRadiusCutOff);
-		tie(sc[kFeatureAxiality], sc[kFeatureRhombicity]) = AxialityAndRhombicity(inertiaTensor);
+		std::tie(sc[kFeatureAxiality], sc[kFeatureRhombicity]) = AxialityAndRhombicity(inertiaTensor);
 	}
 	else
 	{
@@ -775,11 +775,11 @@ FeatureScoreArray CalculateScoresForWater(const c::Atom& water, const c::Structu
 		{
 			if (cif::VERBOSE)
 			{
-				cout << "Bumps with atom " << atom.id() << endl;
+				std::cout << "Bumps with atom " << atom.id() << std::endl;
 				if (cif::VERBOSE > 1)
-					cout << "atom: " << atom.location() << endl
-						 << "water: " << water.location() << endl
-						 << "distance = " << distance << endl;
+					std::cout << "atom: " << atom.location() << std::endl
+						 << "water: " << water.location() << std::endl
+						 << "distance = " << distance << std::endl;
 			}
 					
 //			sc[kFeatureNrOfBumps] += 1;
@@ -789,12 +789,12 @@ FeatureScoreArray CalculateScoresForWater(const c::Atom& water, const c::Structu
 			if (notAHBond(atom))
 			{
 				if (cif::VERBOSE > 1)
-					cout << "Atom " << atom.id() << " is not a HBond donor or acceptor" << endl;
+					std::cout << "Atom " << atom.id() << " is not a HBond donor or acceptor" << std::endl;
 			}
 			else
 			{
 				if (cif::VERBOSE > 1)
-					cout << "HBond with " << atom.id() << " at " << distance << "" << endl;
+					std::cout << "HBond with " << atom.id() << " at " << distance << "" << std::endl;
 	
 				sc[kFeatureNrOfHBonds] += 1;
 //				sc[kFeatureSumOfInvHBondLengths] += 1 / distance;
@@ -808,17 +808,17 @@ FeatureScoreArray CalculateScoresForWater(const c::Atom& water, const c::Structu
 
 	if (cif::VERBOSE)
 	{
-		cout << "density at point: " << sc[kFeatureDensity] << endl
-			 << "density integrated: " << sc[kFeatureDensityIntegrated] << endl
-			 << "EDIA: " << sc[kFeatureEDIA] << endl
-			 << "interpolated water radius: " << sc[kFeatureInterpolatedWaterRadius] << endl
-			 << "stdev density at radius: " << sc[kFeatureDensitySDAtRadius] << endl
-			 << "axiality: " << sc[kFeatureAxiality] << endl
-			 << "rhombicity: " << sc[kFeatureRhombicity] << endl
-//			 << "Bump: " << sc[kFeatureNrOfBumps] << endl
-			 << "HBonds: " << sc[kFeatureNrOfHBonds] << endl
-//			 << "Sum of Inv HBonds: " << sc[kFeatureSumOfInvHBondLengths] << endl;
- 			 << "HBond energy: " << sc[kFeatureEstimatedHBondEnergy] << endl;
+		std::cout << "density at point: " << sc[kFeatureDensity] << std::endl
+			 << "density integrated: " << sc[kFeatureDensityIntegrated] << std::endl
+			 << "EDIA: " << sc[kFeatureEDIA] << std::endl
+			 << "interpolated water radius: " << sc[kFeatureInterpolatedWaterRadius] << std::endl
+			 << "stdev density at radius: " << sc[kFeatureDensitySDAtRadius] << std::endl
+			 << "axiality: " << sc[kFeatureAxiality] << std::endl
+			 << "rhombicity: " << sc[kFeatureRhombicity] << std::endl
+//			 << "Bump: " << sc[kFeatureNrOfBumps] << std::endl
+			 << "HBonds: " << sc[kFeatureNrOfHBonds] << std::endl
+//			 << "Sum of Inv HBonds: " << sc[kFeatureSumOfInvHBondLengths] << std::endl;
+ 			 << "HBond energy: " << sc[kFeatureEstimatedHBondEnergy] << std::endl;
 	}
 
 	return sc;
@@ -830,15 +830,15 @@ int centrifugeLearn(int argc, char* argv[])
 {
 	po::options_description desc("centrifuge-learn " + VERSION_STRING + " options");
 	desc.add_options()
-		("output,o",	po::value<string>(),	"Output file for the calculated model")
-		("input,i",		po::value<vector<string>>(),
+		("output,o",	po::value<std::string>(),	"Output file for the calculated model")
+		("input,i",		po::value<std::vector<std::string>>(),
 												"Input files, can be specified multiple times")
 												
 		("force,f",								"Force overwriting files")
-//		("report,r",	po::value<string>(),	"Write the statics report to this file, use 'stdout' to output to screen")
+//		("report,r",	po::value<std::string>(),	"Write the statics report to this file, use 'stdout' to output to screen")
 
 		("dump-features",
-						po::value<string>(),	"Dump the final feature table to this file")
+						po::value<std::string>(),	"Dump the final feature table to this file")
 
 		("help,h",								"Display help message")
 		("version",								"Print version")
@@ -856,7 +856,7 @@ int centrifugeLearn(int argc, char* argv[])
 						po::value<float>(),		"Uniform B Factor to use for all atoms, default is 20")
 
 //		("save-fit-map",
-//						po::value<string>(),	"Save fit map after residue removal to this file")
+//						po::value<std::string>(),	"Save fit map after residue removal to this file")
 
 		("min-water-distance",
 						po::value<float>(),		"Minimum distance between a water atom and any atom of the protein structure, default is 2.0 Å")
@@ -871,7 +871,7 @@ int centrifugeLearn(int argc, char* argv[])
 						po::value<float>(),		"The density cutoff to use in calculating moments of intertia, default is 0.75 Å")
 
 		("mtz-columns",
-						po::value<string>(),	"Comma separated list of MTZ Column labels to load (default value is \"FWT,PHWT\"")
+						po::value<std::string>(),	"Comma separated list of MTZ Column labels to load (default value is \"FWT,PHWT\"")
 
 		("include-disputed",					"Include all waters in model, not only consensus waters")
 
@@ -894,19 +894,19 @@ int centrifugeLearn(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("output") == 0 or vm.count("input") == 0)
 	{
-		cerr << desc << endl;
+		std::cerr << desc << std::endl;
 		exit(1);
 	}
 	
-	if (fs::exists(vm["output"].as<string>()) and vm.count("force") == 0)
+	if (fs::exists(vm["output"].as<std::string>()) and vm.count("force") == 0)
 	{
-		cerr << "cowardly refusing to overwrite " << vm["output"].as<string>() << endl;
+		std::cerr << "cowardly refusing to overwrite " << vm["output"].as<std::string>() << std::endl;
 		exit(1);
 	}
 
@@ -929,7 +929,7 @@ int centrifugeLearn(int argc, char* argv[])
 	if (vm.count("water-density-radius-cutoff"))
 		params.waterDensityRadiusCutOff = vm["water-density-radius-cutoff"].as<float>();
 	if (vm.count("mtz-columns"))
-		ba::split(params.mtzColumns, vm["mtz-columns"].as<string>(), ba::is_any_of(","));
+		ba::split(params.mtzColumns, vm["mtz-columns"].as<std::string>(), ba::is_any_of(","));
 		
 	bool includeDisputed = vm.count("include-disputed") > 0;
 
@@ -942,42 +942,42 @@ int centrifugeLearn(int argc, char* argv[])
 	if (vm.count("sampling-rate"))
 		samplingRate = vm["sampling-rate"].as<float>();
 
-//	typedef struct { string chainID; int16_t resSeqNr; int label; } WaterInfo;
-//	vector<WaterInfo> waters;
+//	typedef struct { std::string chainID; int16_t resSeqNr; int label; } WaterInfo;
+//	std::vector<WaterInfo> waters;
 
 	typedef struct
 	{
-		fs::path					file;
-		string						curator;
-		shared_ptr<c::File>			mmcif;
-		shared_ptr<c::Structure>	prot;
-		size_t						nrOfWaters;
+		fs::path						file;
+		std::string						curator;
+		std::shared_ptr<c::File>		mmcif;
+		std::shared_ptr<c::Structure>	prot;
+		size_t							nrOfWaters;
 	} StructureInfo;
 
-	map<string,vector<StructureInfo>> structures;
+	std::map<std::string,std::vector<StructureInfo>> structures;
 
-	const regex rx("(.{4})_besttls(?:_dry_(.*))?\\.pdb");
+	const std::regex rx("(.{4})_besttls(?:_dry_(.*))?\\.pdb");
 	
 	// First collect the PDB structures and their curated files
 	// iterate over the input files to collect structures
-	for (fs::path input: vm["input"].as<vector<string>>())
+	for (fs::path input: vm["input"].as<std::vector<std::string>>())
 	{
-		smatch m;
-		string filename = input.filename().string();
+		std::smatch m;
+		std::string filename = input.filename().string();
 		
 		if (cif::VERBOSE)
-			cerr << "reading " << filename << endl;
+			std::cerr << "reading " << filename << std::endl;
 		
-		if (not regex_match(filename, m, rx))
-			throw runtime_error("Filenames must match (.{4})_besttls(.*)\\.pdb");
+		if (not std::regex_match(filename, m, rx))
+			throw std::runtime_error("Filenames must match (.{4})_besttls(.*)\\.pdb");
 
-		string pdbID = m[1].str();
-		string curator = m[2].str();
+		std::string pdbID = m[1].str();
+		std::string curator = m[2].str();
 
 		StructureInfo si = { input, curator };
 		
-		si.mmcif = make_shared<c::File>(input);
-		si.prot = make_shared<c::Structure>(*si.mmcif, 1);
+		si.mmcif = std::make_shared<c::File>(input);
+		si.prot = std::make_shared<c::Structure>(*si.mmcif, 1);
 		si.nrOfWaters = si.prot->waters().size();
 		
 		structures[pdbID].push_back(si);
@@ -988,38 +988,38 @@ int centrifugeLearn(int argc, char* argv[])
 	
 	// process the files, collect data
 	svm::Matrix data;
-	vector<svm::label_type> labels;
+	std::vector<svm::label_type> labels;
 
 	// Statistics
 	typedef struct {
-		string							structure;
+		std::string							structure;
 		uint32_t							waters;
 		uint32_t							rejected;
 		uint32_t							accepted;
 		uint32_t							disputed;
-		map<string,uint32_t>				acceptedBy;
+		std::map<std::string,uint32_t>		acceptedBy;
 	} StructureStatistics;
-	vector<StructureStatistics> stats;
+	std::vector<StructureStatistics> stats;
 
 	// Dump features, write out a dump of all features to allow analysis
 	
-	ofstream dump;
+	std::ofstream dump;
 	if (vm.count("dump-features"))
 	{
-		dump.open(vm["dump-features"].as<string>());
+		dump.open(vm["dump-features"].as<std::string>());
 		if (not dump.is_open())
-			throw runtime_error("Could not write to dump-features file");
+			throw std::runtime_error("Could not write to dump-features file");
 	}
 
 	for (auto& s: structures)
 	{
-		cout << string(cif::get_terminal_width(), '=') << endl;
+		std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
 
 		auto& proteins = s.second;
 		
 		if (proteins.size() == 1)
 		{
-			cout << "Skipping " << s.first << " since there is no curated file yet" << endl;
+			std::cout << "Skipping " << s.first << " since there is no curated file yet" << std::endl;
 			continue;
 		}
 		
@@ -1028,20 +1028,20 @@ int centrifugeLearn(int argc, char* argv[])
 		sort(proteins.begin(), proteins.end(), [](const StructureInfo& a, const StructureInfo& b) -> bool
 			{ return a.curator < b.curator; });
 		
-		cout << "Chose " << proteins.front().file.filename() << " as main structure for " << s.first << endl
-			 << "Nr of curated files: " << (proteins.size() - 1) << endl;
+		std::cout << "Chose " << proteins.front().file.filename() << " as main structure for " << s.first << std::endl
+			 << "Nr of curated files: " << (proteins.size() - 1) << std::endl;
 		
 		// Note, id's of atom need not be the same across the various files.
 		// The approach is therefore to lookup waters by residue sequence number.
 		// If that fails, we fall back to search by location.
-		map<string,uint32_t> curatedCount;
+		std::map<std::string,uint32_t> curatedCount;
 		struct WaterLoc {
-			string		id;
-			string		asymId;
+			std::string		id;
+			std::string		asymId;
 			int			resNum;
 			c::Point	loc;
 		};
-		vector<WaterLoc> waterLocations;
+		std::vector<WaterLoc> waterLocations;
 
 		for (auto& w: proteins.front().prot->waters())
 		{
@@ -1049,8 +1049,8 @@ int centrifugeLearn(int argc, char* argv[])
 			waterLocations.push_back(
 			{
 				w.id(),
-				w.property<string>("auth_asym_id"),
-				w.property<int>("auth_seq_id"),
+				w.property("auth_asym_id"),
+				w.property("auth_seq_id"),
 				w.location()
 			});
 		}
@@ -1064,8 +1064,8 @@ int centrifugeLearn(int argc, char* argv[])
 			uint32_t n = 0;
 			for (auto& w: cp.prot->waters())
 			{
-				string asymId = w.property<string>("auth_asym_id");
-				int seqId = w.property<int>("auth_seq_id");
+				std::string asymId = w.property("auth_asym_id");
+				int seqId = w.property("auth_seq_id");
 				
 				auto i = find_if(waterLocations.begin(), waterLocations.end(), [=](auto& wl) -> bool
 					{
@@ -1080,7 +1080,7 @@ int centrifugeLearn(int argc, char* argv[])
 				
 //				if (i == waterLocations.end())
 //				{
-//					cerr << "Locating water by id failed for " << asymId << ':' << seqId << endl;
+//					std::cerr << "Locating water by id failed for " << asymId << ':' << seqId << std::endl;
 //					
 //					i = find_if(waterLocations.begin(), waterLocations.end(), [&](auto& wl) -> bool
 //						{
@@ -1090,14 +1090,14 @@ int centrifugeLearn(int argc, char* argv[])
 //				}
 
 				if (i == waterLocations.end())
-					cerr << "unknown (new?) water " << asymId << ':' << seqId << endl;
+					std::cerr << "unknown (new?) water " << asymId << ':' << seqId << std::endl;
 				else
 				{
 					if (cif::VERBOSE)
 					{
 						float d = DistanceSquared(w.location(), i->loc);
 						if (d > 0)
-							cerr << "Water " << asymId << ':' << seqId << " drifted by " << sqrt(d) << " in " << cp.file << endl;
+							std::cerr << "Water " << asymId << ':' << seqId << " drifted by " << sqrt(d) << " in " << cp.file << std::endl;
 					}
 
 					curatedCount[i->id] += 1;
@@ -1119,10 +1119,10 @@ int centrifugeLearn(int argc, char* argv[])
 		stat.disputed = curatedCount.size() - stat.rejected - stat.accepted;
 		stats.push_back(stat);
 		
-		cout << "Nr of waters: " << curatedCount.size() << endl
-			 << "Nr of real waters: " << stat.accepted << endl
-			 << "Nr of not waters: " << stat.rejected << endl
-			 << "Nr of disputed waters: " << stat.disputed << endl;
+		std::cout << "Nr of waters: " << curatedCount.size() << std::endl
+			 << "Nr of real waters: " << stat.accepted << std::endl
+			 << "Nr of not waters: " << stat.rejected << std::endl
+			 << "Nr of disputed waters: " << stat.disputed << std::endl;
 		
 		// Do the actual calculations
 		c::Structure& prot = *proteins.front().prot.get();
@@ -1158,12 +1158,12 @@ int centrifugeLearn(int argc, char* argv[])
 			c::Atom water = prot.getAtomById(id);
 			
 			if (not water.comp().isWater())
-				throw runtime_error("This is not a water in " + file.string() + " id: " + id);
+				throw std::runtime_error("This is not a water in " + file.string() + " id: " + id);
 
 			if (cif::VERBOSE)
-				cout << string(cif::get_terminal_width(), '=') << endl
-					 << "Learning from " << id << " @ " << water.location() << endl
-					 << "accepted count: " << (cnt - 1) << endl;
+				std::cout << std::string(cif::get_terminal_width(), '=') << std::endl
+					 << "Learning from " << id << " @ " << water.location() << std::endl
+					 << "accepted count: " << (cnt - 1) << std::endl;
 
 			auto scores = CalculateScoresForWater(water, prot, xmap, distances, bonds, resolution, meanDensity, rmsDensity, *notAHBond, params);
 			
@@ -1175,7 +1175,7 @@ int centrifugeLearn(int argc, char* argv[])
 				for (double s: scores)
 					dump << '\t' << s;
 
-				dump << endl;
+				dump << std::endl;
 			}
 			
 			if (includeDisputed)
@@ -1198,38 +1198,38 @@ int centrifugeLearn(int argc, char* argv[])
 	
 	// print out statistics
 	
-	cout << "ID" << '\t'
+	std::cout << "ID" << '\t'
 		 << "Water" << '\t'
 		 << "Not Water" << '\t'
 		 << "Disputed" << '\t'
-		 << "Accepted by" << endl;
+		 << "Accepted by" << std::endl;
 	for (auto& st: stats)
 	{
-		cout << st.structure << '\t'
+		std::cout << st.structure << '\t'
 			 << st.accepted << '\t'
 			 << st.rejected << '\t'
 			 << st.disputed;
 		
 		for (auto& u: st.acceptedBy)
-			cout << '\t' << u.first << ':' << u.second;
+			std::cout << '\t' << u.first << ':' << u.second;
 
-		cout << endl;
+		std::cout << std::endl;
 	}
 
 	auto scales = data.Scale();
 	
 	if (scales.empty())
-		throw runtime_error("Nothing learned");
+		throw std::runtime_error("Nothing learned");
 
 	if (cif::VERBOSE)
 	{
-		cout << string(cif::get_terminal_width(), '=') << endl
-			 << "Number of waters processed: " << data.size() << endl
-			 << endl
-			 << "Scales: " << endl;
+		std::cout << std::string(cif::get_terminal_width(), '=') << std::endl
+			 << "Number of waters processed: " << data.size() << std::endl
+			 << std::endl
+			 << "Scales: " << std::endl;
 		
 		for (auto& scale: scales)
-			cout << '(' << scale.first << ", " << scale.second << ')' << endl;
+			std::cout << '(' << scale.first << ", " << scale.second << ')' << std::endl;
 	}
 
 	typedef svm::SVM_C_SVC_RBF SVM;
@@ -1243,7 +1243,7 @@ int centrifugeLearn(int argc, char* argv[])
 	{
 		const int cBegin = -5, cEnd = 11, cStep = 2, gBegin = 3, gEnd = -9, gStep = -2;
 		
-		vector<pair<SVMParams,size_t>> paramScores;
+		std::vector<std::pair<SVMParams,size_t>> paramScores;
 		for (auto c = cBegin; c <= cEnd; c+= cStep)
 			for (auto g = gBegin; g >= gEnd; g += gStep)
 			{
@@ -1251,7 +1251,7 @@ int centrifugeLearn(int argc, char* argv[])
 				svmParams.gamma = pow(2.0, g);
 				svmParams.C = pow(2.0, c);
 				
-				paramScores.push_back(make_pair(svmParams, 0));
+				paramScores.push_back(std::make_pair(svmParams, 0));
 			} 
 		
 		// use as much threads as possible
@@ -1259,7 +1259,7 @@ int centrifugeLearn(int argc, char* argv[])
 		
 		boost::thread_group t;
 		size_t N = boost::thread::hardware_concurrency();
-		atomic<size_t> next(0);
+		std::atomic<size_t> next(0);
 	
 		float bestScoreSoFar = 0;
 	
@@ -1273,7 +1273,7 @@ int centrifugeLearn(int argc, char* argv[])
 					if (i >= paramScores.size())
 						break;
 
-					stringstream s;
+					std::stringstream s;
 					s << "C:" << paramScores[i].first.C << " g:" << paramScores[i].first.gamma;
 					progress.message(s.str());
 					
@@ -1307,9 +1307,9 @@ int centrifugeLearn(int argc, char* argv[])
 					if (bestScoreSoFar < mcc)
 					{
 						bestScoreSoFar = mcc;
-						cout << endl
-							 << setprecision(3) << bestScoreSoFar << " g " << paramScores[i].first.gamma << " C " << paramScores[i].first.C
-							 << endl;
+						std::cout << std::endl
+							 << std::setprecision(3) << bestScoreSoFar << " g " << paramScores[i].first.gamma << " C " << paramScores[i].first.C
+							 << std::endl;
 					}
 	
 					progress.consumed(1);
@@ -1318,11 +1318,11 @@ int centrifugeLearn(int argc, char* argv[])
 		
 		t.join_all();
 	
-		sort(paramScores.begin(), paramScores.end(),[](const pair<SVMParams,size_t>& a, const pair<SVMParams,size_t>& b) -> bool
+		sort(paramScores.begin(), paramScores.end(),[](const std::pair<SVMParams,size_t>& a, const std::pair<SVMParams,size_t>& b) -> bool
 			{ return a.second > b.second; });
 			
-		cout << "Best C: " << paramScores.front().first.C << endl
-			 << "Best gamma: " << paramScores.front().first.gamma << endl;
+		std::cout << "Best C: " << paramScores.front().first.C << std::endl
+			 << "Best gamma: " << paramScores.front().first.gamma << std::endl;
 		
 		svmParams = paramScores.front().first;
 	}
@@ -1361,9 +1361,9 @@ int centrifugeLearn(int argc, char* argv[])
 	auto mcc = ((tp * tn) - (fp * fn)) / sqrt((tp + fp) * (tp + fn) * (tn + fp) * (tn + fn));
 	float score = 100.0 * (tp + tn) / labels.size();
 
-	cout << "Cross validation Accuracy: " << score << '%' << endl
-		 << "Matthews correlation coefficient: " << mcc << endl
-		 << "tp: " << tp << " tn: " << tn << " fp: " << fp << " fn: " << fn << endl;
+	std::cout << "Cross validation Accuracy: " << score << '%' << std::endl
+		 << "Matthews correlation coefficient: " << mcc << std::endl
+		 << "tp: " << tp << " tn: " << tn << " fp: " << fp << " fn: " << fn << std::endl;
 
 	auto model = svm.Train(labels, data);
 	
@@ -1378,7 +1378,7 @@ int centrifugeLearn(int argc, char* argv[])
 	for (auto& scale: scales)
 	{
 		auto e = new zeep::xml::element("scale");
-		e->set_attribute("min", to_string(scale.first));
+		e->set_attribute("min", std::to_string(scale.first));
 		e->set_attribute("max", to_string(scale.second));
 		doc.child()->append(e);
 	}
@@ -1387,9 +1387,9 @@ int centrifugeLearn(int argc, char* argv[])
 	
 	notAHBond->Save(*doc.child());
 	
-	std::ofstream modelFile(vm["output"].as<string>());
+	std::ofstream modelFile(vm["output"].as<std::string>());
 	if (not modelFile.is_open())
-		throw runtime_error("Could not write to model file");
+		throw std::runtime_error("Could not write to model file");
 	
 	zeep::xml::writer w(modelFile, true);
 	doc.write(w);
@@ -1403,15 +1403,15 @@ int centrifugePredict(int argc, char* argv[])
 {
 	po::options_description desc("centrifuge-predict " + VERSION_STRING + " options");
 	desc.add_options()
-		("model,m",		po::value<string>(),	"Model file")
+		("model,m",		po::value<std::string>(),	"Model file")
 		("input-coordinates,i",
-						po::value<string>(),	"Input file")
-		("input-map,M",	po::value<string>(),	"Input Map or MTZ file")
-		("output,o",	po::value<string>(),	"Output file")
+						po::value<std::string>(),	"Input file")
+		("input-map,M",	po::value<std::string>(),	"Input Map or MTZ file")
+		("output,o",	po::value<std::string>(),	"Output file")
 		("mtz-columns",
-						po::value<string>(),	"Comma separated list of MTZ Column labels to load (default value is taken from model file)")
-		("coot-script",	po::value<string>(),	"Write a coot script to this file")
-//		("report,r",	po::value<string>(),	"Write the statics report to this file, use 'stdout' to output to screen")
+						po::value<std::string>(),	"Comma separated list of MTZ Column labels to load (default value is taken from model file)")
+		("coot-script",	po::value<std::string>(),	"Write a coot script to this file")
+//		("report,r",	po::value<std::string>(),	"Write the statics report to this file, use 'stdout' to output to screen")
 		("help,h",								"Display help message")
 		("version",								"Print version")
 		("verbose,v",							"Verbose output")
@@ -1430,13 +1430,13 @@ int centrifugePredict(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("model") == 0 or vm.count("input-coordinates") == 0)
 	{
-		cerr << desc << endl;
+		std::cerr << desc << std::endl;
 		exit(1);
 	}
 
@@ -1445,50 +1445,50 @@ int centrifugePredict(int argc, char* argv[])
 		cif::VERBOSE = vm["debug"].as<int>();
 	
 	// Read the model
-	std::ifstream modelFile(vm["model"].as<string>());
+	std::ifstream modelFile(vm["model"].as<std::string>());
 	if (not modelFile.is_open())
-		throw runtime_error("no such model file");
+		throw std::runtime_error("no such model file");
 	
 	zeep::xml::document doc(modelFile);
 	auto e = doc.child()->find_first("params");
 	if (e == nullptr)
-		throw runtime_error("invalid model file");
+		throw std::runtime_error("invalid model file");
 	
 	CentrifugeParameters params;
 	zeep::xml::deserializer dsp(e);
 	params.serialize(dsp, 0);
 	
-	vector<pair<float,float>> scales;
+	std::vector<std::pair<float,float>> scales;
 	for (auto e: doc.child()->find("scale"))
 	{
-		scales.push_back(make_pair(
-			stof(e->get_attribute("min")),
+		scales.push_back(std::make_pair(
+			std::stof(e->get_attribute("min")),
 			stof(e->get_attribute("max"))));
 	}
 	
 	if (scales.size() != kNrOfFeatures)
-		throw runtime_error("Invalid number of scales in model file");
+		throw std::runtime_error("Invalid number of scales in model file");
 
 	e = doc.child()->find_first("svm-config");
 	if (e == nullptr)
-		throw runtime_error("invalid model file");
+		throw std::runtime_error("invalid model file");
 	auto model = svm::ModelBase::Create(*e);
 	
-	fs::path file = vm["input-coordinates"].as<string>();
+	fs::path file = vm["input-coordinates"].as<std::string>();
 
 	if (cif::VERBOSE)
-		cout << string(cif::get_terminal_width(), '=') << endl
-			 << "Processing file: " << file << endl;
+		std::cout << std::string(cif::get_terminal_width(), '=') << std::endl
+			 << "Processing file: " << file << std::endl;
 	
 	std::ofstream cootScript;
 	if (vm.count("coot-script"))
 	{
-		cootScript.open(vm["coot-script"].as<string>());
+		cootScript.open(vm["coot-script"].as<std::string>());
 		if (not cootScript.is_open())
-			throw runtime_error("Could not create coot script");
+			throw std::runtime_error("Could not create coot script");
 		
-		cootScript << "(interesting-things-gui \"Waters\"" << endl
-					<< "(list" << endl;
+		cootScript << "(interesting-things-gui \"Waters\"" << std::endl
+					<< "(list" << std::endl;
 	}
 	
 	c::File mmcif(file);
@@ -1502,11 +1502,11 @@ int centrifugePredict(int argc, char* argv[])
 //	if (vm.count("mtz-columns"))
 //	{
 //		mtzColumns.clear();
-//		ba::split(mtzColumns, vm["mtz-columns"].as<string>(), ba::is_any_of(","));
+//		ba::split(mtzColumns, vm["mtz-columns"].as<std::string>(), ba::is_any_of(","));
 //	}
 //
 //	if (vm.count("input-map"))
-//		mapFile = vm["input-map"].as<string>();
+//		mapFile = vm["input-map"].as<std::string>();
 //	else
 //	{
 //		if (file.extension() == ".gz" or file.extension() == ".bz2")
@@ -1532,7 +1532,7 @@ int centrifugePredict(int argc, char* argv[])
 		samplingRate = vm["sampling-rate"].as<float>();
 
 	c::MapMaker<float> mm;
-	mm.loadMTZ(vm["input-map"].as<string>(), samplingRate);
+	mm.loadMTZ(vm["input-map"].as<std::string>(), samplingRate);
 
 	clipper::Xmap<float>& xmap = mm.fb();
 	
@@ -1547,7 +1547,7 @@ int centrifugePredict(int argc, char* argv[])
 	
 	// Load the NotAHBondSet
 	auto notAHBond = NotAHBondSet::Load(*doc.child());
-	vector<c::Atom> notWater;
+	std::vector<c::Atom> notWater;
 	
 	for (auto& water : prot.waters())
 	{
@@ -1566,21 +1566,21 @@ int centrifugePredict(int argc, char* argv[])
 		
 		auto voted = distance(p.begin(), max_element(p.begin(), p.end()));
 		
-		cout << water.id() << '\t'
+		std::cout << water.id() << '\t'
 			 << water.authAsymId() << ':' << water.authSeqId() << "\t"
 			 << (isWater ? "water" : "not water") << '\t'
 			 << '(' << (p[0] * 100) << "%)"
 			 << (voted == isWater ? "!" : "")
-			 << endl;
+			 << std::endl;
 		
 		if (cootScript.is_open())
 		{
 			float x, y, z;
-			tie(x, y, z) = water.location();
+			std::tie(x, y, z) = water.location();
 			cootScript << "(list \"" << (isWater ? "Keep" : "Remove")
 						<< " HOH " << water.id()
-						<< " (" << setprecision(3) <<  (p[0] * 100) << "%)\" "
-						<< x << ' ' << y << ' ' << z << " )" << endl;
+						<< " (" << std::setprecision(3) <<  (p[0] * 100) << "%)\" "
+						<< x << ' ' << y << ' ' << z << " )" << std::endl;
 		}
 		
 		if (not isWater)
@@ -1592,11 +1592,11 @@ int centrifugePredict(int argc, char* argv[])
 		for (auto& a: notWater)
 			prot.removeAtom(a);
 		
-		prot.getFile().save(vm["output"].as<string>());
+		prot.getFile().save(vm["output"].as<std::string>());
 	}
 	
 	if (cootScript.is_open())
-		cootScript << "))" << endl;
+		cootScript << "))" << std::endl;
 
 	return 0;
 }
@@ -1607,11 +1607,11 @@ int edia_test(int argc, char* argv[])
 {
 	po::options_description desc("centrifuge-predict " + VERSION_STRING + " options");
 	desc.add_options()
-		("pdb",			po::value<string>(),	"Input PDB file")
-		("mtz",			po::value<string>(),	"Input MTZ or CCP4MAP file")
-		("output,o",	po::value<string>(),	"Output file")
+		("pdb",			po::value<std::string>(),	"Input PDB file")
+		("mtz",			po::value<std::string>(),	"Input MTZ or CCP4MAP file")
+		("output,o",	po::value<std::string>(),	"Output file")
 		("mtz-columns",
-						po::value<string>(),	"Comma separated list of MTZ Column labels to load (default value is \"FWT,PHWT\"")
+						po::value<std::string>(),	"Comma separated list of MTZ Column labels to load (default value is \"FWT,PHWT\"")
 		("resolution",	po::value<float>(),		"Resolution to use, default is taken from mtz file or pdb file")
 		("help,h",								"Display help message")
 		("version",								"Print version")
@@ -1631,13 +1631,13 @@ int edia_test(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("pdb") == 0 or vm.count("mtz") == 0)
 	{
-		cerr << desc << endl;
+		std::cerr << desc << std::endl;
 		exit(1);
 	}
 
@@ -1645,17 +1645,17 @@ int edia_test(int argc, char* argv[])
 	if (vm.count("debug"))
 		cif::VERBOSE = vm["debug"].as<int>();
 
-	vector<string> mtzColumns = { "FWT", "PHWT" };
+	std::vector<std::string> mtzColumns = { "FWT", "PHWT" };
 
 	if (vm.count("mtz-columns"))
-		ba::split(mtzColumns, vm["mtz-columns"].as<string>(), ba::is_any_of(","));
+		ba::split(mtzColumns, vm["mtz-columns"].as<std::string>(), ba::is_any_of(","));
 	
-	fs::path pdbFile = vm["pdb"].as<string>();
-	fs::path mtzFile = vm["mtz"].as<string>();
+	fs::path pdbFile = vm["pdb"].as<std::string>();
+	fs::path mtzFile = vm["mtz"].as<std::string>();
 
 	if (cif::VERBOSE)
-		cout << string(cif::get_terminal_width(), '=') << endl
-			 << "Processing file: " << pdbFile << endl;
+		std::cout << std::string(cif::get_terminal_width(), '=') << std::endl
+			 << "Processing file: " << pdbFile << std::endl;
 	
 	c::File mmcif(pdbFile);
 	c::Structure prot(mmcif, 1);
@@ -1676,10 +1676,10 @@ int edia_test(int argc, char* argv[])
 		resolution = vm["resolution"].as<float>();
 
 	if (cif::VERBOSE)
-		cout << "Resolution: " << resolution << endl
-			 << "Mean Density: " << meanDensity << endl
-			 << "RMS Density: " << rmsDensity << endl
-			 << endl;
+		std::cout << "Resolution: " << resolution << std::endl
+			 << "Mean Density: " << meanDensity << std::endl
+			 << "RMS Density: " << rmsDensity << std::endl
+			 << std::endl;
 
 	// Calculate the distance map
 	auto& spacegroup = xmap.spacegroup();
@@ -1688,7 +1688,7 @@ int edia_test(int argc, char* argv[])
 	c::DistanceMap distances(prot, spacegroup, cell, 3.5f);
 	c::BondMap bonds(prot);
 
-	map<string,float> ediaScores;
+	std::map<std::string,float> ediaScores;
 
 //	for (auto& water : prot.waters())
 	for (auto& a : prot.atoms())
@@ -1697,32 +1697,32 @@ int edia_test(int argc, char* argv[])
 //		
 //		ediaScores[a.id()] = edia;
 //		
-//		cout << a.authAsymId() << ':' << a.authSeqId() << '\t'
+//		std::cout << a.authAsymId() << ':' << a.authSeqId() << '\t'
 //			 << a.labelAtomId() << '\t'
 //			 << c::AtomTypeTraits(a.type()).symbol() << '\t'
-//			 << fixed << setprecision(2) << edia << endl;
+//			 << fixed << setprecision(2) << edia << std::endl;
 	}
 	
 	// And EDIAm scores
 
-	cout << endl
-		 << string(cif::get_terminal_width(), '=') << endl
-		 << "EDIAm scores for resdidues: " << endl
+	std::cout << std::endl
+		 << std::string(cif::get_terminal_width(), '=') << std::endl
+		 << "EDIAm scores for resdidues: " << std::endl
 		 << "Asym/seqID" << '\t'
 		 << "comp" << '\t'
 		 << "EDIAm" << '\t'
 		 << "min EDIA" << '\t'
 		 << "median EDIA" << '\t'
 		 << "max EDIA" << '\t'
-		 << "OPIA" << endl;
+		 << "OPIA" << std::endl;
 
-	vector<tuple<string,string,int>> residues;
+	std::vector<std::tuple<std::string,std::string,int>> residues;
 
-	const int kNonPolySeqID = numeric_limits<int>::max();
+	const int kNonPolySeqID = std::numeric_limits<int>::max();
 
 	for (auto r: db["pdbx_poly_seq_scheme"])
 	{
-		string asymId, compId;
+		std::string asymId, compId;
 		int seqId;
 		
 		cif::tie(asymId, compId, seqId) = r.get("asym_id", "mon_id", "seq_id");
@@ -1731,7 +1731,7 @@ int edia_test(int argc, char* argv[])
 
 	for (auto r: db["pdbx_nonpoly_scheme"])
 	{
-		string asymId, compId;
+		std::string asymId, compId;
 		
 		cif::tie(asymId, compId) = r.get("asym_id", "mon_id");
 		residues.push_back(make_tuple(asymId, compId, kNonPolySeqID));
@@ -1739,22 +1739,22 @@ int edia_test(int argc, char* argv[])
 	
 	for (size_t i = 0; i < residues.size(); ++i)
 	{
-		string asymId, compId;
+		std::string asymId, compId;
 		int seqId;
 		
-		tie(asymId, compId, seqId) = residues[i];
+		std::tie(asymId, compId, seqId) = residues[i];
 		
 		auto compound = mmcif::Compound::create(compId);
 		if (not compound or compound->isWater())
 			continue;
 		
-		vector<double> edia;
+		std::vector<double> edia;
 		
 		double sum = 0;
 		size_t N = 0, M = 0;
 		
-		vector<string> compoundAtoms;
-		if (seqId != kNonPolySeqID and (i + 1 == residues.size() or get<0>(residues[i + 1]) != asymId))
+		std::vector<std::string> compoundAtoms;
+		if (seqId != kNonPolySeqID and (i + 1 == residues.size() or std::get<0>(residues[i + 1]) != asymId))
 			compoundAtoms = { "OXT" };
 
 		for (auto cAtom: compound->atoms())
@@ -1774,18 +1774,18 @@ int edia_test(int argc, char* argv[])
 					db["atom_site"].find(cif::Key("label_asym_id") == asymId and cif::Key("label_atom_id") == cAtomID);
 
 			if (a.size() > 1)
-				throw runtime_error("Invalid number of atoms found for asym_id " + asymId + " comp_id " + compId + (seqId == kNonPolySeqID ? "" : " seq_id " + to_string(seqId)));
+				throw std::runtime_error("Invalid number of atoms found for asym_id " + asymId + " comp_id " + compId + (seqId == kNonPolySeqID ? "" : " seq_id " + std::to_string(seqId)));
 
 			if (a.empty())
 			{
 				if (cAtomID == "OXT")
 					--N;
 				else if (cif::VERBOSE)
-					cerr << "Missing atom for compound " << compId << " in asym " << asymId << " seq_id " << (seqId == kNonPolySeqID ? 0 : seqId) << endl;
+					std::cerr << "Missing atom for compound " << compId << " in asym " << asymId << " seq_id " << (seqId == kNonPolySeqID ? 0 : seqId) << std::endl;
 			}
 			else
 			{
-				string atomId = a.front()["id"].as<string>();
+				std::string atomId = a.front()["id"].as<std::string>();
 				
 				float EDIAa = ediaScores[atomId];
 				
@@ -1816,13 +1816,13 @@ int edia_test(int argc, char* argv[])
 			OPIA = 100.0f * M / N;
 		}
 		
-		cout << asymId << '\t'
+		std::cout << asymId << '\t'
 			 << compId << '\t'
-			 << setprecision(2) << EDIAm << '\t'
+			 << std::setprecision(2) << EDIAm << '\t'
 			 << setprecision(2) << ediaMin << '\t'
 			 << setprecision(2) << ediaMedian << '\t'
 			 << setprecision(2) << ediaMax << '\t'
-			 << setprecision(1) << OPIA << endl;
+			 << setprecision(1) << OPIA << std::endl;
 	}
 	
 	return 0;
@@ -1835,7 +1835,7 @@ int pr_main(int argc, char* argv[])
 {
 	int result = 0;
 	
-	string command = fs::path(argv[0]).leaf().string();
+	std::string command = fs::path(argv[0]).leaf().string();
 
 	if (command == "centrifuge" and argc > 1)
 	{
@@ -1852,10 +1852,10 @@ int pr_main(int argc, char* argv[])
 // other commands here
 	else
 	{
-		cout << "Usage: centrifuge command [options]" << endl
-			 << endl
-			 << "Where command is either learn or predict" << endl
-			 << endl;
+		std::cout << "Usage: centrifuge command [options]" << std::endl
+			 << std::endl
+			 << "Where command is either learn or predict" << std::endl
+			 << std::endl;
 
 		exit(1);
 	}

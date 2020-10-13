@@ -36,7 +36,6 @@
 
 #include "svm++.h"
 
-using namespace std;
 namespace ba = boost::algorithm;
 
 //struct svm_class
@@ -67,8 +66,8 @@ namespace ba = boost::algorithm;
 //
 //struct svm_node
 //{
-//	vector<double> sv_coef;
-//	vector<svm_sv> sv;
+//	std::vector<double> sv_coef;
+//	std::vector<svm_sv> sv;
 //
 //	template<class Archive>
 //	void serialize(Archive& ar, const unsigned int version)
@@ -80,12 +79,12 @@ namespace ba = boost::algorithm;
 //
 //struct svm_config
 //{
-//	string					svm_type;
-//	string					kernel_type;
+//	std::string					svm_type;
+//	std::string					kernel_type;
 //	boost::optional<double>	gamma;
-//	vector<double>			rho;
-//	vector<svm_class>		classes;
-//	vector<svm_node>		sv;
+//	std::vector<double>			rho;
+//	std::vector<svm_class>		classes;
+//	std::vector<svm_node>		sv;
 //
 //	template<class Archive>
 //	void serialize(Archive& ar, const unsigned int version)
@@ -104,20 +103,20 @@ void predict_file(svm::ModelBase* model, const char* filename)
 //	typedef svm::ModelBase	SVMModel;
 	typedef svm::Vector		SVMVector;
 
-	ifstream test(filename);
-	string line;
+	std::ifstream test(filename);
+	std::string line;
 
-	while (getline(test, line))
+	while (std::getline(test, line))
 	{
-		list<string> f;
+		std::list<std::string> f;
 		ba::split(f, line, ba::is_any_of(" "));
 		f.pop_front();
 		
 		SVMVector v;
-		for (string& fs: f)
+		for (std::string& fs: f)
 		{
 			auto c = fs.find(':');
-			if (c == string::npos)
+			if (c == std::string::npos)
 				continue;
 			
 			int index = boost::lexical_cast<int>(fs.substr(0, c));
@@ -133,11 +132,11 @@ void predict_file(svm::ModelBase* model, const char* filename)
 		auto voted = distance(prob.begin(),
 			max_element(prob.begin(), prob.end()));
 		
-		cout << predictedClass << '\t'
+		std::cout << predictedClass << '\t'
 			 << (voted ? '0' : '1') << '\t'
 			 << "probabilities: ";
-		copy(prob.begin(), prob.end(), ostream_iterator<double>(cout, ", "));
-		cout << endl;
+		copy(prob.begin(), prob.end(), std::ostream_iterator<double>(std::cout, ", "));
+		std::cout << std::endl;
 	}
 }
 
@@ -152,7 +151,7 @@ void predict_file(svm::ModelBase* model, const char* filename)
 //
 //	auto config = doc.find_first("//svm-config");
 //	if (not config)
-//		throw runtime_error("invalid svm file");
+//		throw std::runtime_error("invalid svm file");
 //	
 //	auto model = svm::ModelBase::Create(*config);
 //
@@ -165,9 +164,9 @@ int centrifuge_test(int argc, char* argv[])
 {
 	cif::VERBOSE = 1;
 	
-	ifstream data("1cbs-0.8.txt.scale");
+	std::ifstream data("1cbs-0.8.txt.scale");
 	if (not data.is_open())
-		throw runtime_error("no such file");
+		throw std::runtime_error("no such file");
 
 	typedef svm::SVM_C_SVC_RBF SVM;
 	typedef SVM::param_type SVMParams;
@@ -180,14 +179,14 @@ int centrifuge_test(int argc, char* argv[])
 
 	SVM svm(params);
 
-	vector<int8_t> labels;
+	std::vector<int8_t> labels;
 	SVMMatrix m;
 	size_t row = 0;
 
 	for (;;)
 	{
-		string line;
-		getline(data, line);
+		std::string line;
+		std::getline(data, line);
 		
 		if (line.empty())
 		{
@@ -196,11 +195,11 @@ int centrifuge_test(int argc, char* argv[])
 			continue;
 		}
 		
-		vector<string> f;
+		std::vector<std::string> f;
 		ba::split(f, line, ba::is_any_of(" "));
 		
 		if (f.size() < 1)
-			throw runtime_error("invalid data");
+			throw std::runtime_error("invalid data");
 		
 		int8_t c = boost::lexical_cast<int8_t>(f.front());
 		f.erase(f.begin(), f.begin() + 1);
@@ -210,7 +209,7 @@ int centrifuge_test(int argc, char* argv[])
 		for (auto& fs: f)
 		{
 			auto c = fs.find(':');
-			if (c == string::npos)
+			if (c == std::string::npos)
 				continue;
 			
 			int index = boost::lexical_cast<int>(fs.substr(0, c));
@@ -233,14 +232,14 @@ int centrifuge_test(int argc, char* argv[])
 		if (cv[i] == labels[i])
 			++correct;
 	
-	cout << "Cross validation Accuracy = " << (100.0 * correct / labels.size()) << '%' << endl;
+	std::cout << "Cross validation Accuracy = " << (100.0 * correct / labels.size()) << '%' << std::endl;
 
 	predict_file(model, "1ctn-0.8-scaled.txt");
 	
 	zeep::xml::document doc;
 	doc.root()->append(model->GetConfig());
 	
-	ofstream model_file("test.model");
+	std::ofstream model_file("test.model");
 	if (model_file.is_open())
 		model_file << doc;
 

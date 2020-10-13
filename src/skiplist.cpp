@@ -39,7 +39,6 @@
 
 #include "skiplist.h"
 
-using namespace std;
 namespace fs = std::filesystem;
 namespace zx = zeep::xml;
 
@@ -99,7 +98,7 @@ struct SkipResiduePDB
 template<typename T>
 struct SkipResidueList
 {
-	vector<T>	res;
+	std::vector<T>	res;
 	
 	template<class Archive>
 	void serialize(Archive& ar, const unsigned int version)
@@ -115,7 +114,7 @@ struct SkipListContainer
 	SkipListNumberingScheme scheme;
 	SkipResidueList<SkipResidueLabel> label;
 	SkipResidueList<SkipResiduePDB> pdb;
-//	vector<SkipResidueAuth> auth;
+//	std::vector<SkipResidueAuth> auth;
 
 	template<class Archive>
 	void serialize(Archive& ar, const unsigned int version)
@@ -133,7 +132,7 @@ struct SkipListContainer
 				break;
 				
 			default:
-				throw runtime_error("Unimplemented skiplist scheme");
+				throw std::runtime_error("Unimplemented skiplist scheme");
 		}
 	}
 };
@@ -162,7 +161,7 @@ SkipList readSkipList(const fs::path& file, const mmcif::Structure& structure)
 {
 	std::ifstream is(file);
 	if (not is.is_open())
-		throw runtime_error("Could not open skip list file " + file.string());
+		throw std::runtime_error("Could not open skip list file " + file.string());
 	
 	zx::document doc(is);
 	
@@ -182,19 +181,19 @@ SkipList readSkipList(const fs::path& file, const mmcif::Structure& structure)
 			for (auto& r: list.pdb.res)
 			{
 				SkipResidue lr;
-				tie(lr.asymID, lr.seqID, lr.monID) =
+				std::tie(lr.asymID, lr.seqID, lr.monID) =
 					structure.MapPDBToLabel(r.strandID, r.seqNum, r.monID, r.insCode);
 				
 				if (lr.asymID.empty())
-					throw runtime_error("Could not map residue specified in skip list (" +
-						r.monID + ' ' + r.strandID + to_string(r.seqNum) + r.insCode + ')');
+					throw std::runtime_error("Could not map residue specified in skip list (" +
+						r.monID + ' ' + r.strandID + std::to_string(r.seqNum) + r.insCode + ')');
 				
-				result.emplace_back(move(lr));
+				result.emplace_back(std::move(lr));
 			}
 			break;
 		
 		default:
-			throw runtime_error("Unknown skip list scheme");
+			throw std::runtime_error("Unknown skip list scheme");
 	}
 	
 	return result;

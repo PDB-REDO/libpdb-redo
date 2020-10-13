@@ -34,7 +34,6 @@
 
 #include "MapMaker.hpp"
 
-using namespace std;
 namespace po = boost::program_options;
 namespace fs = std::filesystem;
 namespace c = mmcif;
@@ -46,9 +45,9 @@ int pr_main(int argc, char* argv[])
 	po::options_description visible_options("make-mtz " + VERSION_STRING + " options");
 	visible_options.add_options()
 		("help,h",										"Display help message")
-		("hklin",			po::value<string>(),		"Input file (either mtz or cif reflections file)")
-		("xyzin",			po::value<string>(),		"Input coordinates file")
-		("hklout",			po::value<string>(),		"Output MTZ file")
+		("hklin",			po::value<std::string>(),		"Input file (either mtz or cif reflections file)")
+		("xyzin",			po::value<std::string>(),		"Input coordinates file")
+		("hklout",			po::value<std::string>(),		"Output MTZ file")
 		("status-ccp4",									"In case the status flag contains '0' and '1', interpret status flag as CCP4 ('0' is free), the default is XPLOR ('1' is free)")
 		("no-bulk",										"No bulk ")
 		("electron-scattering",							"Use electron scattering factors")
@@ -56,8 +55,8 @@ int pr_main(int argc, char* argv[])
 		("aniso-cal",									"Anisotropic scaling of calculated")
 //		("num-reflns",		po::value<int>(),			"Number of reflections to use in structure factor weighting")
 //		("num-params",		po::value<int>(),			"Number of spline parameters to use in structure factor weighting")
-//		("fo-labels",		po::value<string>(),		"Comma seperated list of the (two) labels containing the observed reflections, default is 'FP,SIGFP'")
-//		("free-label",		po::value<string>(),		"Label for the free flag")
+//		("fo-labels",		po::value<std::string>(),		"Comma seperated list of the (two) labels containing the observed reflections, default is 'FP,SIGFP'")
+//		("free-label",		po::value<std::string>(),		"Label for the free flag")
 		("version",										"Print version")
 		("verbose,v",									"Verbose output")
 		;
@@ -77,13 +76,13 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("hklin") == 0 or vm.count("xyzin") == 0 or vm.count("hklout") == 0)
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(1);
 	}
 
@@ -93,10 +92,10 @@ int pr_main(int argc, char* argv[])
 
 	// --------------------------------------------------------------------
 
-//	MTZMaker mm(vm["hklin"].as<string>(), vm["xyzin"].as<string>(), vm);
+//	MTZMaker mm(vm["hklin"].as<std::string>(), vm["xyzin"].as<std::string>(), vm);
 
-	fs::path hklin = vm["hklin"].as<string>();
-	fs::path xyzin = vm["xyzin"].as<string>();
+	fs::path hklin = vm["hklin"].as<std::string>();
+	fs::path xyzin = vm["xyzin"].as<std::string>();
 
 	mmcif::File f(xyzin);
 	mmcif::Structure structure(f);
@@ -113,9 +112,9 @@ int pr_main(int argc, char* argv[])
 	auto aniso = c::MapMaker<float>::as_None;
 	if (vm.count("aniso-scaling"))
 	{
-		if (vm["aniso-scaling"].as<string>() == "observed")
+		if (vm["aniso-scaling"].as<std::string>() == "observed")
 			aniso = c::MapMaker<float>::as_Observed;
-		else if (vm["aniso-scaling"].as<string>() == "calculated")
+		else if (vm["aniso-scaling"].as<std::string>() == "calculated")
 			aniso = c::MapMaker<float>::as_Calculated;
 	}
 
@@ -131,9 +130,9 @@ int pr_main(int argc, char* argv[])
 		
 	mm.calculate(hklin, structure, vm.count("no-bulk"), aniso, samplingRate, electronScattering);
 
-	string name = f.data().getName();
+	std::string name = f.data().getName();
 
-	mm.writeMTZ(vm["hklout"].as<string>(), name, name);	
+	mm.writeMTZ(vm["hklout"].as<std::string>(), name, name);	
 
 	return 0;
 }

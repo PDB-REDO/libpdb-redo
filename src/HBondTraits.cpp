@@ -28,8 +28,7 @@
 
 #include <set>
 #include <regex>
-
-
+#include <fstream>
 
 #include <boost/algorithm/string.hpp>
 
@@ -37,7 +36,6 @@
 
 #include "HBondTraits.h"
 
-using namespace std;
 namespace fs = std::filesystem;
 namespace ba = boost::algorithm;
 
@@ -45,16 +43,16 @@ NotAHBondSet* NotAHBondSet::Create()
 {
 	const char* clibdMon = getenv("CLIBD_MON");
 	if (clibdMon == nullptr)
-		throw runtime_error("Cannot locate peptide list, please source the CCP4 environment");
+		throw std::runtime_error("Cannot locate peptide list, please source the CCP4 environment");
 	
 	fs::path dir(clibdMon);
 	
-	const regex kNotAHBondEnergyTypeRX("NR(?:5|55|56|6|66)");
+	const std::regex kNotAHBondEnergyTypeRX("NR(?:5|55|56|6|66)");
 	NotAHBondAtomSet atomSet;
 	
 	for (auto d = fs::directory_iterator(dir); d != fs::directory_iterator(); ++d)
 	{
-		if (d->path().leaf().string().length() != 1)
+		if (d->path().filename().string().length() != 1)
 			continue;
 		
 		for (auto e = fs::directory_iterator(d->path()); e != fs::directory_iterator(); ++e)
@@ -64,28 +62,28 @@ NotAHBondSet* NotAHBondSet::Create()
 			
 			std::ifstream file(e->path());
 			if (not file.is_open())
-				throw runtime_error("Could not open file: " + e->path().string());
+				throw std::runtime_error("Could not open file: " + e->path().string());
 			
 			cif::File data(file);
 			
 			for (auto& compName: data["comp_list"]["chem_comp"])
 			{
-				string compId = compName["id"].as<string>();
+				std::string compId = compName["id"].as<std::string>();
 				
 				try
 				{
 					for (auto& compAtom: data["comp_" + compId]["chem_comp_atom"])
 					{
-						string atomType = compAtom["type_symbol"].as<string>();
-						string typeEnergy = compAtom["type_energy"].as<string>();
+						std::string atomType = compAtom["type_symbol"].as<std::string>();
+						std::string typeEnergy = compAtom["type_energy"].as<std::string>();
 					
 						if (atomType == "N" and (typeEnergy == "N" or regex_match(typeEnergy, kNotAHBondEnergyTypeRX)))
-							atomSet.insert({ compId, compAtom["atom_id"].as<string>() });
+							atomSet.insert({ compId, compAtom["atom_id"].as<std::string>() });
 					}
 				}
-				catch (const exception& ex)
+				catch (const std::exception& ex)
 				{
-					cerr << "Error reading " << e->path() << ": " << ex.what() << endl;
+					std::cerr << "Error reading " << e->path() << ": " << ex.what() << std::endl;
 				}
 			}
 		}

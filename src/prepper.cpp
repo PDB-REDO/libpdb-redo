@@ -50,7 +50,6 @@
 
 #include "ClipperWrapper.hpp"
 
-using namespace std;
 namespace po = boost::program_options;
 namespace ba = boost::algorithm;
 namespace fs = std::filesystem;
@@ -60,29 +59,29 @@ namespace zx = zeep::xml;
 
 // --------------------------------------------------------------------
 
-const set<string> kStripperResidues = {
+const std::set<std::string> kStripperResidues = {
 	"GLY", "ALA", "VAL", "THR", "SER", "CYS", "TRP", "PHE", "TYR", "HIS", "ILE",
 	"LEU", "ASP", "ASN", "GLU", "GLN", "MET", "ARG", "LYS", "PRO", "MSE"
 };
 
-const set<string> kBackBone = {
+const std::set<std::string> kBackBone = {
 	"N", "CA", "C", "O", "OXT"
 };
 
 // --------------------------------------------------------------------
 
-void SwapFields(cif::Row& r, string fld1, string fld2)
+void SwapFields(cif::Row& r, std::string fld1, std::string fld2)
 {
-	string v = r[fld1].as<string>();
-	r[fld1] = r[fld2].as<string>();
+	std::string v = r[fld1].as<std::string>();
+	r[fld1] = r[fld2].as<std::string>();
 	r[fld2] = v;
 }
 
 // returns <asymId,compId,seqId>
-tuple<string,string,string> MapResidue(cif::Datablock& db, string chainID,
-	string compID, int seqNum, string iCode)
+std::tuple<std::string,std::string,std::string> MapResidue(cif::Datablock& db, std::string chainID,
+	std::string compID, int seqNum, std::string iCode)
 {
-	string asymId, compId, seqId;
+	std::string asymId, compId, seqId;
 
 	auto r = db["pdbx_poly_seq_scheme"][
 		cif::Key("pdb_strand_id") == chainID and
@@ -101,19 +100,19 @@ tuple<string,string,string> MapResidue(cif::Datablock& db, string chainID,
 			cif::Key("pdb_ins_code") == iCode];
 
 		if (r.empty())
-			throw runtime_error("Could not map residue " + chainID + to_string(seqNum) + iCode);
+			throw std::runtime_error("Could not map residue " + chainID + std::to_string(seqNum) + iCode);
 		
 		cif::tie(asymId, compId) = r.get("asym_id", "mon_id");
 	}
 
-	return make_tuple(asymId, compId, seqId);
+	return std::make_tuple(asymId, compId, seqId);
 }
 
 // returns <chainID,compId,seqNum,iCode>
-tuple<char,string,int,char> MapBackResidue(cif::Datablock& db, string asymId,
-	string compId, string seqId)
+std::tuple<char,std::string,int,char> MapBackResidue(cif::Datablock& db, std::string asymId,
+	std::string compId, std::string seqId)
 {
-	string chainID, iCode;
+	std::string chainID, iCode;
 	int seqNum;
 
 	auto r = db["pdbx_poly_seq_scheme"][
@@ -131,34 +130,34 @@ tuple<char,string,int,char> MapBackResidue(cif::Datablock& db, string asymId,
 			cif::Key("seq_id") == seqId];
 
 		if (r.empty())
-			throw runtime_error("Could not map residue " + asymId + ":" + seqId);
+			throw std::runtime_error("Could not map residue " + asymId + ":" + seqId);
 		
 		cif::tie(chainID, compId, seqNum, iCode) =
 			r.get("pdb_strand_id", "pdb_mon_id", "pdb_seq_num", "pdb_ins_code");
 	}
 
-	return make_tuple(chainID[0], compId, seqNum, iCode[0] ? iCode[0] : ' ');
+	return std::make_tuple(chainID[0], compId, seqNum, iCode[0] ? iCode[0] : ' ');
 }
 
 // returns <atomId,asymId,monId,seqId>
-tuple<string,string,string,string> MapAtom(cif::Datablock& db, string PDB_atomStr)
+std::tuple<std::string,std::string,std::string,std::string> MapAtom(cif::Datablock& db, std::string PDB_atomStr)
 {
-	string atomId = PDB_atomStr.substr(0, 4);		ba::trim(atomId);
-	string monId = PDB_atomStr.substr(5, 3);		ba::trim(monId);
-	string chainId = PDB_atomStr.substr(9, 1);
+	std::string atomId = PDB_atomStr.substr(0, 4);		ba::trim(atomId);
+	std::string monId = PDB_atomStr.substr(5, 3);		ba::trim(monId);
+	std::string chainId = PDB_atomStr.substr(9, 1);
 	int seqNum = stoi(PDB_atomStr.substr(10, 4));
-	string insCode = PDB_atomStr.substr(14, 1);	ba::trim(insCode);
+	std::string insCode = PDB_atomStr.substr(14, 1);	ba::trim(insCode);
 	
-	string asymId, seqId;
+	std::string asymId, seqId;
 	
-	tie(asymId, monId, seqId) = MapResidue(db, chainId, monId, seqNum, insCode);
+	std::tie(asymId, monId, seqId) = MapResidue(db, chainId, monId, seqNum, insCode);
 	
-	return make_tuple(atomId, asymId, monId, seqId);
+	return std::make_tuple(atomId, asymId, monId, seqId);
 }
 
 int DropLink(cif::Datablock& db, 
-	string fromAtomId, string fromAsymId, string fromCompId, string fromSeqId,
-	string toAtomId, string toAsymId, string toCompId, string toSeqId)
+	std::string fromAtomId, std::string fromAsymId, std::string fromCompId, std::string fromSeqId,
+	std::string toAtomId, std::string toAsymId, std::string toCompId, std::string toSeqId)
 {
 	return db["struct_conn"].erase(
 		(
@@ -183,15 +182,15 @@ int DropLink(cif::Datablock& db,
 			cif::Key("ptnr2_label_atom_id") == fromAtomId
 		), [](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Stripping link " << r["id"].as<string>() << endl;
+				std::cerr << "Stripping link " << r["id"].as<std::string>() << std::endl;
 		});
 }
 
-tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile, cif::Datablock& dat)
+std::tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile, cif::Datablock& dat)
 {
 	std::ifstream file(pdbCareFile);
 	if (not file.is_open())
-		throw runtime_error("Could not open pdb-care file " + pdbCareFile.string());
+		throw std::runtime_error("Could not open pdb-care file " + pdbCareFile.string());
 	
 	zx::document care(file);
 	
@@ -200,12 +199,12 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 	// non_reducingend_links_to_protein handling
 	for (auto e: care.find("//non_reducingend_links_to_protein/link"))
 	{
-		string fromAtomId, fromAsymId, fromCompId, fromSeqId;
-		tie(fromAtomId, fromAsymId, fromCompId, fromSeqId)
+		std::string fromAtomId, fromAsymId, fromCompId, fromSeqId;
+		std::tie(fromAtomId, fromAsymId, fromCompId, fromSeqId)
 			= MapAtom(db, e->get_attribute("from"));
 
-		string toAtomId, toAsymId, toCompId, toSeqId;
-		tie(toAtomId, toAsymId, toCompId, toSeqId)
+		std::string toAtomId, toAsymId, toCompId, toSeqId;
+		std::tie(toAtomId, toAsymId, toCompId, toSeqId)
 			= MapAtom(db, e->get_attribute("to"));
 		
 		deletedLinkCount += DropLink(db, fromAtomId, fromAsymId, fromCompId, fromSeqId,
@@ -215,12 +214,12 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 	// delete_link
 	for (auto e: care.find("//delete_link"))
 	{
-		string fromAtomId, fromAsymId, fromCompId, fromSeqId;
-		tie(fromAtomId, fromAsymId, fromCompId, fromSeqId)
+		std::string fromAtomId, fromAsymId, fromCompId, fromSeqId;
+		std::tie(fromAtomId, fromAsymId, fromCompId, fromSeqId)
 			= MapAtom(db, e->get_attribute("from"));
 
-		string toAtomId, toAsymId, toCompId, toSeqId;
-		tie(toAtomId, toAsymId, toCompId, toSeqId)
+		std::string toAtomId, toAsymId, toCompId, toSeqId;
+		std::tie(toAtomId, toAsymId, toCompId, toSeqId)
 			= MapAtom(db, e->get_attribute("to"));
 		
 		deletedLinkCount += DropLink(db, fromAtomId, fromAsymId, fromCompId, fromSeqId,
@@ -231,16 +230,16 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 	int linkID = 1;
 	for (auto e: care.find("//create_link"))
 	{
-		string fromAtomId, fromAsymId, fromCompId, fromSeqId;
-		tie(fromAtomId, fromAsymId, fromCompId, fromSeqId)
+		std::string fromAtomId, fromAsymId, fromCompId, fromSeqId;
+		std::tie(fromAtomId, fromAsymId, fromCompId, fromSeqId)
 			= MapAtom(db, e->get_attribute("from"));
 
-		string toAtomId, toAsymId, toCompId, toSeqId;
-		tie(toAtomId, toAsymId, toCompId, toSeqId)
+		std::string toAtomId, toAsymId, toCompId, toSeqId;
+		std::tie(toAtomId, toAsymId, toCompId, toSeqId)
 			= MapAtom(db, e->get_attribute("to"));
 		
 		db["struct_conn"].emplace({
-			{ "id", "covale_s" + to_string(linkID++) },
+			{ "id", "covale_s" + std::to_string(linkID++) },
 			{ "conn_type_id", "covale" },
 			{ "ptnr1_label_asym_id", fromAsymId },
 			{ "ptnr1_label_comp_id", fromCompId },
@@ -256,7 +255,7 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 		++addedLinkCount;
 	}
 	
-	set<string> oldNames, newNames;
+	std::set<std::string> oldNames, newNames;
 	
 	for (auto e: care.find("//issue_remedies/node[@issues > 0]"))
 	{
@@ -264,22 +263,22 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 		if (not rename)
 			continue;
 		
-		string pdbResname = e->get_attribute("pdb_resname");
+		std::string pdbResname = e->get_attribute("pdb_resname");
 		
-		string resname = pdbResname.substr(0, 3);
-		string chainID = pdbResname.substr(4, 1);
+		std::string resname = pdbResname.substr(0, 3);
+		std::string chainID = pdbResname.substr(4, 1);
 		int seqNr = stoi(pdbResname.substr(5, 4));
-		string iCode = pdbResname.substr(9, 1);
+		std::string iCode = pdbResname.substr(9, 1);
 		
 		if (iCode == " ")
 			iCode.clear();
 		
 		// see if we need to skip this pair
-		string newName = rename->get_attribute("new_name");
+		std::string newName = rename->get_attribute("new_name");
 		if (not dat["carb_rename_ignore"].find(cif::Key("from_comp_id") == resname and cif::Key("to_comp_id") == newName).empty())
 		{
 			if (cif::VERBOSE)
-				cerr << "Skipping pdb-care rename suggestion from " << resname << " to " << newName << endl;
+				std::cerr << "Skipping pdb-care rename suggestion from " << resname << " to " << newName << std::endl;
 			continue;
 		}
 
@@ -293,13 +292,13 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 		
 		if (ppss.empty())
 		{
-			cerr << "Could not rename '" << pdbResname << "' since it was not found" << endl;
+			std::cerr << "Could not rename '" << pdbResname << "' since it was not found" << std::endl;
 			continue;
 		}
 		
 		assert(ppss.size() == 1);
 		
-		string asymId, entityId, monId;
+		std::string asymId, entityId, monId;
 		cif::tie(asymId, entityId, monId) =
 			ppss.front().get("asym_id", "entity_id", "mon_id");
 			
@@ -320,7 +319,7 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 		}
 		
 		if (cif::VERBOSE)
-			cout << "Renamed " << pdbResname << " to " << newName << endl;
+			std::cout << "Renamed " << pdbResname << " to " << newName << std::endl;
 		
 		oldNames.insert(resname);
 		newNames.insert(newName);
@@ -332,7 +331,7 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 		if (db["atom_site"].find(cif::Key("label_comp_id") == cmp).empty())
 		{
 			if (cif::VERBOSE)
-				cout << "Removing _chem_comp " << cmp << endl;
+				std::cout << "Removing _chem_comp " << cmp << std::endl;
 
 			db["chem_comp"].erase(cif::Key("id") == cmp);
 		}
@@ -344,13 +343,13 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 			continue;
 
 		if (cif::VERBOSE)
-			cout << "Adding _chem_comp " << cmp << endl;
+			std::cout << "Adding _chem_comp " << cmp << std::endl;
 		
 		auto compound = c::Compound::create(cmp);
 		if (compound == nullptr)
 		{
 			if (cif::VERBOSE)
-				cerr << "Unknown compound " << cmp << endl;
+				std::cerr << "Unknown compound " << cmp << std::endl;
 
 			db["chem_comp"].emplace({
 				{ "id", cmp },
@@ -361,9 +360,9 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 			continue;
 		}
 		
-		string formula = compound->formula();
-		string name = compound->name();
-		string type = compound->type();
+		std::string formula = compound->formula();
+		std::string name = compound->name();
+		std::string type = compound->type();
 		
 		if (type.empty())
 			type = "saccharide";
@@ -379,19 +378,19 @@ tuple<uint32_t,uint32_t> HandlePDBCare(cif::Datablock& db, fs::path pdbCareFile,
 	
 	db["chem_comp"].reorderByIndex();
 	
-//	cout << deletedLinkCount << " carbohydrate atoms in total were deleted." << endl
+//	std::cout << deletedLinkCount << " carbohydrate atoms in total were deleted." << std::endl
 //		 << 
 //      WRITE(6,*) LNKKIL, ' carbohydrate LINKs in total will be deleted.'
 //      WRITE(6,*) NALINK, ' carbohydrate LINKs in total will be added.'
 //      WRITE(6,*) RENCNT, ' carbohydrate residues will be renamed.'
 //C      PRINT*, LINLNK
 
-	return make_tuple(deletedLinkCount, addedLinkCount);
+	return std::make_tuple(deletedLinkCount, addedLinkCount);
 }
 
 void FixMatrix(cif::Datablock& db)
 {
-	const array<float,12> kIdentity({
+	const std::array<float,12> kIdentity({
 		1, 0, 0,	// matrix1
 		0, 1, 0,	// matrix2
 		0, 0, 1,	// matrix3
@@ -399,7 +398,7 @@ void FixMatrix(cif::Datablock& db)
 	});
 	
 	bool hasIdentiy = false;
-	array<float,12> mat;
+	std::array<float,12> mat;
 
 	auto& structNcsOper = db["struct_ncs_oper"];
 	
@@ -469,15 +468,15 @@ int pr_main(int argc, char* argv[])
 	
 	po::options_description visible_options("prepper " + VERSION_STRING + " options file]" );
 	visible_options.add_options()
-		("output,o",	po::value<string>(),	"The output file, default is stdout")
-		("pdb-care",	po::value<string>(),	"pdb-care file")
+		("output,o",	po::value<std::string>(),	"The output file, default is stdout")
+		("pdb-care",	po::value<std::string>(),	"pdb-care file")
 		("help,h",								"Display help message")
 		("version",								"Print version")
 		("validate",							"Validate the content of the file using the default or specified dictionary")
 		("verbose,v",							"Verbose output")
 		("server",								"Server mode")
-		("pdb-redo-data", po::value<string>(),	"The PDB-REDO dat file" /*, default is the built in one"*/)
-		("dict",		po::value<string>(),	"Dictionary file containing restraints for residues in this specific target")
+		("pdb-redo-data", po::value<std::string>(),	"The PDB-REDO dat file" /*, default is the built in one"*/)
+		("dict",		po::value<std::string>(),	"Dictionary file containing restraints for residues in this specific target")
 
 		("cab-sg-distance",
 						po::value<float>(),		"Max distance between CAB/CAC and CYS-SG for disambiguating HEM/HEC")
@@ -485,7 +484,7 @@ int pr_main(int argc, char* argv[])
 
 	po::options_description hidden_options("hidden options");
 	hidden_options.add_options()
-		("input,i",		po::value<string>(),	"Input files")
+		("input,i",		po::value<std::string>(),	"Input files")
 		("debug,d",		po::value<int>(),		"Debug level (for even more verbose output)")
 		("test",								"Generic test option");
 
@@ -514,29 +513,29 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("input") == 0)
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(1);
 	}
 
 	fs::path pdbRedoDataFile = "pdb-redo-data.cif";
 	if (vm.count("pdb-redo-data"))
-		pdbRedoDataFile = vm["pdb-redo-data"].as<string>();
+		pdbRedoDataFile = vm["pdb-redo-data"].as<std::string>();
 	std::ifstream pdbRedoData(pdbRedoDataFile);
 	if (not pdbRedoData.is_open())
-		throw runtime_error("Could not open pdb-redo-data file");
+		throw std::runtime_error("Could not open pdb-redo-data file");
 	cif::File pdbRedoDataCif(pdbRedoData);
 	cif::Datablock& dat = pdbRedoDataCif.firstDatablock();
 
 	// Load dict, if any
 	
 	if (vm.count("dict"))
-		c::CompoundFactory::instance().pushDictionary(vm["dict"].as<string>());
+		c::CompoundFactory::instance().pushDictionary(vm["dict"].as<std::string>());
 
 	cif::VERBOSE = vm.count("verbose") != 0;
 	if (vm.count("debug"))
@@ -544,17 +543,17 @@ int pr_main(int argc, char* argv[])
 	
 	bool serverMode = vm.count("server") > 0;
 	
-	fs::path input = vm["input"].as<string>();
+	fs::path input = vm["input"].as<std::string>();
 	c::File pdb(input);
 	
 	auto& db = pdb.data();
 
-	auto entityForAsym = [&db](const string& asymId)
+	auto entityForAsym = [&db](const std::string& asymId)
 	{
-		string entityId;
+		std::string entityId;
 		for (auto& r: db["struct_asym"].find(cif::Key("id") == asymId))
 		{
-			entityId = r["entity_id"].as<string>();
+			entityId = r["entity_id"].as<std::string>();
 			break;
 		}
 		return entityId;
@@ -578,16 +577,16 @@ int pr_main(int argc, char* argv[])
 
 	auto& atomSites = db["atom_site"];
 
-	vector<string> dummies;
+	std::vector<std::string> dummies;
 	for (auto a: atomSites.find(cif::Key("label_comp_id") == "DUM" and cif::Key("label_atom_id") == "DUM"))
-		dummies.push_back(a["id"].as<string>());
+		dummies.push_back(a["id"].as<std::string>());
 
-	string waterAsymID, waterEntityID;
+	std::string waterAsymID, waterEntityID;
 	if (not dummies.empty())
 	{
 		for (auto r: db["entity"].find(cif::Key("type") == "water"))
 		{
-			waterEntityID = r["id"].as<string>();
+			waterEntityID = r["id"].as<std::string>();
 			break;
 		}
 
@@ -595,7 +594,7 @@ int pr_main(int argc, char* argv[])
 		if (waterEntityID.empty())
 		{
 			auto& entity = db["entity"];
-			waterEntityID = "w-" + to_string(entity.size() + 1);
+			waterEntityID = "w-" + std::to_string(entity.size() + 1);
 			entity.emplace({
 				{ "id", waterEntityID },
 				{ "type", "water" },
@@ -607,14 +606,14 @@ int pr_main(int argc, char* argv[])
 
 		for (auto r: db["struct_asym"].find(cif::Key("entity_id") == waterEntityID))
 		{
-			waterAsymID = r["id"].as<string>();
+			waterAsymID = r["id"].as<std::string>();
 			break;
 		}
 
 		// need to create a new water struct_asym
 		if (waterAsymID.empty())
 		{
-			waterAsymID = "W-" + to_string(db["struct_asym"].size());
+			waterAsymID = "W-" + std::to_string(db["struct_asym"].size());
 			db["struct_asym"].emplace({
 				{ "id", waterAsymID },
 				{ "pdbx_blank_PDB_chainid_flag", "N" },
@@ -623,13 +622,13 @@ int pr_main(int argc, char* argv[])
 			});
 		}
 
-		set<string> asyms;
+		std::set<std::string> asyms;
 
 		for (auto dummy: dummies)
 		{
 			for (auto r: atomSites.find(cif::Key("id") == dummy))
 			{
-				asyms.emplace(r["label_asym_id"].as<string>());
+				asyms.emplace(r["label_asym_id"].as<std::string>());
 
 				r.assign({
 					{ "label_asym_id", waterAsymID },
@@ -660,19 +659,19 @@ int pr_main(int argc, char* argv[])
 	FixMatrix(db);
 	
 	if (vm.count("pdb-care"))
-		tie(numOfLinksDeleted, numOfLinksAdded) = HandlePDBCare(db, vm["pdb-care"].as<string>(), dat);
+		std::tie(numOfLinksDeleted, numOfLinksAdded) = HandlePDBCare(db, vm["pdb-care"].as<std::string>(), dat);
 	
 	// handle atoms with zero occupancy
 	numOfAtomsDeleted += atomSites.erase(cif::Key("occupancy") == 0.0 and cif::Key("label_comp_id") == "HOH",
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted zero occupancy water atom: " << r["id"].as<std::string>() << endl;
+				std::cerr << "Deleted zero occupancy water atom: " << r["id"].as<std::string>() << std::endl;
 		});
 
 
 	for (auto a: atomSites.find(cif::Key("occupancy") == 0.0))
 	{
-		string id, compId, atomId, altId;
+		std::string id, compId, atomId, altId;
 		cif::tie(id, compId, atomId, altId) = a.get("id", "label_comp_id", "label_atom_id", "label_alt_id");
 
 		assert(compId != "HOH");
@@ -681,7 +680,7 @@ int pr_main(int argc, char* argv[])
 		if (compound and (cif::iequals(compound->group(), "peptide") or cif::iequals(compound->group(), "P-peptide")))
 		{
 			if (cif::VERBOSE)
-				cerr << "Changed occupancy to 1.00 for (hetero) atom: " << id << endl;
+				std::cerr << "Changed occupancy to 1.00 for (hetero) atom: " << id << std::endl;
 			a["occupancy"] = 1.0;
 
 			++numOfOccupanciesReset;
@@ -689,7 +688,7 @@ int pr_main(int argc, char* argv[])
 		else
 		{
 			if (cif::VERBOSE)
-				cerr << "Changed occupancy to 0.01 for (hetero) atom: " << id << endl;
+				std::cerr << "Changed occupancy to 0.01 for (hetero) atom: " << id << std::endl;
 			a["occupancy"] = 0.01;
 
 			++numOfOccupanciesReset;
@@ -700,13 +699,13 @@ int pr_main(int argc, char* argv[])
 	numOfAtomsDeleted += atomSites.erase(cif::Key("occupancy") < 0.0,
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted zero occupancy (hetero) atom: " << r["id"].as<std::string>() << endl;
+				std::cerr << "Deleted zero occupancy (hetero) atom: " << r["id"].as<std::string>() << std::endl;
 		});
 	
 	// remove dubious links
 	for (auto l: dat["link_remove"])
 	{
-		string atom[2], residue[2];
+		std::string atom[2], residue[2];
 		cif::tie(atom[0], residue[0], atom[1], residue[1]) = l.get("atom_1", "residue_1", "atom_2", "residue_2");
 		
 		numOfLinksDeleted += db["struct_conn"].erase(
@@ -723,7 +722,7 @@ int pr_main(int argc, char* argv[])
 			),
 			[](const cif::Row& r) {
 				if (cif::VERBOSE)
-					cerr << "Deleted dubious LINK " << r["id"].as<std::string>() << endl;
+					std::cerr << "Deleted dubious LINK " << r["id"].as<std::string>() << std::endl;
 			}
 		);
 	}
@@ -732,7 +731,7 @@ int pr_main(int argc, char* argv[])
 	numOfLinksDeleted += db["struct_conn"].erase(cif::Key("pdbx_dist_value") > 5.0,
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted extremely long LINK: " << r["id"].as<std::string>() << endl;
+				std::cerr << "Deleted extremely long LINK: " << r["id"].as<std::string>() << std::endl;
 		});
 	
 	// Flip ASN if glycosylated at OD1 (LINK part)
@@ -750,12 +749,12 @@ int pr_main(int argc, char* argv[])
 			)
 		))
 	{
-		string asymId, seqId;
+		std::string asymId, seqId;
 		
 		if (cif::VERBOSE)
-			cerr << "Flipping at OD1 glycosylated ASN " << lr["id"].as<std::string>() << endl;
+			std::cerr << "Flipping at OD1 glycosylated ASN " << lr["id"].as<std::string>() << std::endl;
 		
-		if (lr["ptnr1_label_atom_id"].as<string>() == "OD1")
+		if (lr["ptnr1_label_atom_id"].as<std::string>() == "OD1")
 		{
 			cif::tie(asymId, seqId) = lr.get("ptnr1_label_asym_id", "ptnr1_label_seq_id");
 			lr["ptnr1_label_atom_id"] = "ND2";
@@ -774,21 +773,21 @@ int pr_main(int argc, char* argv[])
 				cif::Key("label_atom_id") == "OD1" or cif::Key("label_atom_id") == "ND2"
 			)))
 		{
-			if (r["label_atom_id"].as<string>() == "ND2")
+			if (r["label_atom_id"].as<std::string>() == "ND2")
 			{
 				r["label_atom_id"] = "OD1";
 				r["type_symbol"] = "O";
 
-				auto a = db["atom_site_anisotrop"][cif::Key("id") == r["id"].as<string>()];
+				auto a = db["atom_site_anisotrop"][cif::Key("id") == r["id"].as<std::string>()];
 				if (not a.empty())
 					a["type_symbol"] = "O";
 			}
-			else if (r["label_atom_id"].as<string>() == "OD1")
+			else if (r["label_atom_id"].as<std::string>() == "OD1")
 			{
 				r["label_atom_id"] = "ND2";
 				r["type_symbol"] = "N";
 
-				auto a = db["atom_site_anisotrop"][cif::Key("id") == r["id"].as<string>()];
+				auto a = db["atom_site_anisotrop"][cif::Key("id") == r["id"].as<std::string>()];
 				if (not a.empty())
 					a["type_symbol"] = "N";
 			}
@@ -801,10 +800,10 @@ int pr_main(int argc, char* argv[])
 		
 	// Fix O1-LINKs
 	for (auto lr: db["struct_conn"].find(
-		(cif::Key("ptnr1_label_atom_id") == "O1" and cif::Key("ptnr2_label_atom_id") == regex("C[2346]")) or
-		(cif::Key("ptnr2_label_atom_id") == "O1" and cif::Key("ptnr1_label_atom_id") == regex("C[2346]"))))
+		(cif::Key("ptnr1_label_atom_id") == "O1" and cif::Key("ptnr2_label_atom_id") == std::regex("C[2346]")) or
+		(cif::Key("ptnr2_label_atom_id") == "O1" and cif::Key("ptnr1_label_atom_id") == std::regex("C[2346]"))))
 	{
-		string compId[2], atomId[2];
+		std::string compId[2], atomId[2];
 		cif::tie(compId[0], compId[1], atomId[0], atomId[1]) =
 			lr.get("ptnr1_label_comp_id", "ptnr2_label_comp_id", "ptnr1_label_atom_id", "ptnr2_label_atom_id");
 		
@@ -812,13 +811,13 @@ int pr_main(int argc, char* argv[])
 			continue;
 		
 		if (cif::VERBOSE)
-			cerr << "Fixing non-standard carbohydrate LINK " << lr["id"].as<std::string>() << endl;
+			std::cerr << "Fixing non-standard carbohydrate LINK " << lr["id"].as<std::string>() << std::endl;
 		
-		string asymId[2], seqId[2], entityId[2];
+		std::string asymId[2], seqId[2], entityId[2];
 		
-		smatch m;
+		std::smatch m;
 		
-		if (regex_match(atomId[0], m, regex("C([2346])")))
+		if (std::regex_match(atomId[0], m, std::regex("C([2346])")))
 		{
 			lr["ptnr1_label_atom_id"] = atomId[0] = "O" + m[1].str();
 			lr["ptnr2_label_atom_id"] = "C1";
@@ -826,7 +825,7 @@ int pr_main(int argc, char* argv[])
 			cif::tie(asymId[0], seqId[0], asymId[1], seqId[1]) =
 				lr.get("ptnr1_label_asym_id", "ptnr1_label_seq_id", "ptnr2_label_asym_id", "ptnr2_label_seq_id");
 		}
-		else if (regex_match(atomId[1], m, regex("C([2346])")))
+		else if (std::regex_match(atomId[1], m, std::regex("C([2346])")))
 		{
 			lr["ptnr1_label_atom_id"] = "C1";
 			lr["ptnr2_label_atom_id"] = atomId[0] = "O" + m[1].str();
@@ -838,8 +837,8 @@ int pr_main(int argc, char* argv[])
 		}
 
 		// swap alt location
-		auto alt = lr["ptnr1_label_alt_id"].as<string>();
-		lr["ptnr1_label_alt_id"] = lr["ptnr2_label_alt_id"].as<string>();
+		auto alt = lr["ptnr1_label_alt_id"].as<std::string>();
+		lr["ptnr1_label_alt_id"] = lr["ptnr2_label_alt_id"].as<std::string>();
 		lr["ptnr2_label_alt_id"] = alt;
 		
 		// Update atom_site records
@@ -862,12 +861,12 @@ int pr_main(int argc, char* argv[])
 			char chainID, iCode;
 			int seqNum;
 			
-			tie(chainID, compId[0], seqNum, iCode) = MapBackResidue(db, asymId[0], compId[0], seqId[0]);
+			std::tie(chainID, compId[0], seqNum, iCode) = MapBackResidue(db, asymId[0], compId[0], seqId[0]);
 			
-			a["auth_seq_id"] = to_string(seqNum);
+			a["auth_seq_id"] = std::to_string(seqNum);
 			a["auth_comp_id"] = compId[0];
-			a["auth_asym_id"] = string{ chainID };
-			a["pdbx_PDB_ins_code"] = iCode == ' ' ? "" : string { iCode };
+			a["auth_asym_id"] = std::string{ chainID };
+			a["pdbx_PDB_ins_code"] = iCode == ' ' ? "" : std::string { iCode };
 			a["auth_atom_id"] = atomId[0];
 		}
 
@@ -879,11 +878,11 @@ int pr_main(int argc, char* argv[])
 		( cif::Key("ptnr1_label_atom_id") == "N" and cif::Key("ptnr2_label_atom_id") == "C") or
 		( cif::Key("ptnr1_label_atom_id") == "P" and cif::Key("ptnr2_label_atom_id") == "O3'")))
 	{
-		for (string f: { "label_atom_id", "label_asym_id", "label_comp_id", "label_seq_id",
+		for (std::string f: { "label_atom_id", "label_asym_id", "label_comp_id", "label_seq_id",
 				"auth_asym_id", "auth_comp_id", "auth_seq_id", "symmetry" })
 			SwapFields(ll, "ptnr1_" + f, "ptnr2_" + f);
 
-		for (string f: { "label_alt_id", "PDB_ins_code" })
+		for (std::string f: { "label_alt_id", "PDB_ins_code" })
 			SwapFields(ll, "pdbx_ptnr1_" + f, "pdbx_ptnr2_" + f);
 
 		++numOfLinksFixed;
@@ -891,7 +890,7 @@ int pr_main(int argc, char* argv[])
 	
 	for (auto r: dat["link_swap"])
 	{
-		string atomId[2], compId[2];
+		std::string atomId[2], compId[2];
 		cif::tie(atomId[0], compId[0], atomId[1], compId[1]) =
 			r.get("atom_id_1", "comp_id_1", "atom_id_2", "comp_id_2");
 		
@@ -901,11 +900,11 @@ int pr_main(int argc, char* argv[])
 			cif::Key("ptnr2_label_atom_id") == atomId[1] and
 			cif::Key("ptnr2_label_comp_id") == compId[1]))
 		{
-			for (string f: { "label_atom_id", "label_asym_id", "label_comp_id", "label_seq_id",
+			for (std::string f: { "label_atom_id", "label_asym_id", "label_comp_id", "label_seq_id",
 					"auth_asym_id", "auth_comp_id", "auth_seq_id", "symmetry" })
 				SwapFields(ll, "ptnr1_" + f, "ptnr2_" + f);
 	
-			for (string f: { "label_alt_id", "PDB_ins_code" })
+			for (std::string f: { "label_alt_id", "PDB_ins_code" })
 				SwapFields(ll, "pdbx_ptnr1_" + f, "pdbx_ptnr2_" + f);
 
 			++numOfLinksFixed;
@@ -915,7 +914,7 @@ int pr_main(int argc, char* argv[])
 	// Set Refmac link types
 	for (auto t: dat["link_label"])
 	{
-		string atomId[2], compId[2], type;
+		std::string atomId[2], compId[2], type;
 		cif::tie(atomId[0], compId[0], atomId[1], compId[1], type) =
 			t.get("atom_id_1", "comp_id_1", "atom_id_2", "comp_id_2", "refmac");
 		
@@ -936,7 +935,7 @@ int pr_main(int argc, char* argv[])
 	{
 		a["type_symbol"] = "N";
 		
-		for (auto aa: db["atom_site_anisotrop"].find(cif::Key("id") == a["id"].as<string>()))
+		for (auto aa: db["atom_site_anisotrop"].find(cif::Key("id") == a["id"].as<std::string>()))
 			aa["type_symbol"] = "N";
 	}
 
@@ -945,7 +944,7 @@ int pr_main(int argc, char* argv[])
 		cif::Key("type_symbol") == "H" or cif::Key("type_symbol") == "D" or cif::Key("type_symbol") == "X",
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted (hetero) atom: " << r["id"].as<std::string>() << endl;
+				std::cerr << "Deleted (hetero) atom: " << r["id"].as<std::string>() << std::endl;
 		});
 	
 	// Remove unknown ligands when running in database mode.
@@ -955,16 +954,16 @@ int pr_main(int argc, char* argv[])
 		if (serverMode)
 		{
 			if (c::CompoundFactory::instance().create("UNL") == nullptr)
-				throw runtime_error("File contains unspecified UNL residues");
+				throw std::runtime_error("File contains unspecified UNL residues");
 
 			if (cif::VERBOSE)
-				cerr << "File contains UNL records but also specifies the residue in the dictionary, accepting" << endl;
+				std::cerr << "File contains UNL records but also specifies the residue in the dictionary, accepting" << std::endl;
 
 			break;
 		}
 
 		if (cif::VERBOSE)
-			cerr << "File contains UNL records but does not specify the residue in the dictionary, dropping" << endl;
+			std::cerr << "File contains UNL records but does not specify the residue in the dictionary, dropping" << std::endl;
 
 		numOfAtomsDeleted += atomSites.erase(cif::Key("label_comp_id") == "UNL");
 
@@ -981,7 +980,7 @@ int pr_main(int argc, char* argv[])
 //		for (auto a: atomSites.find(cif::Key("label_comp_id") == "UNL"))
 //		{
 //			if (cif::VERBOSE)
-//				cerr << "Deleted (hetero) atom: " << a["id"].as<std::string>() << endl;
+//				std::cerr << "Deleted (hetero) atom: " << a["id"].as<std::string>() << std::endl;
 //			
 //			atomSites.erase(cif::Key("label_comp_id") == "UNL");
 //			
@@ -999,7 +998,7 @@ int pr_main(int argc, char* argv[])
 		cif::Key("label_atom_id") != "CB",
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted atom from unknown residue " << r["id"].as<std::string>() << endl;
+				std::cerr << "Deleted atom from unknown residue " << r["id"].as<std::string>() << std::endl;
 		}
 	);
 	
@@ -1007,7 +1006,7 @@ int pr_main(int argc, char* argv[])
 		cif::Key("label_comp_id") == "GLY" and cif::Key("label_atom_id") == "CB",
 		[](const cif::Row& r) {
 			if (cif::VERBOSE)
-				cerr << "Deleted CB atom from GLY " << r["id"].as<std::string>() << endl;
+				std::cerr << "Deleted CB atom from GLY " << r["id"].as<std::string>() << std::endl;
 		}
 	);
 	
@@ -1018,7 +1017,7 @@ int pr_main(int argc, char* argv[])
 		cif::Key("label_atom_id") == "SE" and
 		cif::Key("occupancy") < 1.0))
 	{
-		string asymId, seqId;
+		std::string asymId, seqId;
 		cif::tie(asymId, seqId) = a.get("label_asym_id", "label_seq_id");
 		
 		auto sideChainAtoms = atomSites.find(
@@ -1031,7 +1030,7 @@ int pr_main(int argc, char* argv[])
 		if (not sideChainAtoms.empty())
 		{
 			if (cif::VERBOSE)
-				cerr << "Changed selenium occupancy to 1.00 for " << a["id"].as<std::string>() << endl;
+				std::cerr << "Changed selenium occupancy to 1.00 for " << a["id"].as<std::string>() << std::endl;
 			
 			a["occupancy"] = 1.0;
 			
@@ -1042,14 +1041,14 @@ int pr_main(int argc, char* argv[])
 	// delete aniso records when B factor < 2
 	for (auto& a: atomSites.find(cif::Key("B_iso_or_equiv") < 2.0))
 	{
-		string id = a["id"].as<string>();
+		std::string id = a["id"].as<std::string>();
 
 		for (auto aa: db["atom_site_anisotrop"].find(cif::Key("id") == id))
 		{
 			db["atom_site_anisotrop"].erase(aa);
 			
 			if (cif::VERBOSE)
-				cerr << "Deleted aniso record for atom with id " << id << " since B-factor is less than 2" << endl;
+				std::cerr << "Deleted aniso record for atom with id " << id << " since B-factor is less than 2" << std::endl;
 			
 			++numOfAnisosDeleted;
 			
@@ -1061,11 +1060,11 @@ int pr_main(int argc, char* argv[])
 	}
 	
 	// delete aniso records where one of the eigen values of U is less than 0
-	set<string> delAniso;
+	std::set<std::string> delAniso;
 	
 	for (auto aa: db["atom_site_anisotrop"])
 	{
-		string id;
+		std::string id;
 		float U[6];
 		cif::tie(id, U[0], U[1], U[2], U[3], U[4], U[5]) =
 			aa.get("id", "U[1][1]", "U[2][2]", "U[3][3]", "U[1][2]", "U[1][3]", "U[2][3]");
@@ -1083,7 +1082,7 @@ int pr_main(int argc, char* argv[])
 			delAniso.insert(id);
 
 			if (cif::VERBOSE)
-				cerr << "Deleted aniso record for atom with id " << id << " since one of the eigen values of U is less than zero" << endl;
+				std::cerr << "Deleted aniso record for atom with id " << id << " since one of the eigen values of U is less than zero" << std::endl;
 			
 			++numOfAnisosDeleted;
 		}
@@ -1111,9 +1110,9 @@ int pr_main(int argc, char* argv[])
 	{
 		c::Structure structure(pdb);
 
-		// string entryId = db["entry"].front()["id"].as<string>();
+		// std::string entryId = db["entry"].front()["id"].as<std::string>();
 		// if (entryId.empty())
-		// 	throw runtime_error("Missing _entry.id in coordinates file");
+		// 	throw std::runtime_error("Missing _entry.id in coordinates file");
 
 		// double a, b, c, alpha, beta, gamma;
 		// cif::tie(a, b, c, alpha, beta, gamma) = db["cell"][cif::Key("entry_id") == entryId]
@@ -1122,9 +1121,9 @@ int pr_main(int argc, char* argv[])
 
 		// clipper::Cell cell(clipper::Cell_descr(a, b, c, alpha, beta, gamma));
 
-		// string spacegroupName = db["symmetry"]
+		// std::string spacegroupName = db["symmetry"]
 		// 	[cif::Key("entry_id") == entryId]
-		// 	["space_group_name_H-M"].as<string>();
+		// 	["space_group_name_H-M"].as<std::string>();
 
 		// int spacegroupNr = mmcif::GetSpacegroupNumber(spacegroupName);
 
@@ -1138,7 +1137,7 @@ int pr_main(int argc, char* argv[])
 
 		for (auto h: hem)
 		{
-			auto asym = h["asym_id"].as<string>();
+			auto asym = h["asym_id"].as<std::string>();
 
 			try
 			{
@@ -1161,7 +1160,7 @@ int pr_main(int argc, char* argv[])
 							auto d = c::Distance(atom, sgAtom);
 
 							if (testHemHec and d < 5)
-								cerr << "Distance " << hca << " " << atom << " to " << sgAtom << " is " << d << endl;
+								std::cerr << "Distance " << hca << " " << atom << " to " << sgAtom << " is " << d << std::endl;
 
 							if (d <= maxCabSgDistance)
 							{
@@ -1179,7 +1178,7 @@ int pr_main(int argc, char* argv[])
 							// {
 							// 	auto d = c::Distance(atom, sgAtom);
 
-							// 	cerr << "Distance " << hca << " to " << atom.id() << " is " << d << endl;
+							// 	std::cerr << "Distance " << hca << " to " << atom.id() << " is " << d << std::endl;
 
 							// 	if (d <= 2.5)
 							// 	{
@@ -1232,18 +1231,18 @@ int pr_main(int argc, char* argv[])
 		}
 	}
 
-	cout << endl
-		 << "Report" << endl
-		 << "Occupancies reset     : " << numOfOccupanciesReset << endl
-		 << "B-factors reset       : " << numOfBFactorsReset << endl
-		 << "Deleted (hetero) atoms: " << numOfAtomsDeleted << endl
-		 << "Deleted ANISOU records: " << numOfAnisosDeleted << endl
-		 << "Deleted LINK   records: " << numOfLinksDeleted << endl
-		 << "Added   LINK   records: " << numOfLinksAdded << endl
-		 << "Fixed   LINK   records: " << numOfLinksFixed << endl
-		 << "Renamed water atoms   : " << numOfRenamedWaters << endl
-		 << "Replaced dummies      : " << numOfReplacedDummies << endl
-		 << "Renamed HEM to HEC    : " << numOfHemHecRenamed << endl
+	std::cout << std::endl
+		 << "Report" << std::endl
+		 << "Occupancies reset     : " << numOfOccupanciesReset << std::endl
+		 << "B-factors reset       : " << numOfBFactorsReset << std::endl
+		 << "Deleted (hetero) atoms: " << numOfAtomsDeleted << std::endl
+		 << "Deleted ANISOU records: " << numOfAnisosDeleted << std::endl
+		 << "Deleted LINK   records: " << numOfLinksDeleted << std::endl
+		 << "Added   LINK   records: " << numOfLinksAdded << std::endl
+		 << "Fixed   LINK   records: " << numOfLinksFixed << std::endl
+		 << "Renamed water atoms   : " << numOfRenamedWaters << std::endl
+		 << "Replaced dummies      : " << numOfReplacedDummies << std::endl
+		 << "Renamed HEM to HEC    : " << numOfHemHecRenamed << std::endl
 		 ;
 		 
 	if (vm.count("output"))
@@ -1264,8 +1263,8 @@ int pr_main(int argc, char* argv[])
 
 			if (d == 0)
 			{
-				string asymIDa = a["label_asym_id"].as<string>();
-				string asymIDb = b["label_asym_id"].as<string>();
+				std::string asymIDa = a["label_asym_id"].as<std::string>();
+				std::string asymIDb = b["label_asym_id"].as<std::string>();
 
 				d = asymIDa.length() - asymIDb.length();
 				if (d == 0)
@@ -1281,8 +1280,8 @@ int pr_main(int argc, char* argv[])
 
 			if (d == 0)
 			{
-				string asymIDa = a["label_asym_id"].as<string>();
-				string asymIDb = b["label_asym_id"].as<string>();
+				std::string asymIDa = a["label_asym_id"].as<std::string>();
+				std::string asymIDb = b["label_asym_id"].as<std::string>();
 				d = asymIDa.compare(asymIDb);
 			}
 
@@ -1290,7 +1289,7 @@ int pr_main(int argc, char* argv[])
 			return d;
 		});
 		
-		pdb.save(vm["output"].as<string>());
+		pdb.save(vm["output"].as<std::string>());
 	}
 
 	return result;

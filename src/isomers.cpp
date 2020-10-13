@@ -71,7 +71,6 @@
 #include "utils.hpp"
 #include "svm++.h"
 
-using namespace std;
 using namespace clipper;
 using data32::Flag;
 using data32::F_phi;
@@ -88,15 +87,15 @@ namespace c = mmcif;
 
 // --------------------------------------------------------------------
 
-vector<string> CollectCandidateIds(bool includeSugars)
+std::vector<std::string> CollectCandidateIds(bool includeSugars)
 {
 	const char* clibd_mon = getenv("CLIBD_MON");
 	if (clibd_mon == nullptr)
-		throw runtime_error("CLIBD_MON is not defined, please source the CCP4 environment");
+		throw std::runtime_error("CLIBD_MON is not defined, please source the CCP4 environment");
 
 	fs::path monomersDir(clibd_mon);
 	
-	vector<string> ids;
+	std::vector<std::string> ids;
 	
 	for (fs::directory_iterator mp(monomersDir); mp != fs::directory_iterator(); ++mp)
 	{
@@ -108,7 +107,7 @@ vector<string> CollectCandidateIds(bool includeSugars)
 			if (is_directory(*mps))
 				continue;
 			
-			string n = mps->path().filename().string();
+			std::string n = mps->path().filename().string();
 			if (ba::ends_with(n, ".cif"))
 			{
 				n = n.substr(0, n.length() - 4);
@@ -134,7 +133,7 @@ vector<string> CollectCandidateIds(bool includeSugars)
 //		}
 //		catch (const exception& ex)
 //		{
-//			cerr << ex.what() << endl;
+//			std::cerr << ex.what() << std::endl;
 //			i = ids.erase(i) - 1;
 //		}
 //
@@ -146,7 +145,7 @@ vector<string> CollectCandidateIds(bool includeSugars)
 
 	parallel_for(ids.size(), [&](size_t i)
 	{
-		set<string> failed;
+		std::set<std::string> failed;
 		
 		for (;;)
 		{
@@ -160,9 +159,9 @@ vector<string> CollectCandidateIds(bool includeSugars)
 					failed.insert(ids[i]);
 				}
 			}
-			catch (const exception& ex)
+			catch (const std::exception& ex)
 			{
-				cerr << ex.what() << endl;
+				std::cerr << ex.what() << std::endl;
 				failed.insert(ids[i]);
 			}
 	
@@ -173,7 +172,7 @@ vector<string> CollectCandidateIds(bool includeSugars)
 		
 		std::unique_lock l(m);
 		
-		vector<string> nIds;
+		std::vector<std::string> nIds;
 		nIds.reserve(ids.size() - failed.size());
 
 		set_difference(ids.begin(), ids.end(), failed.begin(), failed.end(),
@@ -187,11 +186,11 @@ vector<string> CollectCandidateIds(bool includeSugars)
 
 // --------------------------------------------------------------------
 
-void CompareCompounds(const vector<string>& ids, ostream& report)
+void CompareCompounds(const std::vector<std::string>& ids, std::ostream& report)
 {
 	std::mutex m;
 	
-	vector<tuple<int,int>> idSets;
+	std::vector<std::tuple<int,int>> idSets;
 
 	for (size_t i = 0; i + 1 < ids.size(); ++i)
 	{
@@ -204,7 +203,7 @@ void CompareCompounds(const vector<string>& ids, ostream& report)
 	parallel_for(ids.size(), [&](size_t i)
 	{
 		int a, b;
-		tie(a, b) = idSets[i];
+		std::tie(a, b) = idSets[i];
 		
 		auto* ca = mmcif::Compound::create(ids[a]);
 		auto* cb = mmcif::Compound::create(ids[b]);
@@ -214,7 +213,7 @@ void CompareCompounds(const vector<string>& ids, ostream& report)
 		if (ca->isIsomerOf(*cb))
 		{
 			std::unique_lock l(m);
-			report << ids[a] << " is isomer of " << ids[b] << endl;
+			report << ids[a] << " is isomer of " << ids[b] << std::endl;
 		}
 	});
 }
@@ -228,7 +227,7 @@ int pr_main(int argc, char* argv[])
 		("help,h",										"Display help message")
 		("version",										"Print version")
 		("with-sugar",									"Include sugars in isomer sets")
-		("output,o", po::value<string>(),				"Output file")
+		("output,o", po::value<std::string>(),			"Output file")
 		("verbose,v",									"Verbose output")
 		;
 	
@@ -247,13 +246,13 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help"))
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(0);
 	}
 	
@@ -264,20 +263,20 @@ int pr_main(int argc, char* argv[])
 #if 1
 	auto ids = CollectCandidateIds(vm.count("with-sugar") > 0);
 	
-	cout << "Comparing " << ids.size() << " entries all against all" << endl;
+	std::cout << "Comparing " << ids.size() << " entries all against all" << std::endl;
 	
 	if (vm.count("output"))
 	{
-		ofstream f(vm["output"].as<string>(), ios_base::out);
+		std::ofstream f(vm["output"].as<std::string>(), std::ios_base::out);
 		if (not f.is_open())
-			throw runtime_error("Could not open output file " + vm["output"].as<string>());
+			throw std::runtime_error("Could not open output file " + vm["output"].as<std::string>());
 		
 		CompareCompounds(ids, f);
 	}
 	else
-		CompareCompounds(ids, cout);
+		CompareCompounds(ids, std::cout);
 #else
-	CompareCompounds({ "OKA", "XT2" }, cout);
+	CompareCompounds({ "OKA", "XT2" }, std::cout);
 #endif
 	return 0;
 }
