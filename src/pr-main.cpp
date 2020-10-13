@@ -1,3 +1,30 @@
+/* include/cif++/Config.hpp.  Generated from Config.hpp.in by configure.  */
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ * 
+ * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
 #include "pdb-redo.h"
 
 #include <sys/time.h>
@@ -10,20 +37,16 @@
 #include <cmath>
 #include <regex>
 
-#include <zeep/streambuf.hpp>
-
 #include "cif++/Cif++.hpp"
 #include "cif++/CifUtils.hpp"
 
-using namespace std;
-
-string VERSION_STRING;
+std::string VERSION_STRING;
 
 int pr_main(int argc, char* argv[]);
 
 // --------------------------------------------------------------------
 
-ostream& operator<<(ostream& os, const struct timeval& t)
+std::ostream& operator<<(std::ostream& os, const struct timeval& t)
 {
 	uint64_t s = t.tv_sec;
 	if (s > 24 * 60 * 60)
@@ -49,14 +72,14 @@ ostream& operator<<(ostream& os, const struct timeval& t)
 	
 	double ss = s + 1e-6 * t.tv_usec;
 	
-	os << fixed << setprecision(1) << ss << 's';
+	os << std::fixed << std::setprecision(1) << ss << 's';
 
 	return os;
 }
 
-ostream& operator<<(ostream& os, const chrono::duration<double>& t)
+std::ostream& operator<<(std::ostream& os, const std::chrono::duration<double>& t)
 {
-	uint64_t s = static_cast<uint64_t>(trunc(t.count()));
+	uint64_t s = static_cast<uint64_t>(std::trunc(t.count()));
 	if (s > 24 * 60 * 60)
 	{
 		uint32_t days = s / (24 * 60 * 60);
@@ -80,7 +103,7 @@ ostream& operator<<(ostream& os, const chrono::duration<double>& t)
 	
 	double ss = s + 1e-6 * (t.count() - s);
 	
-	os << fixed << setprecision(1) << ss << 's';
+	os << std::fixed << std::setprecision(1) << ss << 's';
 
 	return os;
 }
@@ -94,19 +117,19 @@ class RUsage
 		{
 			struct rusage u;
 			auto end = std::chrono::system_clock::now();
-			chrono::duration<double> diff = end - start;
+			std::chrono::duration<double> diff = end - start;
 			
 			if (getrusage(RUSAGE_SELF, &u) == 0)
-				cerr << "CPU usage: "
+				std::cerr << "CPU usage: "
 					<< u.ru_utime << " user, "
 					<< u.ru_stime << " system, "
-					<< diff << " wall" << endl;
+					<< diff << " wall" << std::endl;
 			else
 				perror("Failed to get rusage");
 		}
 	}
 
-	chrono::time_point<chrono::system_clock>	start = std::chrono::system_clock::now();
+	std::chrono::time_point<std::chrono::system_clock>	start = std::chrono::system_clock::now();
 };
 
 // --------------------------------------------------------------------
@@ -117,50 +140,51 @@ namespace {
 
 void load_version_info()
 {
-	const regex
+	const std::regex
 		rxVersionNr(R"(build-(\d+)-g[0-9a-f]{7}(-dirty)?)"),
 		rxVersionDate(R"(Date: +(\d{4}-\d{2}-\d{2}).*)");
 
-	auto version = cif::rsrc_loader::load("version.txt");
-	if (not version)
-		VERSION_STRING = "unknown version, version resource is missing";
-	else
+#include "revision.hpp"
+
+	struct membuf : public std::streambuf
 	{
-		zeep::char_streambuf buffer(version.data(), version.size());
-		istream is(&buffer);
-		string line;
+		membuf(char* data, size_t length)       { this->setg(data, data, data + length); }
+	} buffer(const_cast<char*>(kRevision), sizeof(kRevision));
 
-		while (getline(is, line))
+	std::istream is(&buffer);
+
+	std::string line;
+
+	while (getline(is, line))
+	{
+		std::smatch m;
+
+		if (std::regex_match(line, m, rxVersionNr))
 		{
-			smatch m;
-
-			if (regex_match(line, m, rxVersionNr))
-			{
-				gVersionNr = m[1];
-				if (m[2].matched)
-					gVersionNr += '*';
-				continue;
-			}
-
-			if (regex_match(line, m, rxVersionDate))
-			{
-				gVersionDate = m[1];
-				continue;
-			}
+			gVersionNr = m[1];
+			if (m[2].matched)
+				gVersionNr += '*';
+			continue;
 		}
 
-		if (not VERSION_STRING.empty())
-			VERSION_STRING += "\n";
-		VERSION_STRING += gVersionNr + " " + gVersionDate;
+		if (std::regex_match(line, m, rxVersionDate))
+		{
+			gVersionDate = m[1];
+			continue;
+		}
 	}
+
+	if (not VERSION_STRING.empty())
+		VERSION_STRING += "\n";
+	VERSION_STRING += gVersionNr + '.' + cif::get_version_nr() + " " + gVersionDate;
 }
 
-string get_version_nr()
+std::string get_version_nr()
 {
-	return gVersionNr;
+	return gVersionNr + '/' + cif::get_version_nr();
 }
 
-string get_version_date()
+std::string get_version_date()
 {
 	return gVersionDate;
 }
@@ -168,16 +192,16 @@ string get_version_date()
 // --------------------------------------------------------------------
 
 // recursively print exception whats:
-void print_what (const exception& e)
+void print_what (const std::exception& e)
 {
-	cerr << e.what() << endl;
+	std::cerr << e.what() << std::endl;
 	try
 	{
-		rethrow_if_nested(e);
+		std::rethrow_if_nested(e);
 	}
-	catch (const exception& nested)
+	catch (const std::exception& nested)
 	{
-		cerr << " >> ";
+		std::cerr << " >> ";
 		print_what(nested);
 	}
 }
@@ -191,17 +215,20 @@ int main(int argc, char* argv[])
 	try
 	{
 		cif::rsrc_loader::init({
-#if USE_RSRC
-			{ cif::rsrc_loader_type::mrsrc, "", { gResourceIndex, gResourceData, gResourceName } },
+			{ cif::rsrc_loader_type::file, "." },
+#if defined DATADIR
+			{ cif::rsrc_loader_type::file, DATADIR },
 #endif
-			{ cif::rsrc_loader_type::file, "." }
+#if USE_RSRC
+			{ cif::rsrc_loader_type::mrsrc, "", { gResourceIndex, gResourceData, gResourceName } }
+#endif
 		});
 
 		load_version_info();
 		
 		result = pr_main(argc, argv);
 	}
-	catch (exception& ex)
+	catch (std::exception& ex)
 	{
 		print_what(ex);
 		exit(1);

@@ -24,61 +24,59 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#pragma once
+#include "pdb-redo.h"
 
-#include <set>
+#include "ClipperWrapper.hpp"
 
-#include <zeep/xml/serialize.hpp>
+// --------------------------------------------------------------------
 
-#include "cif++/Structure.hpp"
-
-class NotAHBondSet
+clipper::Atom toClipper(const mmcif::Atom& atom)
 {
-  public:
-	~NotAHBondSet() {}
+	using mmcif::kPI;
 
-	NotAHBondSet(const NotAHBondSet&) = delete;
-	NotAHBondSet& operator=(const NotAHBondSet&) = delete;
+	auto row = atom.getRow();
 
-	static NotAHBondSet* Create();
+	clipper::Atom result;
 
-	void Save(zeep::xml::element& inNode);
-	static NotAHBondSet* Load(zeep::xml::element& inNode);
+	auto location = atom.location();
+	result.set_coord_orth({location.mX, location.mY, location.mZ});
 	
-	bool IsHBondDonorOrAcceptor(const std::string& inMonomer,
-		const std::string& inAtomID) const
+	if (row["occupancy"].empty())
+		result.set_occupancy(1.0);
+	else
+		result.set_occupancy(row["occupancy"].as<float>());
+	
+	std::string element = row["type_symbol"].as<std::string>();
+	if (not row["pdbx_formal_charge"].empty())
 	{
-		return mData.count({inMonomer, inAtomID}) > 0;
+		int charge = row["pdbx_formal_charge"].as<int>();
+		if (abs(charge) > 1)
+			element += std::to_string(charge);
+		if (charge < 0)
+			element += '-';
+		else
+			element += '+';
 	}
-  
-	bool operator()(const mmcif::Atom& atom) const
+	result.set_element(element);
+	
+	if (not row["U_iso_or_equiv"].empty())
+		result.set_u_iso(row["U_iso_or_equiv"].as<float>());
+	else if (not row["B_iso_or_equiv"].empty())
+		result.set_u_iso(row["B_iso_or_equiv"].as<float>() / (8 * kPI * kPI));
+	else
+		throw std::runtime_error("Missing B_iso or U_iso");	
+	
+	auto r = atom.getRowAniso();
+	if (r.empty())
+		result.set_u_aniso_orth(clipper::U_aniso_orth(nan("0"), 0, 0, 0, 0, 0));
+	else
 	{
-		return atom.type() == mmcif::N and
-			IsHBondDonorOrAcceptor(atom.comp().id(), atom.labelAtomID());
-	}
-  
-  private:
-
-	struct NotAHBondAtom
-	{
-		std::string	monomer;
-		std::string	atomId;
+		float u11, u12, u13, u22, u23, u33;
+		cif::tie(u11, u12, u13, u22, u23, u33) =
+			r.get("U[1][1]", "U[1][2]", "U[1][3]", "U[2][2]", "U[2][3]", "U[3][3]");
 		
-		bool operator<(const NotAHBondAtom& rhs) const
-		{
-			int d = monomer.compare(rhs.monomer);
-			if (d == 0)
-				d = atomId.compare(rhs.atomId);
-			return d < 0;
-		}
-	};
-	
-	typedef std::set<NotAHBondAtom> NotAHBondAtomSet;
-
-	NotAHBondSet(NotAHBondAtomSet&& data)
-		: mData(std::move(data))
-	{
+		result.set_u_aniso_orth(clipper::U_aniso_orth(u11, u22, u33, u12, u13, u23));
 	}
 	
-	NotAHBondAtomSet mData;
-};
+	return result;
+}

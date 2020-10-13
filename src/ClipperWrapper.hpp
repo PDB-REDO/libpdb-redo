@@ -24,5 +24,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-int stripper(int argc, char* argv[]);
+#pragma once
 
+#include <clipper/core/coords.h>
+#include <cif++/Structure.hpp>
+
+clipper::Atom toClipper(const mmcif::Atom& atom);
