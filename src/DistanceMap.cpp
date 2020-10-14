@@ -454,6 +454,7 @@ std::vector<Atom> DistanceMap::near(const Atom& a, float maxDistance) const
 	}
 
 	std::vector<Atom> result;
+	auto alta = a.labelAltID();
 	
 	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
 	{
@@ -466,6 +467,10 @@ std::vector<Atom> DistanceMap::near(const Atom& a, float maxDistance) const
 
 		size_t ixb = mJA[i];
 		Atom b = structure.getAtomByID(rIndex.at(ixb));
+
+		auto altb = b.labelAltID();
+		if (altb != alta and not altb.empty() and not alta.empty())
+			continue;
 		
 		if (rti > 0)
 			result.emplace_back(symmetryCopy(b, mD, mRtOrth.at(rti)));

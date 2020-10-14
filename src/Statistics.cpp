@@ -706,8 +706,6 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 	for (const auto& [asymID, seqID, compID, authSeqID]: residues)
 	{
 		AtomDataSums sums;
-		double ediaSum = 0;
-		size_t n = 0, m = 0;
 
 		std::vector<const AtomData*> resAtomData;
 		for (const auto& d: atomData)
@@ -720,8 +718,10 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 		if (comp == nullptr)
 		{
 			if (not missing.count(compID) and compID != "HOH")
+			{
 				std::cerr << "Missing information for compound '" << compID << '\'' << std::endl;
-			missing.insert(compID);
+				missing.insert(compID);
+			}
 		}
 		else
 		{
@@ -729,11 +729,6 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 			{
 				if (compAtom.typeSymbol == H or compAtom.id == "OXT")
 					continue;
-
-				++n;
-				
-				float o = 0;
-				double edia = 0;
 
 				for (auto d: resAtomData)
 				{
@@ -749,19 +744,6 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 						sums += d->sums;
 					else
 						sums += d->sums * o_d;
-
-					if (o_d > o)
-					{
-						o = o_d;
-						edia = d->edia;
-					}
-				}
-				
-				if (o != 0)
-				{
-					ediaSum += pow(edia + 0.1, -2);
-					if (edia >= 0.8)
-						++m;
 				}
 
 				resAtomData.erase(
@@ -777,21 +759,89 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 				sums += d->sums;
 			else
 				sums += d->sums * d->occupancy;
-
-			ediaSum += pow(d->edia + 0.1, -2);
-			++n;
-			
-			if (d->edia >= 0.8)
-				++m;
 		}
+
+		// EDIA
+
+		auto& res = mStructure.getResidue(asymID, compID, seqID);
+		auto alts = res.getAlternateIDs();
+
+		if (alts.empty())
+			alts.insert("");
+
+		double EDIAm = 0, OPIA = 0, OCC = 0;
+		
+		for (auto alt: alts)
+		{
+			double ediaSum = 0, occSum = 0;
+			size_t n = 0, m = 0;
+
+			for (const auto& d: atomData)
+			{
+				if (d.asymID != asymID or d.seqID != seqID)
+					continue;
+
+				if (alt.empty())
+				{
+					resAtomData.push_back(&d);
+					continue;
+				}
+
+				auto altd = d.atom.labelAltID();
+				if (altd.empty() or altd == alt)
+					resAtomData.push_back(&d);
+			}
+
+			if (comp == nullptr)
+			{
+				for (const auto& d: resAtomData)
+				{
+					occSum += d->occupancy;
+					ediaSum += pow(d->edia + 0.1, -2);
+					++n;
+					if (d->edia >= 0.8)
+						++m;
+				}
+			}
+			else
+			{
+				for (auto& compAtom: comp->atoms())
+				{
+					if (compAtom.typeSymbol == H or compAtom.id == "OXT")
+						continue;
+
+					for (auto d: resAtomData)
+					{
+						if (d->atom.labelAtomID() != compAtom.id)
+							continue;
+
+						occSum += d->occupancy;
+						ediaSum += pow(d->edia + 0.1, -2);
+						
+						if (d->edia >= 0.8)
+							++m;
+					}
+				}
+			}
+
+			if (n == 0) // I'm paranoid
+				continue;
+			
+			OCC += occSum;
+			EDIAm += occSum * (1 / sqrt(ediaSum / n) - 0.1);
+			OPIA += occSum * (100. * m / n);
+		}
+
+		EDIAm /= OCC;
+		OPIA /= OCC;
 		
 		result.emplace_back(ResidueStatistics{asymID, seqID, compID,
 			authSeqID,
 			(sums.rfSums[0] / sums.rfSums[1]),				// rsr
 			sums.srg(),										// srsr
 			sums.cc(),										// rsccs
-			1 / sqrt(ediaSum / n) - 0.1,					// ediam
-			100. * m / n,									// opia
+			EDIAm,											// ediam
+			OPIA,											// opia
 			static_cast<int>(round(mVF * sums.ngrid))});	// ngrid
 	}
 	
