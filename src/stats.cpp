@@ -210,36 +210,6 @@ int pr_main(int argc, char* argv[])
 	if (vm.count("output-format") and vm["output-format"].as<std::string>() == "json")
 	{
 		using object = zeep::json::element;
-		
-		// std::vector<object> rs;
-		
-		// for (auto i: r)
-		// {
-		// 	object res;
-		// 	res["asymID"] = i.asymID;
-		// 	res["seqID"] = i.seqID;
-		// 	res["compID"] = i.compID;
-			
-		// 	std::tuple<std::string,int,std::string,std::string> pdbID = structure.MapLabelToPDB(i.asymID, i.seqID, i.compID, i.authSeqID);
-			
-		// 	object pdb;
-		// 	pdb["strandID"] = get<0>(pdbID);
-		// 	pdb["seqNum"] = get<1>(pdbID);
-		// 	pdb["compID"] = get<2>(pdbID);
-		// 	pdb["insCode"] = get<3>(pdbID);
-		// 	res["pdb"] = pdb;
-			
-		// 	res["RSR"] = i.RSR;
-		// 	res["SRSR"] = i.SRSR;
-		// 	res["RSCCS"] = i.RSCCS;
-		// 	res["NGRID"] = i.ngrid;
-		// 	res["EDIAm"] = i.EDIAm;
-		// 	res["OPIA"] = i.OPIA;
-			
-		// 	rs.push_back(move(res));
-		// }
-		
-		// object stats(rs);
 
 		object stats;
 		

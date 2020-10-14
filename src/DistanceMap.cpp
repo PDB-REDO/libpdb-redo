@@ -450,7 +450,7 @@ std::vector<Atom> DistanceMap::near(const Atom& a, float maxDistance) const
 	}
 	catch (const std::out_of_range& ex)
 	{
-		throw std::runtime_error("atom " + a.id() + " not found in distance std::map");
+		throw std::runtime_error("atom " + a.id() + " not found in distance map");
 	}
 
 	std::vector<Atom> result;

@@ -288,6 +288,18 @@ struct AtomDataSums
 		swSums[2] += rhs.swSums[2];
 		return *this;
 	}
+
+	friend AtomDataSums operator*(const AtomDataSums& a, float factor)
+	{
+		return {
+			static_cast<size_t>(std::round(a.ngrid * factor)),
+			{ a.rfSums[0] * factor, a.rfSums[1] * factor },
+			{ a.edSums[0] * factor, a.edSums[1] * factor },
+			{ a.ccSums[0] * factor, a.ccSums[1] * factor, a.ccSums[2] * factor },
+			{ a.rgSums[0] * factor, a.rgSums[1] * factor },
+			{ a.swSums[0] * factor, a.swSums[1] * factor, a.swSums[2] * factor }
+		};
+	}
 	
 	double cc() const
 	{
@@ -307,20 +319,20 @@ struct AtomData
 {
 	AtomData(Atom atom, float radius)
 		: atom(atom)
-//		, asymID(atom.authAsymID())
-//		, seqID(atom.property<std::string>("auth_seq_id"))
 		, asymID(atom.labelAsymID())
 		, seqID(atom.labelSeqID())
-		, radius(radius) {}
+		, radius(radius)
+		, occupancy(atom.occupancy()) {}
 	
-	Atom					atom;
+	Atom						atom;
 	std::string					asymID;
-	int						seqID;
-	float					radius;
+	int							seqID;
+	float						radius;
+	float						occupancy;
 	std::vector<AtomGridData>	points;
-	double					averageDensity = 0;
-	double					edia = 0;
-	AtomDataSums			sums;
+	double						averageDensity = 0;
+	double						edia = 0;
+	AtomDataSums				sums;
 };
 
 // --------------------------------------------------------------------
@@ -691,15 +703,18 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 	std::vector<ResidueStatistics> result;
 
 	// And now collect the per residue information
-	for (auto r: residues)
+	for (const auto& [asymID, seqID, compID, authSeqID]: residues)
 	{
-		int seqID;
-		std::string asymID, compID, authSeqID;
-		std::tie(asymID, seqID, compID, authSeqID) = r;
-		
 		AtomDataSums sums;
 		double ediaSum = 0;
 		size_t n = 0, m = 0;
+
+		std::vector<const AtomData*> resAtomData;
+		for (const auto& d: atomData)
+		{
+			if (d.asymID == asymID and d.seqID == seqID)
+				resAtomData.push_back(&d);
+		}
 
 		auto comp = Compound::create(compID);
 		if (comp == nullptr)
@@ -707,47 +722,67 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 			if (not missing.count(compID) and compID != "HOH")
 				std::cerr << "Missing information for compound '" << compID << '\'' << std::endl;
 			missing.insert(compID);
-			
-			for (const auto& d: atomData)
-			{
-				if (d.asymID != asymID or d.seqID != seqID)
-					continue;
-				
-				sums += d.sums;
-				ediaSum += pow(d.edia + 0.1, -2);
-				++n;
-				
-				if (d.edia >= 0.8)
-					++m;
-			}
 		}
 		else
 		{
 			for (auto& compAtom: comp->atoms())
 			{
-				if (compAtom.typeSymbol == H)
+				if (compAtom.typeSymbol == H or compAtom.id == "OXT")
 					continue;
 
 				++n;
 				
-				auto ci = find_if(atomData.begin(), atomData.end(),
-					[=](auto& d) { return d.asymID == asymID and d.seqID == seqID and d.atom.labelAtomID() == compAtom.id; });
+				float o = 0;
+				double edia = 0;
 
-				if (ci == atomData.end())
+				for (auto d: resAtomData)
 				{
-					if (compAtom.id == "OXT")
-						--n;
-					else if (cif::VERBOSE > 1)
-						std::cerr << "Missing atom '" << compAtom.id << "' in residue " << asymID << ':' << seqID << std::endl;
-					continue;
+					if (d->atom.labelAtomID() != compAtom.id)
+						continue;
+
+					float o_d = d->occupancy;
+
+					if (o_d == 0)
+						continue;
+
+					if (o_d == 1)
+						sums += d->sums;
+					else
+						sums += d->sums * o_d;
+
+					if (o_d > o)
+					{
+						o = o_d;
+						edia = d->edia;
+					}
 				}
 				
-				sums += ci->sums;
-				ediaSum += pow(ci->edia + 0.1, -2);
-				
-				if (ci->edia >= 0.8)
-					++m;
+				if (o != 0)
+				{
+					ediaSum += pow(edia + 0.1, -2);
+					if (edia >= 0.8)
+						++m;
+				}
+
+				resAtomData.erase(
+					std::remove_if(resAtomData.begin(), resAtomData.end(), [id=compAtom.id](const AtomData* d) { return d->atom.labelAtomID() == id; }),
+					resAtomData.end());
 			}
+		}
+
+		// atoms that were present but not part of the Compound 
+		for (auto d: resAtomData)
+		{
+			if (d->occupancy == 1)
+				sums += d->sums;
+			else
+				sums += d->sums * d->occupancy;
+
+			ediaSum += pow(d->edia + 0.1, -2);
+			++n;
+			
+			if (d->edia >= 0.8)
+				++m;
 		}
 		
 		result.emplace_back(ResidueStatistics{asymID, seqID, compID,
@@ -984,7 +1019,6 @@ EDIAStatsCollector::EDIAStatsCollector(MapMaker<float>& mm,
 	: StatsCollector(mm, structure, electronScattering)
 	, mDistanceMap(structure, mm.spacegroup(), mm.cell(), 3.5f), mBondMap(bondMap)
 {
-	
 	// create a atom radius map, for EDIA
 
 	const double kResolutions[] =
