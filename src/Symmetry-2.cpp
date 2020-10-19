@@ -173,13 +173,10 @@ int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac& rt)
 
 	auto rte = [&rot](int i, int j) { return static_cast<int8_t>(lrint(rot(i, j))); };
 
-	m::SymopData k
-	{
-		{
-			rte(0, 0), rte(0, 1), rte(0, 2),
-			rte(1, 0), rte(1, 1), rte(1, 2),
-			rte(2, 0), rte(2, 1), rte(2, 2)
-		}
+	std::array<int,15> krt{
+		rte(0, 0), rte(0, 1), rte(0, 2),
+		rte(1, 0), rte(1, 1), rte(1, 2),
+		rte(2, 0), rte(2, 1), rte(2, 2)
 	};
 
 	for (int i = 0; i < 3; ++i)
@@ -201,27 +198,29 @@ int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac& rt)
 
 		switch (i)
 		{
-			case 0: k.trn_0_0 = n; k.trn_0_1 = d; break;
-			case 1: k.trn_1_0 = n; k.trn_1_1 = d; break;
-			case 2: k.trn_2_0 = n; k.trn_2_1 = d; break;
+			case 0: krt[ 9] = n; krt[10] = d; break;
+			case 1: krt[11] = n; krt[12] = d; break;
+			case 2: krt[13] = n; krt[14] = d; break;
 		}
 	}
+
+	m::SymopData k(krt);
 
 	const size_t N = m::kSymopNrTableSize;
 	int32_t L = 0, R = static_cast<int32_t>(N - 1);
 	while (L <= R)
 	{
 		int32_t i = (L + R) / 2;
-		if (m::kSymopNrTable[i].spacegroupNr < spacegroup)
+		if (m::kSymopNrTable[i].spacegroup() < spacegroup)
 			L = i + 1;
 		else
 			R = i - 1;
 	}
 
-	for (size_t i = L; i < N and m::kSymopNrTable[i].spacegroupNr == spacegroup; ++i)
+	for (size_t i = L; i < N and m::kSymopNrTable[i].spacegroup() == spacegroup; ++i)
 	{
-		if (m::kSymopNrTable[i].rt.iv == k.iv)
-			return m::kSymopNrTable[i].rotationalNr;
+		if (m::kSymopNrTable[i].symop() == k)
+			return m::kSymopNrTable[i].rotational_number();
 	}
 
 	throw runtime_error("Symmetry operation was not found in table, cannot find rotational number");
