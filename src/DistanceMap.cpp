@@ -33,6 +33,7 @@
 
 #include "DistanceMap.hpp"
 #include "ClipperWrapper.hpp"
+#include "Symmetry-2.hpp"
 
 //#define DEBUG_VOOR_BART
 
@@ -173,7 +174,7 @@ std::vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spa
 
 DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell,
 		float maxDistance)
-	: structure(p), dim(0), mMaxDistance(maxDistance), mMaxDistanceSQ(maxDistance * maxDistance)
+	: structure(p), cell(cell), spacegroup(spacegroup), dim(0), mMaxDistance(maxDistance), mMaxDistanceSQ(maxDistance * maxDistance)
 {
 	auto& atoms = p.atoms();
 	dim = atoms.size();
@@ -473,9 +474,9 @@ std::vector<Atom> DistanceMap::near(const Atom& a, float maxDistance) const
 			continue;
 		
 		if (rti > 0)
-			result.emplace_back(symmetryCopy(b, mD, mRtOrth.at(rti)));
+			result.emplace_back(symmetryCopy(b, mD, cell, spacegroup, mRtOrth.at(rti)));
 		else if (rti < 0)
-			result.emplace_back(symmetryCopy(b, mD, mRtOrth.at(-rti).inverse()));
+			result.emplace_back(symmetryCopy(b, mD, cell, spacegroup, mRtOrth.at(-rti).inverse()));
 		else
 			result.emplace_back(b);
 	}

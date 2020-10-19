@@ -81,16 +81,6 @@ clipper::Atom toClipper(const mmcif::Atom& atom)
 	return result;
 }
 
-// --------------------------------------------------------------------
-
-mmcif::Atom symmetryCopy(const mmcif::Atom& atom, const mmcif::Point& d, const clipper::RTop_orth& rt)
-{
-	auto loc = atom.location();
-	loc += d;
-	loc = ((clipper::Coord_orth)loc).transform(rt);
-
-	return mmcif::Atom(atom, loc);
-}
 
 	// AtomImpl(const AtomImpl& impl, const Point& d, const clipper::RTop_orth& rt)
 	// 	: mFile(impl.mFile), mID(impl.mID), mType(impl.mType), mAtomID(impl.mAtomID)

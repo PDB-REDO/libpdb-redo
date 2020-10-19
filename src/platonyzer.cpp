@@ -1,18 +1,47 @@
-#include "pdb-redo.h"
+/*-
+ * SPDX-License-Identifier: BSD-2-Clause
+ * 
+ * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
+ * 
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 
+ * 1. Redistributions of source code must retain the above copyright notice, this
+ *    list of conditions and the following disclaimer
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+ * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+ * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+ * ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+ * (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+ * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+ * ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+ * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+ * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+ */
+
+#include "pdb-redo.hpp"
 
 #include <iomanip>
+#include <fstream>
+#include <filesystem>
 
 #include <boost/program_options.hpp>
-#include <boost/filesystem/fstream.hpp>
 
-#include "cif++/Cif++.h"
-#include "cif++/Compound.h"
-#include "cif++/Structure.h"
-#include "cif++/Symmetry.h"
+#include "cif++/Cif++.hpp"
+#include "cif++/Compound.hpp"
+#include "cif++/Structure.hpp"
+#include "cif++/Symmetry.hpp"
+
+#include "Symmetry-2.hpp"
 
 using namespace std;
 namespace po = boost::program_options;
-namespace fs = boost::filesystem;
+namespace fs = std::filesystem;
 namespace c = mmcif;
 
 // -----------------------------------------------------------------------
@@ -24,7 +53,7 @@ const set<string> kBackBone = {
 const float
 	kMaxZnHisDistanceInCluster = 3.8f,
 	kMaxZnCysDistanceInCluster = 4.8f,
-	kBoundaryClosenessAtomToZn = 2.9f,
+	// kBoundaryClosenessAtomToZn = 2.9f,
 
 	kDixonQTest95Perc5Points = 0.710f,
 
@@ -72,12 +101,12 @@ class RestraintGenerator
 
 		friend ostream& operator<<(ostream& os, const AtomPart& aw)
 		{
-			os << "chain " << aw.m_a.authAsymId()
-			   << " resi " << aw.m_a.authSeqId()
+			os << "chain " << aw.m_a.authAsymID()
+			   << " resi " << aw.m_a.authSeqID()
 			   << " ins " << (aw.m_a.pdbxAuthInsCode().empty() ? "." : aw.m_a.pdbxAuthInsCode())
-			   << " atom " << aw.m_a.authAtomId();
-			if (not aw.m_a.pdbxAuthAltId().empty())
-				os << " alt " + aw.m_a.pdbxAuthAltId();
+			   << " atom " << aw.m_a.authAtomID();
+			if (not aw.m_a.pdbxAuthAltID().empty())
+				os << " alt " + aw.m_a.pdbxAuthAltID();
 			os << " symm " << (aw.m_a.isSymmetryCopy() ? "Y" : "N");
 
 			return os;
@@ -188,35 +217,35 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int s
 	vector<IonSite> result;
 
     // factory for symmetry atom iterators
-	c::SymmetryAtomIteratorFactory saif(structure, spacegroup, cell);
+	SymmetryAtomIteratorFactory saif(structure, spacegroup, cell);
 
 	for (auto atom: structure.atoms())
 	{
-	 	if (atom.labelCompId() != "ZN")
+	 	if (atom.labelCompID() != "ZN")
 		 	continue;
 
 		IonSite zs = { atom };
 
 		for (auto a: structure.atoms())
 		{
-			if (a.labelCompId() == "HIS" and (a.labelAtomId() == "ND1" or a.labelAtomId() == "NE2"))
+			if (a.labelCompID() == "HIS" and (a.labelAtomID() == "ND1" or a.labelAtomID() == "NE2"))
 			{
 				for (auto sa: saif(a))
 				{
 					float d = Distance(atom, sa);
 					if (d <= kMaxZnHisDistanceInCluster)
-						zs.lig.emplace_back(sa, d, saif.symop_mmcif(sa));
+						zs.lig.emplace_back(sa, d, sa.symmetry());
 				}
 				continue;
 			}
 
-			if (a.labelCompId() == "CYS" and a.labelAtomId() == "SG")
+			if (a.labelCompID() == "CYS" and a.labelAtomID() == "SG")
 			{
 				for (auto sa: saif(a))
 				{
 					float d = Distance(atom, sa);
 					if (d <= kMaxZnCysDistanceInCluster)
-						zs.lig.emplace_back(sa, d, saif.symop_mmcif(sa));
+						zs.lig.emplace_back(sa, d, sa.symmetry());
 				}
 				continue;
 			}
@@ -237,7 +266,7 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int s
 			{
 				auto& ba = get<0>(*b);
 
-				if (ba.labelCompId() != aa.labelCompId() or aa.labelSeqId() != ba.labelSeqId() or aa.labelAsymId() != ba.labelAsymId() or aa.symmetry() != ba.symmetry())
+				if (ba.labelCompID() != aa.labelCompID() or aa.labelSeqID() != ba.labelSeqID() or aa.labelAsymID() != ba.labelAsymID() or aa.symmetry() != ba.symmetry())
 					continue;
 
 				auto bd = get<1>(*b);
@@ -253,12 +282,12 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int s
 		if (cif::VERBOSE)
 		{
 			cerr << "preliminary cluster: " << endl
-				 << " zn: " << zs.ion.labelAsymId() << '/' << zs.ion.labelAtomId() << " (" << zs.ion.pdbID() << ')' << endl;
+				 << " zn: " << zs.ion.labelAsymID() << '/' << zs.ion.labelAtomID() << " (" << zs.ion.pdbID() << ')' << endl;
 
 			for (auto& l: zs.lig)
 			{
 				auto& a = get<0>(l);
-				cerr << " " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " (" << a.pdbID() << ')'  << ' ' << saif.symop_mmcif(a) << " @ " << get<1>(l) << endl;
+				cerr << " " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')'  << ' ' << a.symmetry() << " @ " << get<1>(l) << endl;
 			}
 		}
 
@@ -282,7 +311,7 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int s
                 for (size_t i = 4; i < zs.lig.size(); ++i)
                 {
                     auto& a = get<0>(zs.lig[i]);
-                    cerr << "Atom " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " (" << a.pdbID() << ')'  << " was considered to be an outlier" << endl;
+                    cerr << "Atom " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')'  << " was considered to be an outlier" << endl;
                 }
 			}
 
@@ -326,11 +355,11 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 	vector<IonSite> result;
 
     // factory for symmetry atom iterators
-	c::SymmetryAtomIteratorFactory saif(structure, spacegroup, cell);
+	SymmetryAtomIteratorFactory saif(structure, spacegroup, cell);
 
 	for (auto atom: structure.atoms())
 	{
-	 	if (atom.labelCompId() != "NA" and atom.labelCompId() != "MG")
+	 	if (atom.labelCompID() != "NA" and atom.labelCompID() != "MG")
 		 	continue;
 
 		IonSite is = { atom };
@@ -345,7 +374,7 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 				{
 					float d = Distance(atom, sa);
 					if (d <= kMaxMetalLigandDistance)
-						is.lig.emplace_back(sa, d, saif.symop_mmcif(sa));
+						is.lig.emplace_back(sa, d, sa.symmetry());
 				}
 			}
 		}
@@ -368,10 +397,10 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 				// mmCIF...
 				if (aa.isWater())
 				{
-					if (aa.authSeqId() != ba.authSeqId() or aa.authAsymId() != ba.authAsymId() or aa.symmetry() != ba.symmetry())
+					if (aa.authSeqID() != ba.authSeqID() or aa.authAsymID() != ba.authAsymID() or aa.symmetry() != ba.symmetry())
 						continue;
 				}
-				else if (ba.labelAtomId() != aa.labelAtomId() or ba.labelCompId() != aa.labelCompId() or aa.labelSeqId() != ba.labelSeqId() or aa.labelAsymId() != ba.labelAsymId() or aa.symmetry() != ba.symmetry())
+				else if (ba.labelAtomID() != aa.labelAtomID() or ba.labelCompID() != aa.labelCompID() or aa.labelSeqID() != ba.labelSeqID() or aa.labelAsymID() != ba.labelAsymID() or aa.symmetry() != ba.symmetry())
 					continue;
 
 				auto bd = get<1>(*b);
@@ -387,12 +416,12 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 		if (cif::VERBOSE)
 		{
 			cerr << "preliminary cluster: " << endl
-				 << " metal: " << is.ion.labelAsymId() << '/' << is.ion.labelAtomId() << " (" << is.ion.pdbID() << ')' << endl;
+				 << " metal: " << is.ion.labelAsymID() << '/' << is.ion.labelAtomID() << " (" << is.ion.pdbID() << ')' << endl;
 
 			for (auto& l: is.lig)
 			{
 				auto& a = get<0>(l);
-				cerr << " " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " (" << a.pdbID() << ')' << ' ' << saif.symop_mmcif(a) << " @ " << get<1>(l) << endl;
+				cerr << " " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')' << ' ' << a.symmetry() << " @ " << get<1>(l) << endl;
 			}
 		}
 
@@ -407,25 +436,25 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 				
 			try
 			{
-				if (aa.labelCompId() == "GLN")
+				if (aa.labelCompID() == "GLN")
 				{
-					assert(aa.labelAtomId() == "NE2");
-					auto o = structure.getAtomByLabel("OE1", aa.labelAsymId(), "GLN", aa.labelSeqId(), aa.labelAltId());
+					assert(aa.labelAtomID() == "NE2");
+					auto o = structure.getAtomByLabel("OE1", aa.labelAsymID(), "GLN", aa.labelSeqID(), aa.labelAltID());
 
 					if (cif::VERBOSE)
-						cerr << "Flipping side chain for GLN " << " " << aa.labelAsymId() << aa.labelSeqId() << " (" << aa.pdbID() << ')' << endl;
+						cerr << "Flipping side chain for GLN " << " " << aa.labelAsymID() << aa.labelSeqID() << " (" << aa.pdbID() << ')' << endl;
 
 					structure.swapAtoms(aa, o);
 					continue;
 				}
 				
-				if (aa.labelCompId() == "ASN")
+				if (aa.labelCompID() == "ASN")
 				{
-					assert(aa.labelAtomId() == "ND2");
-					auto o = structure.getAtomByLabel("OD1", aa.labelAsymId(), "GLN", aa.labelSeqId(), aa.labelAltId());
+					assert(aa.labelAtomID() == "ND2");
+					auto o = structure.getAtomByLabel("OD1", aa.labelAsymID(), "GLN", aa.labelSeqID(), aa.labelAltID());
 
 					if (cif::VERBOSE)
-						cerr << "Flipping side chain for ASN " << " " << aa.labelAsymId() << aa.labelSeqId() << " (" << aa.pdbID() << ')' << endl;
+						cerr << "Flipping side chain for ASN " << " " << aa.labelAsymID() << aa.labelSeqID() << " (" << aa.pdbID() << ')' << endl;
 
 					structure.swapAtoms(aa, o);
 					continue;
@@ -434,7 +463,7 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 			catch (const std::out_of_range& ex)
 			{
 				if (cif::VERBOSE)
-					cerr << "Could not flip " << aa.labelCompId() << ": " << ex.what() << endl;
+					cerr << "Could not flip " << aa.labelCompID() << ": " << ex.what() << endl;
 
 				// is.lig.clear();	// give up
 				// break;
@@ -472,7 +501,7 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 			if (cif::VERBOSE)
 			{
 				auto& a = get<0>(is.lig.back());
-				cerr << "Removing outlier " << a.labelAsymId() << a.labelSeqId() << '/' << a.labelAtomId() << " (" << a.pdbID() << ')' << ' ' << saif.symop_mmcif(a) << " @ " << get<1>(is.lig.back()) << endl;
+				cerr << "Removing outlier " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')' << ' ' << a.symmetry() << " @ " << get<1>(is.lig.back()) << endl;
 			}
 
 			is.lig.erase(is.lig.begin() + is.lig.size() - 1);
@@ -495,7 +524,7 @@ int pr_main(int argc, char* argv[])
 {
 	int result = 0;
 
-	po::options_description visible_options("platonyzer " + VERSION + " options file]" );
+	po::options_description visible_options("platonyzer " + VERSION_STRING + " options file]" );
 	visible_options.add_options()
 		("output,o",	po::value<string>(),	"The output file, default is stdout")
 		("restraints-file,r",
@@ -530,7 +559,7 @@ int pr_main(int argc, char* argv[])
 
 	if (fs::exists(configFile))
 	{
-		fs::ifstream cfgFile(configFile);
+		std::ifstream cfgFile(configFile);
 		if (cfgFile.is_open())
 			po::store(po::parse_config_file(cfgFile, visible_options), vm);
 	}
@@ -539,7 +568,7 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION << endl;
+		cout << argv[0] << " version " << VERSION_STRING << endl;
 		exit(0);
 	}
 
@@ -625,8 +654,8 @@ int pr_main(int argc, char* argv[])
 			// replace LINK/struct_conn records
 			size_t n = structConn.size();
 			structConn.erase(
-				(cif::Key("ptnr1_label_asym_id") == ionSite.ion.labelAsymId() and cif::Key("ptnr1_label_atom_id") == ionSite.ion.labelAtomId()) or
-				(cif::Key("ptnr2_label_asym_id") == ionSite.ion.labelAsymId() and cif::Key("ptnr2_label_atom_id") == ionSite.ion.labelAtomId()));
+				(cif::Key("ptnr1_label_asym_id") == ionSite.ion.labelAsymID() and cif::Key("ptnr1_label_atom_id") == ionSite.ion.labelAtomID()) or
+				(cif::Key("ptnr2_label_asym_id") == ionSite.ion.labelAsymID() and cif::Key("ptnr2_label_atom_id") == ionSite.ion.labelAtomID()));
 			removedLinks += (n - structConn.size());
 			createdLinks += ionSite.lig.size();
 
@@ -637,26 +666,26 @@ int pr_main(int argc, char* argv[])
 				structConn.emplace({
 					{ "id", id },
 					{ "conn_type_id", "metalc" },
-					{ "ptnr1_label_asym_id", atom.labelAsymId() },
-					{ "ptnr1_label_comp_id", atom.labelCompId() },
-					{ "ptnr1_label_seq_id", atom.labelSeqId() },
-					{ "ptnr1_label_atom_id", atom.labelAtomId() },
-					{ "pdbx_ptnr1_label_alt_id", atom.labelAltId() },
+					{ "ptnr1_label_asym_id", atom.labelAsymID() },
+					{ "ptnr1_label_comp_id", atom.labelCompID() },
+					{ "ptnr1_label_seq_id", atom.labelSeqID() },
+					{ "ptnr1_label_atom_id", atom.labelAtomID() },
+					{ "pdbx_ptnr1_label_alt_id", atom.labelAltID() },
 					{ "pdbx_ptnr1_PDB_ins_code", atom.pdbxAuthInsCode() },
 					{ "ptnr1_symmetry", "1_555" },
-					{ "ptnr1_auth_asym_id", atom.authAsymId() },
-					{ "ptnr1_auth_comp_id", atom.authCompId() },
-					{ "ptnr1_auth_seq_id", atom.authSeqId() },
+					{ "ptnr1_auth_asym_id", atom.authAsymID() },
+					{ "ptnr1_auth_comp_id", atom.authCompID() },
+					{ "ptnr1_auth_seq_id", atom.authSeqID() },
 
-					{ "ptnr2_label_asym_id", ionSite.ion.labelAsymId() },
-					{ "ptnr2_label_comp_id", ionSite.ion.labelCompId() },
+					{ "ptnr2_label_asym_id", ionSite.ion.labelAsymID() },
+					{ "ptnr2_label_comp_id", ionSite.ion.labelCompID() },
 					{ "ptnr2_label_seq_id", "?" },
-					{ "ptnr2_label_atom_id", ionSite.ion.labelAtomId() },
-					{ "pdbx_ptnr2_label_alt_id", ionSite.ion.labelAltId() },
+					{ "ptnr2_label_atom_id", ionSite.ion.labelAtomID() },
+					{ "pdbx_ptnr2_label_alt_id", ionSite.ion.labelAltID() },
 					{ "pdbx_ptnr2_PDB_ins_code", ionSite.ion.pdbxAuthInsCode() },
-					{ "ptnr2_auth_asym_id", ionSite.ion.authAsymId() },
-					{ "ptnr2_auth_comp_id", ionSite.ion.authCompId() },
-					{ "ptnr2_auth_seq_id", ionSite.ion.authSeqId() },
+					{ "ptnr2_auth_asym_id", ionSite.ion.authAsymID() },
+					{ "ptnr2_auth_comp_id", ionSite.ion.authCompID() },
+					{ "ptnr2_auth_seq_id", ionSite.ion.authSeqID() },
 					{ "ptnr2_symmetry", symop },
 
 					{ "pdbx_dist_value", distance }

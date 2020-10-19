@@ -1,3 +1,5 @@
+AC_PREREQ([2.69])
+
 AC_INIT([pdb-redo-tools], 1.0, [m.hekkelman@nki.nl])
 
 dnl Switch to a decent C++ compiler, and check if it works.
@@ -44,8 +46,6 @@ AC_CHECK_HEADER([filesystem], [], [AC_MSG_ERROR([The file <filesystem> is missin
 
 AX_BOOST_BASE([1.65.1], [], [AC_MSG_ERROR([Could not find a recent version of boost])])
 AX_BOOST_IOSTREAMS
-AX_BOOST_THREAD
-AX_BOOST_REGEX
 AX_BOOST_PROGRAM_OPTIONS
 AX_BOOST_DATE_TIME
 

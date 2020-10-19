@@ -134,7 +134,7 @@ endif
 # disabled for now: centrifuge map-maker
 PROGRAMS = \
 	mtz-maker extractor prepper tls-interpreter stats isomers chiron re-ref \
-	pepflip compref flipper
+	pepflip compref flipper platonyzer
 
 mtz-maker_OBJECTS = MapMaker.o ResolutionCalculator.o ClipperWrapper.o
 extractor_OBJECTS = ResolutionCalculator.o
@@ -145,6 +145,7 @@ map-maker_OBJECTS = pr-server.o
 rama-angles_OBJECTS = pr-server.o ramachandran.o
 re-ref_OBJECTS = minimizer.o restraints.o MapMaker.o BondMap.o Statistics.o AtomShape.o ClipperWrapper.o DistanceMap.o ResolutionCalculator.o
 pepflip_OBJECTS = minimizer.o restraints.o skiplist.o ramachandran.o MapMaker.o BondMap.o Statistics.o AtomShape.o ClipperWrapper.o DistanceMap.o ResolutionCalculator.o
+platonyzer_OBJECTS = Symmetry-2.o
 
 tortoize_RSRC = rsrc/rama-data.bin rsrc/torsion-data.bin
 map-maker_RSRC = $(DOCROOT_FILES)

@@ -65,6 +65,8 @@ class DistanceMap
 	void AddDistancesForAtoms(const Residue& a, const Residue& b, DistMap& dm, int32_t rtix);
 
 	const Structure&						structure;
+	clipper::Cell							cell;
+	clipper::Spacegroup						spacegroup;
 	size_t									dim;
 	std::unordered_map<std::string,size_t>	index;
 	std::map<size_t,std::string>			rIndex;

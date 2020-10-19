@@ -30,4 +30,3 @@
 #include <cif++/Structure.hpp>
 
 clipper::Atom toClipper(const mmcif::Atom& atom);
-mmcif::Atom symmetryCopy(const mmcif::Atom& atom, const mmcif::Point& d, const clipper::RTop_orth& rt);
