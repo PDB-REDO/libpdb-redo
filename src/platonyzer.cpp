@@ -530,6 +530,7 @@ int pr_main(int argc, char* argv[])
 		("restraints-file,r",
 						po::value<string>(),	"Restraint file name, default is {id}_platonyze.restraints")
 		("delete-vdw-rest",						"Delete vanderWaals restraints for octahedral ions in the external for Refmac")
+		("create-na-mg-links",					"Create links for Na/Mg ion sites that were found")
 		("help,h",								"Display help message")
 		("version",								"Print version")
 		("verbose,v",							"Verbose output")
@@ -630,6 +631,8 @@ int pr_main(int argc, char* argv[])
 	size_t removedLinks = 0, createdLinks = 0;
 	size_t platonyzerLinkId = 1;
 
+	bool createNaMgLinks = vm.count("create-na-mg-links");
+
 	for (auto& ionSites: {
 		findZincSites(structure, db, spacegroupNr, cell),
 		findOctahedralSites(structure, db, spacegroupNr, cell)
@@ -657,6 +660,10 @@ int pr_main(int argc, char* argv[])
 				(cif::Key("ptnr1_label_asym_id") == ionSite.ion.labelAsymID() and cif::Key("ptnr1_label_atom_id") == ionSite.ion.labelAtomID()) or
 				(cif::Key("ptnr2_label_asym_id") == ionSite.ion.labelAsymID() and cif::Key("ptnr2_label_atom_id") == ionSite.ion.labelAtomID()));
 			removedLinks += (n - structConn.size());
+
+			if (not createNaMgLinks and (ionSite.ion.type() == c::AtomType::Na or ionSite.ion.type() == c::AtomType::Mg))
+				continue;
+
 			createdLinks += ionSite.lig.size();
 
 			for (auto&& [atom, distance, symop] : ionSite.lig)
