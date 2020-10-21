@@ -320,6 +320,7 @@ mmcif::Atom symmetryCopy(const mmcif::Atom& atom, const mmcif::Point& d,
 	auto loc = atom.location();
 	loc += d;
 	loc = ((clipper::Coord_orth)loc).transform(rt);
+	loc -= d;
 
 	std::string rt_operation = describe_rt_operation(spacegroup, cell, rt);
 
