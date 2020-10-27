@@ -29,8 +29,12 @@
 #include <iomanip>
 #include <fstream>
 #include <filesystem>
+#include <unordered_set>
 
 #include <boost/program_options.hpp>
+#include <boost/iostreams/concepts.hpp>    // output_filter
+#include <boost/iostreams/operations.hpp>  // put
+#include <boost/iostreams/filtering_stream.hpp>
 
 #include "cif++/Cif++.hpp"
 #include "cif++/Compound.hpp"
@@ -39,14 +43,14 @@
 
 #include "Symmetry-2.hpp"
 
-using namespace std;
 namespace po = boost::program_options;
+namespace io = boost::iostreams;
 namespace fs = std::filesystem;
 namespace c = mmcif;
 
 // -----------------------------------------------------------------------
 
-const set<string> kBackBone = {
+const std::set<std::string> kBackBone = {
 	"N", "CA", "C", "O", "OXT"
 };
 
@@ -63,7 +67,7 @@ const float
 
 // enum class RestraintType { Dist, Angle }; //TODO implement: TORSION (and others?) when necessary
 
-// string to_string(RestraintType type)
+// std::string to_string(RestraintType type)
 // {
 // 	switch (type)
 // 	{
@@ -76,20 +80,61 @@ class RestraintGenerator
 {
   public:
 
-	RestraintGenerator(const string& file, bool deleteVDWRestraints)
-		: m_file(file), m_deleteVDWRestraints(deleteVDWRestraints)
+	RestraintGenerator(const std::string& file, bool deleteVDWRestraints)
+		: m_file_file(file), m_deleteVDWRestraints(deleteVDWRestraints)
 	{
-		if (not m_file.is_open())
-			throw runtime_error("Could not open restraint file " + file);
+		if (not m_file_file.is_open())
+			throw std::runtime_error("Could not open restraint file " + file);
+		
+		m_file.push(unique_filter());
+		m_file.push(m_file_file);
 	}
 
 	~RestraintGenerator() = default;
 
-	size_t writeTetrahedral(const c::Atom& ion, const vector<c::Atom>& ligands);
-	size_t writeOctahedral(const c::Atom& ion, const vector<c::Atom>& ligands,
-		const vector<tuple<size_t,size_t>>& opposing);
+	std::size_t writeTetrahedral(const c::Atom& ion, const std::vector<c::Atom>& ligands);
+	std::size_t writeOctahedral(const c::Atom& ion, const std::vector<c::Atom>& ligands,
+		const std::vector<std::tuple<std::size_t,std::size_t>>& opposing);
 
   private:
+
+	class unique_filter : public io::output_filter
+	{
+	  public:
+		template<typename Sink>
+		bool put(Sink& dest, int c)
+		{
+			bool result = true;
+
+			if (c == '\n')
+			{
+				if (m_seen.insert(m_line).second)
+				{
+					for (char ch: m_line)
+						io::put(dest, ch);
+					result = io::put(dest, c);
+				}
+
+				m_line.clear();
+			}
+			else
+				m_line += c;
+			
+			return result;
+		}
+
+		template<typename Sink>
+		void close(Sink&)
+		{
+			m_line.clear();
+			m_seen.clear();
+		}
+
+	  private:
+		
+		std::string m_line;
+		std::unordered_set<std::string> m_seen;
+	};
 
 	void writeAngleRestraint(float target, float sd, const c::Atom& a, const c::Atom& b, const c::Atom& c);
 
@@ -99,7 +144,7 @@ class RestraintGenerator
 
 		AtomPart(const c::Atom& a) : m_a(a) {}
 
-		friend ostream& operator<<(ostream& os, const AtomPart& aw)
+		friend std::ostream& operator<<(std::ostream& os, const AtomPart& aw)
 		{
 			os << "chain " << aw.m_a.authAsymID()
 			   << " resi " << aw.m_a.authSeqID()
@@ -107,24 +152,27 @@ class RestraintGenerator
 			   << " atom " << aw.m_a.authAtomID();
 			if (not aw.m_a.pdbxAuthAltID().empty())
 				os << " alt " + aw.m_a.pdbxAuthAltID();
+			else if (not aw.m_a.labelAltID().empty())
+				os << " alt " + aw.m_a.labelAltID();
 			os << " symm " << (aw.m_a.isSymmetryCopy() ? "Y" : "N");
 
 			return os;
 		}
 	};
 
-	ofstream m_file;
+	std::ofstream m_file_file;
+	io::filtering_ostream m_file;
 	bool m_deleteVDWRestraints;
 };
 
-size_t RestraintGenerator::writeTetrahedral(const c::Atom& ion, const vector<c::Atom>& ligands)
+std::size_t RestraintGenerator::writeTetrahedral(const c::Atom& ion, const std::vector<c::Atom>& ligands)
 {
 	const float
 		kTarget = 109.5,
 		kSD = 3;
 
-	size_t n = 0;
-	for (auto a = ligands.begin(); next(a) != ligands.end(); ++a)
+	std::size_t n = 0;
+	for (auto a = ligands.begin(); std::next(a) != ligands.end(); ++a)
 	{
 		for (auto b = a + 1; b != ligands.end(); ++b)
 		{
@@ -136,21 +184,21 @@ size_t RestraintGenerator::writeTetrahedral(const c::Atom& ion, const vector<c::
 	return n;
 }
 
-size_t RestraintGenerator::writeOctahedral(const c::Atom& ion, const vector<c::Atom>& ligands,
-	const vector<tuple<size_t,size_t>>& opposing)
+std::size_t RestraintGenerator::writeOctahedral(const c::Atom& ion, const std::vector<c::Atom>& ligands,
+	const std::vector<std::tuple<std::size_t,std::size_t>>& opposing)
 {
 	const float kSD = 3;
 
 	if (m_deleteVDWRestraints)
-		m_file << "vdwr exclude " << AtomPart(ion) << endl;
+		m_file << "vdwr exclude " << AtomPart(ion) << std::endl;
 
-	size_t n = 0, ai = 0;
-	for (auto a = ligands.begin(); next(a) != ligands.end(); ++a, ++ai)
+	std::size_t n = 0, ai = 0;
+	for (auto a = ligands.begin(); std::next(a) != ligands.end(); ++a, ++ai)
 	{
-		size_t bi = ai + 1;
+		std::size_t bi = ai + 1;
 		for (auto b = a + 1; b != ligands.end(); ++b, ++bi)
 		{
-			if (find(opposing.begin(), opposing.end(), make_tuple(ai, bi)) == opposing.end())
+			if (find(opposing.begin(), opposing.end(), std::make_tuple(ai, bi)) == opposing.end())
 				writeAngleRestraint(90, kSD, *a, ion, *b);
 			else
 				writeAngleRestraint(180, kSD, *a, ion, *b);
@@ -164,7 +212,7 @@ size_t RestraintGenerator::writeOctahedral(const c::Atom& ion, const vector<c::A
 void RestraintGenerator::writeAngleRestraint(float target, float sd, const c::Atom& a, const c::Atom& b, const c::Atom& c)
 {
 	m_file << "exte angle first " << AtomPart(a) << " next " << AtomPart(b) << " next " << AtomPart(c)
-		   << fixed << setprecision(3) << " value " << target << " sigma " << sd << endl;
+		   << std::fixed << std::setprecision(3) << " value " << target << " sigma " << sd << std::endl;
 }
 
 // ------------------------------------------------------------------------
@@ -172,8 +220,8 @@ void RestraintGenerator::writeAngleRestraint(float target, float sd, const c::At
 struct IonSite
 {
 	c::Atom ion;
-	vector<tuple<c::Atom,float,string>> lig;
-	vector<tuple<size_t,size_t>> opposing;
+	std::vector<std::tuple<c::Atom,float,std::string>> lig;
+	std::vector<std::tuple<std::size_t,std::size_t>> opposing;
 
 	bool isOctaHedral();
 };
@@ -185,14 +233,14 @@ bool IonSite::isOctaHedral()
 	bool result = lig.size() == 6;
 
 	// check angles
-	for (size_t a = 0; result and a + 1 < 6; ++a)
+	for (std::size_t a = 0; result and a + 1 < 6; ++a)
 	{
-		auto& la = get<0>(lig[a]);
-		size_t opposing_la = 0;
+		auto& la = std::get<0>(lig[a]);
+		std::size_t opposing_la = 0;
 
-		for (size_t b = a + 1; result and b < 6; ++b)
+		for (std::size_t b = a + 1; result and b < 6; ++b)
 		{
-			auto& lb = get<0>(lig[b]);
+			auto& lb = std::get<0>(lig[b]);
 			float angle = c::Angle(la.location(), ion.location(), lb.location());
 			
 			if (abs(angle - 180) < kMaxAllowedAngleDeviation)	// opposing?
@@ -212,9 +260,105 @@ bool IonSite::isOctaHedral()
 
 // -----------------------------------------------------------------------
 
-vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int spacegroup, const clipper::Cell& cell)
+bool findZincSites(c::Structure& structure, cif::Datablock& db, int spacegroup, const clipper::Cell& cell,
+	IonSite& zs, const std::string& altID)
 {
-	vector<IonSite> result;
+	bool result = false;
+
+	for (;;)
+	{
+		// strip out the atoms that are not available in this alt group
+		if (not altID.empty())
+		{
+			zs.lig.erase(
+				std::remove_if(zs.lig.begin(), zs.lig.end(), [altID](auto& l)
+				{
+					auto alt = std::get<0>(l).labelAltID();
+					return not alt.empty() and alt != altID;
+				}), zs.lig.end());
+		}
+
+		// sort ligands on distance
+		std::sort(zs.lig.begin(), zs.lig.end(), [](auto& a, auto& b) { return std::get<1>(a) < std::get<1>(b); });
+
+		// take the nearest atom of a residue, this takes care of NE2/ND1 from a single HIS
+		// and also the alt cases
+		for (auto a = zs.lig.begin(); a != zs.lig.end() and std::next(a) != zs.lig.end(); ++a)
+		{
+			auto& aa = std::get<0>(*a);
+
+			auto ad = std::get<1>(*a);
+
+			for (auto b = std::next(a); b != zs.lig.end(); ++b)
+			{
+				auto& ba = std::get<0>(*b);
+
+				if (ba.labelCompID() != aa.labelCompID() or aa.labelSeqID() != ba.labelSeqID() or aa.labelAsymID() != ba.labelAsymID() or aa.symmetry() != ba.symmetry())
+					continue;
+
+				auto bd = std::get<1>(*b);
+				assert(bd > ad);
+
+				zs.lig.erase(b);
+				break;
+			}
+		}
+
+		// -----------------------------------------------------------------------
+
+		if (cif::VERBOSE)
+		{
+			std::cerr << "preliminary cluster: " << std::endl
+				 << " zn: " << zs.ion.labelAsymID() << '/' << zs.ion.labelAtomID() << " (" << zs.ion.pdbID() << ')' << std::endl;
+
+			for (auto& l: zs.lig)
+			{
+				auto& a = std::get<0>(l);
+				std::cerr << " " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')'  << ' ' << a.symmetry() << " @ " << std::get<1>(l) << std::endl;
+			}
+		}
+
+		// -----------------------------------------------------------------------
+		// if there are more than five atoms, give up. If there are exactly five
+		// see if we can use a dixon q-test to assign the last to be an outlier.
+
+		if (zs.lig.size() >= 5)
+		{
+			auto gap = std::get<1>(zs.lig[4]) - std::get<1>(zs.lig[3]);
+			auto range = std::get<1>(zs.lig[4]) - std::get<1>(zs.lig[0]);
+			if ((gap / range) < kDixonQTest95Perc5Points)
+			{
+				if (cif::VERBOSE)
+					std::cerr << "Rejecting cluster since there are 5 or more atoms near by and nr 5 is not considered to be an outlier" << std::endl;
+				continue;
+			}
+
+			if (cif::VERBOSE)
+			{
+                for (std::size_t i = 4; i < zs.lig.size(); ++i)
+                {
+                    auto& a = std::get<0>(zs.lig[i]);
+                    std::cerr << "Atom " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')'  << " was considered to be an outlier" << std::endl;
+                }
+			}
+
+			zs.lig.erase(zs.lig.begin() + 4, zs.lig.end());
+		}
+
+		if (zs.lig.size() == 4)
+			result = true;
+		else if (cif::VERBOSE)
+			std::cerr << "Rejecting cluster since there are not 4 atoms near by" << std::endl;
+
+		break;
+	}
+
+	return result;
+}
+
+std::vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int spacegroup, const clipper::Cell& cell)
+{
+	std::vector<IonSite> result;
 
     // factory for symmetry atom iterators
 	SymmetryAtomIteratorFactory saif(structure, spacegroup, cell);
@@ -253,81 +397,22 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int s
 			}
 		}
 
-		// sort ligands on distance
-		sort(zs.lig.begin(), zs.lig.end(), [](auto& a, auto& b) { return get<1>(a) < get<1>(b); });
-
-		// take the nearest atom of a residue, this takes care of NE2/ND1 from a single HIS
-		// and also the alt cases
-		for (auto a = zs.lig.begin(); a != zs.lig.end() and next(a) != zs.lig.end(); ++a)
+		std::set<std::string> altIDs;
+		for (const auto& [a, f, s]: zs.lig)
 		{
-			auto& aa = get<0>(*a);
-
-			auto ad = get<1>(*a);
-
-			for (auto b = next(a); b != zs.lig.end(); ++b)
-			{
-				auto& ba = get<0>(*b);
-
-				if (ba.labelCompID() != aa.labelCompID() or aa.labelSeqID() != ba.labelSeqID() or aa.labelAsymID() != ba.labelAsymID() or aa.symmetry() != ba.symmetry())
-					continue;
-
-				auto bd = get<1>(*b);
-				assert(bd > ad);
-
-				zs.lig.erase(b);
-				break;
-			}
+			if (not a.labelAltID().empty())
+				altIDs.insert(a.labelAltID());
 		}
+		
+		if (altIDs.empty())	// no alternates
+			altIDs.insert("");
 
-		// -----------------------------------------------------------------------
-
-		if (cif::VERBOSE)
+		for (auto& alt: altIDs)
 		{
-			cerr << "preliminary cluster: " << endl
-				 << " zn: " << zs.ion.labelAsymID() << '/' << zs.ion.labelAtomID() << " (" << zs.ion.pdbID() << ')' << endl;
-
-			for (auto& l: zs.lig)
-			{
-				auto& a = get<0>(l);
-				cerr << " " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')'  << ' ' << a.symmetry() << " @ " << get<1>(l) << endl;
-			}
+			IonSite azs = zs;
+			if (findZincSites(structure, db, spacegroup, cell, azs, alt))
+				result.emplace_back(std::move(azs));
 		}
-
-		// -----------------------------------------------------------------------
-		// if there are more than five atoms, give up. If there are exactly five
-		// see if we can use a dixon q-test to assign the last to be an outlier.
-
-		if (zs.lig.size() >= 5)
-		{
-			auto gap = get<1>(zs.lig[4]) - get<1>(zs.lig[3]);
-			auto range = get<1>(zs.lig[4]) - get<1>(zs.lig[0]);
-			if ((gap / range) < kDixonQTest95Perc5Points)
-			{
-				if (cif::VERBOSE)
-					cerr << "Rejecting cluster since there are 5 or more atoms near by and nr 5 is not considered to be an outlier" << endl;
-				continue;
-			}
-
-			if (cif::VERBOSE)
-			{
-                for (size_t i = 4; i < zs.lig.size(); ++i)
-                {
-                    auto& a = get<0>(zs.lig[i]);
-                    cerr << "Atom " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')'  << " was considered to be an outlier" << endl;
-                }
-			}
-
-			zs.lig.erase(zs.lig.begin() + 4, zs.lig.end());
-		}
-
-		if (zs.lig.size() != 4)
-		{
-			if (cif::VERBOSE)
-				cerr << "Rejecting cluster since there not 4 atoms near by" << endl;
-			continue;
-		}
-
-		result.emplace_back(move(zs));
 	}
 
 	return result;
@@ -335,7 +420,7 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int s
 
 // -----------------------------------------------------------------------
 
-constexpr float get_t_90(size_t N)
+constexpr float get_t_90(std::size_t N)
 {
 	const float t_dist_90[] = {
 		1.638,	// 3
@@ -352,9 +437,166 @@ constexpr float get_t_90(size_t N)
 	return t_dist_90[N - 3];
 }
 
-vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db, int spacegroup, const clipper::Cell& cell)
+bool findOctahedralSites(c::Structure& structure, cif::Datablock& db, int spacegroup, const clipper::Cell& cell,
+	IonSite& is, const std::string& altID)
 {
-	vector<IonSite> result;
+	bool result = false;
+
+	for (;;)
+	{
+		// strip out the atoms that are not available in this alt group
+		if (not altID.empty())
+		{
+			is.lig.erase(
+				std::remove_if(is.lig.begin(), is.lig.end(), [altID](auto& l)
+				{
+					auto alt = std::get<0>(l).labelAltID();
+					return not alt.empty() and alt != altID;
+				}), is.lig.end());
+		}
+
+		// sort ligands on distance
+		sort(is.lig.begin(), is.lig.end(), [](auto& a, auto& b) { return std::get<1>(a) < std::get<1>(b); });
+
+		// take the nearest atom of a residue, this takes care of NE2/ND1 from a single HIS
+		// and also the alt cases
+		for (auto a = is.lig.begin(); a != is.lig.end() and std::next(a) != is.lig.end(); ++a)
+		{
+			auto& aa = std::get<0>(*a);
+
+			for (auto b = std::next(a); b != is.lig.end(); ++b)
+			{
+				auto& ba = std::get<0>(*b);
+
+				// mmCIF...
+				if (aa.isWater())
+				{
+					if (aa.authSeqID() != ba.authSeqID() or aa.authAsymID() != ba.authAsymID() or aa.symmetry() != ba.symmetry())
+						continue;
+				}
+				else if (ba.labelAtomID() != aa.labelAtomID() or ba.labelCompID() != aa.labelCompID() or aa.labelSeqID() != ba.labelSeqID() or aa.labelAsymID() != ba.labelAsymID() or aa.symmetry() != ba.symmetry())
+					continue;
+
+				assert(std::get<1>(*b) > std::get<1>(*a));
+
+				is.lig.erase(b);
+				break;
+			}
+		}
+
+		// -----------------------------------------------------------------------
+
+		if (cif::VERBOSE)
+		{
+			std::cerr << "preliminary cluster: " << std::endl
+					<< " metal: " << is.ion << std::endl;
+
+			for (auto& l: is.lig)
+			{
+				auto& a = std::get<0>(l);
+				std::cerr << " " << a << ' ' << a.symmetry() << " @ " << std::get<1>(l) << std::endl;
+			}
+		}
+
+		// -----------------------------------------------------------------------
+		
+		for (auto a = is.lig.begin(); a != is.lig.end() and std::next(a) != is.lig.end(); ++a)
+		{
+			auto& aa = std::get<0>(*a);
+
+			if (aa.type() != c::AtomType::N)
+				continue;
+				
+			try
+			{
+				if (aa.labelCompID() == "GLN")
+				{
+					assert(aa.labelAtomID() == "NE2");
+					auto o = structure.getAtomByLabel("OE1", aa.labelAsymID(), "GLN", aa.labelSeqID(), aa.labelAltID());
+
+					if (cif::VERBOSE)
+						std::cerr << "Flipping side chain for GLN " << " " << aa.labelAsymID() << aa.labelSeqID() << " (" << aa.pdbID() << ')' << std::endl;
+
+					structure.swapAtoms(aa, o);
+					continue;
+				}
+				
+				if (aa.labelCompID() == "ASN")
+				{
+					assert(aa.labelAtomID() == "ND2");
+					auto o = structure.getAtomByLabel("OD1", aa.labelAsymID(), "ASN", aa.labelSeqID(), aa.labelAltID());
+
+					if (cif::VERBOSE)
+						std::cerr << "Flipping side chain for ASN " << " " << aa.labelAsymID() << aa.labelSeqID() << " (" << aa.pdbID() << ')' << std::endl;
+
+					structure.swapAtoms(aa, o);
+					continue;
+				}
+			}
+			catch (const std::out_of_range& ex)
+			{
+				if (cif::VERBOSE)
+					std::cerr << "Could not flip " << aa.labelCompID() << ": " << ex.what() << std::endl;
+
+				// is.lig.clear();	// give up
+				// break;
+			}
+		}
+
+		// -----------------------------------------------------------------------
+		// if there are less than six atoms or more than nine, give up.
+
+		if (is.lig.size() < 6 or is.lig.size() > 9)
+		{
+			if (cif::VERBOSE)
+				std::cerr << "Rejecting cluster since the number of atoms is not reasonable" << std::endl;
+			break;
+		}
+		
+		// However, if we have more than six, try to remove outliers with a Grubbs test
+		// See: https://en.wikipedia.org/wiki/Grubbs%27s_test_for_outliers
+
+		while (is.lig.size() > 6)
+		{
+			double sum = accumulate(is.lig.begin(), is.lig.end(), 0.0, [](double s, auto& l) { return s + std::get<1>(l); });
+			double avg = sum / is.lig.size();
+			double stddev = sqrt(accumulate(is.lig.begin(), is.lig.end(), 0.0, [avg](double s, auto& l) { return s + (std::get<1>(l) - avg) * (std::get<1>(l) - avg); }) / (is.lig.size() - 1));
+
+			// only test if max distance is outlier
+			double G = (std::get<1>(is.lig.back()) - avg) / stddev;
+
+			// extracted from student t-distribution table, with one-sided confidence level 90%
+			// and degrees of freedom 
+			
+			if (G < get_t_90(is.lig.size()))
+				break;
+			
+			if (cif::VERBOSE)
+			{
+				auto& a = std::get<0>(is.lig.back());
+				std::cerr << "Removing outlier " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')' << ' ' << a.symmetry() << " @ " << std::get<1>(is.lig.back()) << std::endl;
+			}
+
+			is.lig.erase(is.lig.begin() + is.lig.size() - 1);
+		}
+
+		if (not is.isOctaHedral())
+		{
+			if (cif::VERBOSE)
+				std::cerr << "Rejecting cluster since it is not an octahedral" << std::endl;
+			break;
+		}
+
+		result = true;
+		break;
+	}
+
+	return result;
+}
+
+std::vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db, int spacegroup, const clipper::Cell& cell)
+{
+	std::vector<IonSite> result;
 
     // factory for symmetry atom iterators
 	SymmetryAtomIteratorFactory saif(structure, spacegroup, cell);
@@ -389,142 +631,22 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 			}
 		}
 
-		// sort ligands on distance
-		sort(is.lig.begin(), is.lig.end(), [](auto& a, auto& b) { return get<1>(a) < get<1>(b); });
-
-		// take the nearest atom of a residue, this takes care of NE2/ND1 from a single HIS
-		// and also the alt cases
-		for (auto a = is.lig.begin(); a != is.lig.end() and next(a) != is.lig.end(); ++a)
+		std::set<std::string> altIDs;
+		for (const auto& [a, f, s]: is.lig)
 		{
-			auto& aa = get<0>(*a);
-
-			auto ad = get<1>(*a);
-
-			for (auto b = next(a); b != is.lig.end(); ++b)
-			{
-				auto& ba = get<0>(*b);
-
-				// mmCIF...
-				if (aa.isWater())
-				{
-					if (aa.authSeqID() != ba.authSeqID() or aa.authAsymID() != ba.authAsymID() or aa.symmetry() != ba.symmetry())
-						continue;
-				}
-				else if (ba.labelAtomID() != aa.labelAtomID() or ba.labelCompID() != aa.labelCompID() or aa.labelSeqID() != ba.labelSeqID() or aa.labelAsymID() != ba.labelAsymID() or aa.symmetry() != ba.symmetry())
-					continue;
-
-				auto bd = get<1>(*b);
-				assert(bd > ad);
-
-				is.lig.erase(b);
-				break;
-			}
+			if (not a.labelAltID().empty())
+				altIDs.insert(a.labelAltID());
 		}
 
-		// -----------------------------------------------------------------------
+		if (altIDs.empty())	// no alternates
+			altIDs.insert("");
 
-		if (cif::VERBOSE)
+		for (auto& alt: altIDs)
 		{
-			cerr << "preliminary cluster: " << endl
-				 << " metal: " << is.ion.labelAsymID() << '/' << is.ion.labelAtomID() << " (" << is.ion.pdbID() << ')' << endl;
-
-			for (auto& l: is.lig)
-			{
-				auto& a = get<0>(l);
-				cerr << " " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')' << ' ' << a.symmetry() << " @ " << get<1>(l) << endl;
-			}
+			IonSite ais = is;
+			if (findOctahedralSites(structure, db, spacegroup, cell, ais, alt))
+				result.emplace_back(std::move(ais));
 		}
-
-		// -----------------------------------------------------------------------
-		
-		for (auto a = is.lig.begin(); a != is.lig.end() and next(a) != is.lig.end(); ++a)
-		{
-			auto& aa = get<0>(*a);
-
-			if (aa.type() != c::AtomType::N)
-				continue;
-				
-			try
-			{
-				if (aa.labelCompID() == "GLN")
-				{
-					assert(aa.labelAtomID() == "NE2");
-					auto o = structure.getAtomByLabel("OE1", aa.labelAsymID(), "GLN", aa.labelSeqID(), aa.labelAltID());
-
-					if (cif::VERBOSE)
-						cerr << "Flipping side chain for GLN " << " " << aa.labelAsymID() << aa.labelSeqID() << " (" << aa.pdbID() << ')' << endl;
-
-					structure.swapAtoms(aa, o);
-					continue;
-				}
-				
-				if (aa.labelCompID() == "ASN")
-				{
-					assert(aa.labelAtomID() == "ND2");
-					auto o = structure.getAtomByLabel("OD1", aa.labelAsymID(), "GLN", aa.labelSeqID(), aa.labelAltID());
-
-					if (cif::VERBOSE)
-						cerr << "Flipping side chain for ASN " << " " << aa.labelAsymID() << aa.labelSeqID() << " (" << aa.pdbID() << ')' << endl;
-
-					structure.swapAtoms(aa, o);
-					continue;
-				}
-			}
-			catch (const std::out_of_range& ex)
-			{
-				if (cif::VERBOSE)
-					cerr << "Could not flip " << aa.labelCompID() << ": " << ex.what() << endl;
-
-				// is.lig.clear();	// give up
-				// break;
-			}
-		}
-
-		// -----------------------------------------------------------------------
-		// if there are less than six atoms or more than nine, give up.
-
-		if (is.lig.size() < 6 or is.lig.size() > 9)
-		{
-			if (cif::VERBOSE)
-				cerr << "Rejecting cluster since the number of atoms is unreasonable" << endl;
-			continue;
-		}
-		
-		// However, if we have more than six, try to remove outliers with a Grubbs test
-		// See: https://en.wikipedia.org/wiki/Grubbs%27s_test_for_outliers
-
-		while (is.lig.size() > 6)
-		{
-			double sum = accumulate(is.lig.begin(), is.lig.end(), 0.0, [](double s, auto& l) { return s + get<1>(l); });
-			double avg = sum / is.lig.size();
-			double stddev = sqrt(accumulate(is.lig.begin(), is.lig.end(), 0.0, [avg](double s, auto& l) { return s + (get<1>(l) - avg) * (get<1>(l) - avg); }) / (is.lig.size() - 1));
-
-			// only test if max distance is outlier
-			double G = (get<1>(is.lig.back()) - avg) / stddev;
-
-			// extracted from student t-distribution table, with one-sided confidence level 90%
-			// and degrees of freedom 
-			
-			if (G < get_t_90(is.lig.size()))
-				break;
-			
-			if (cif::VERBOSE)
-			{
-				auto& a = get<0>(is.lig.back());
-				cerr << "Removing outlier " << a.labelAsymID() << a.labelSeqID() << '/' << a.labelAtomID() << " (" << a.pdbID() << ')' << ' ' << a.symmetry() << " @ " << get<1>(is.lig.back()) << endl;
-			}
-
-			is.lig.erase(is.lig.begin() + is.lig.size() - 1);
-		}
-
-		if (not is.isOctaHedral())
-		{
-			if (cif::VERBOSE)
-				cerr << "Rejecting cluster since it is not an octahedral" << endl;
-			continue;
-		}
-
-		result.emplace_back(move(is));
 	}
 
 	return result;
@@ -536,21 +658,21 @@ int pr_main(int argc, char* argv[])
 
 	po::options_description visible_options("platonyzer " + VERSION_STRING + " options file]" );
 	visible_options.add_options()
-		("output,o",	po::value<string>(),	"The output file, default is stdout")
+		("output,o",	po::value<std::string>(),	"The output file, default is stdout")
 		("restraints-file,r",
-						po::value<string>(),	"Restraint file name, default is {id}_platonyze.restraints")
+						po::value<std::string>(),	"Restraint file name, default is {id}_platonyze.restraints")
 		("delete-vdw-rest",						"Delete vanderWaals restraints for octahedral ions in the external for Refmac")
 		("create-na-mg-links",					"Create links for Na/Mg ion sites that were found")
 		("help,h",								"Display help message")
 		("version",								"Print version")
 		("verbose,v",							"Verbose output")
-		// ("pdb-redo-data", po::value<string>(),	"The PDB-REDO dat file" /*, default is the built in one"*/)
-		("dict",		po::value<string>(),	"Dictionary file containing restraints for residues in this specific target")
+		// ("pdb-redo-data", po::value<std::string>(),	"The PDB-REDO dat file" /*, default is the built in one"*/)
+		("dict",		po::value<std::string>(),	"Dictionary file containing restraints for residues in this specific target")
 		;
 
 	po::options_description hidden_options("hidden options");
 	hidden_options.add_options()
-		("input,i",		po::value<string>(),	"Input files")
+		("input,i",		po::value<std::string>(),	"Input files")
 		("test",								"Run test-suite")
 		("debug,d",		po::value<int>(),		"Debug level (for even more verbose output)");
 
@@ -579,42 +701,42 @@ int pr_main(int argc, char* argv[])
 
 	if (vm.count("version"))
 	{
-		cout << argv[0] << " version " << VERSION_STRING << endl;
+		std::cout << argv[0] << " version " << VERSION_STRING << std::endl;
 		exit(0);
 	}
 
 	if (vm.count("help") or vm.count("input") == 0)
 	{
-		cerr << visible_options << endl;
+		std::cerr << visible_options << std::endl;
 		exit(1);
 	}
 
 	// Load dict, if any
 
 	if (vm.count("dict"))
-		c::CompoundFactory::instance().pushDictionary(vm["dict"].as<string>());
+		c::CompoundFactory::instance().pushDictionary(vm["dict"].as<std::string>());
 
 	cif::VERBOSE = vm.count("verbose") != 0;
 	if (vm.count("debug"))
 		cif::VERBOSE = vm["debug"].as<int>();
 
 	if (cif::VERBOSE)
-		cerr << "Loading data...";
+		std::cerr << "Loading data...";
 
-	fs::path input = vm["input"].as<string>();
+	fs::path input = vm["input"].as<std::string>();
 	c::File pdb(input);
 	c::Structure structure(pdb);
 
 	if (cif::VERBOSE)
-		cerr << " done" << endl;
+		std::cerr << " done" << std::endl;
 
 	auto& db = pdb.data();
 
 	// -----------------------------------------------------------------------
 
-	string entryId = db["entry"].front()["id"].as<string>();
+	std::string entryId = db["entry"].front()["id"].as<std::string>();
 	if (entryId.empty())
-		throw runtime_error("Missing _entry.id in coordinates file");
+		throw std::runtime_error("Missing _entry.id in coordinates file");
 
 	double a, b, c, alpha, beta, gamma;
 	cif::tie(a, b, c, alpha, beta, gamma) = db["cell"][cif::Key("entry_id") == entryId]
@@ -623,23 +745,23 @@ int pr_main(int argc, char* argv[])
 
 	clipper::Cell cell(clipper::Cell_descr(a, b, c, alpha, beta, gamma));
 
-	string spacegroupName = db["symmetry"]
+	std::string spacegroupName = db["symmetry"]
 		[cif::Key("entry_id") == entryId]
-		["space_group_name_H-M"].as<string>();
+		["space_group_name_H-M"].as<std::string>();
 
 	int spacegroupNr = mmcif::GetSpacegroupNumber(spacegroupName);
 
 	// -----------------------------------------------------------------------
 
-	string restraintFileName = entryId + "_platonyzer.restraints";
+	std::string restraintFileName = entryId + "_platonyzer.restraints";
 	if (vm.count("restraints-file"))
-		restraintFileName = vm["restraints-file"].as<string>();
+		restraintFileName = vm["restraints-file"].as<std::string>();
 	RestraintGenerator rg(restraintFileName, vm.count("delete-vdw-rest"));
 
 	auto& structConn = db["struct_conn"];
 
-	size_t removedLinks = 0, createdLinks = 0;
-	size_t platonyzerLinkId = 1;
+	std::size_t removedLinks = 0, createdLinks = 0;
+	std::size_t platonyzerLinkId = 1;
 
 	bool createNaMgLinks = vm.count("create-na-mg-links");
 
@@ -651,8 +773,8 @@ int pr_main(int argc, char* argv[])
 		for (auto ionSite: ionSites)
 		{
 			// write restraints
-			vector<c::Atom> ligands;
-			transform(ionSite.lig.begin(), ionSite.lig.end(), back_inserter(ligands), [](auto& l) { return get<0>(l); });
+			std::vector<c::Atom> ligands;
+			transform(ionSite.lig.begin(), ionSite.lig.end(), back_inserter(ligands), [](auto& l) { return std::get<0>(l); });
 
 			switch (ionSite.lig.size())
 			{
@@ -665,7 +787,7 @@ int pr_main(int argc, char* argv[])
 			};
 
 			// replace LINK/struct_conn records
-			size_t n = structConn.size();
+			std::size_t n = structConn.size();
 			structConn.erase(
 				(cif::Key("ptnr1_label_asym_id") == ionSite.ion.labelAsymID() and cif::Key("ptnr1_label_atom_id") == ionSite.ion.labelAtomID()) or
 				(cif::Key("ptnr2_label_asym_id") == ionSite.ion.labelAsymID() and cif::Key("ptnr2_label_atom_id") == ionSite.ion.labelAtomID()));
@@ -678,7 +800,7 @@ int pr_main(int argc, char* argv[])
 
 			for (auto&& [atom, distance, symop] : ionSite.lig)
 			{
-				string id = "metalc_p-" + to_string(platonyzerLinkId++);
+				std::string id = "metalc_p-" + std::to_string(platonyzerLinkId++);
 
 				structConn.emplace({
 					{ "id", id },
@@ -714,17 +836,17 @@ int pr_main(int argc, char* argv[])
 	// -----------------------------------------------------------------------
 
 	if (cif::VERBOSE)
-		cerr << "Removed " << removedLinks << " link records" << endl
-			 << "Created " << createdLinks << " link records" << endl;
+		std::cerr << "Removed " << removedLinks << " link records" << std::endl
+			 << "Created " << createdLinks << " link records" << std::endl;
 
 	// -----------------------------------------------------------------------
 
 	db.add_software("platonyzer", "other", get_version_nr(), get_version_date());
 
 	if (vm.count("output"))
-		pdb.save(vm["output"].as<string>());
+		pdb.save(vm["output"].as<std::string>());
 	else
-		pdb.file().save(cout);
+		pdb.file().save(std::cout);
 
 	return result;
 }

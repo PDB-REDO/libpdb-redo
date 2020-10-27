@@ -44,7 +44,7 @@ namespace mmcif
 
 inline std::ostream& operator<<(std::ostream& os, const Atom& a)
 {
-	os << a.labelAsymID() << ':' << a.labelSeqID() << '/' << a.labelAtomID();
+	os << a.labelAsymID() << ':' << a.labelSeqID() << '/' << a.labelAtomID() << a.labelAltID();
 	
 	return os;
 }
