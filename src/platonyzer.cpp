@@ -224,6 +224,8 @@ vector<IonSite> findZincSites(c::Structure& structure, cif::Datablock& db, int s
 	 	if (atom.labelCompID() != "ZN")
 		 	continue;
 
+		atom.property("pdbx_formal_charge", 2);
+
 		IonSite zs = { atom };
 
 		for (auto a: structure.atoms())
@@ -359,7 +361,15 @@ vector<IonSite> findOctahedralSites(c::Structure& structure, cif::Datablock& db,
 
 	for (auto atom: structure.atoms())
 	{
-	 	if (atom.labelCompID() != "NA" and atom.labelCompID() != "MG")
+		auto compID = atom.labelCompID();
+
+		if (compID == "NA" or compID == "K")	
+			atom.property("pdbx_formal_charge", 1);
+		
+		if (compID == "CA" or compID == "MG")
+			atom.property("pdbx_formal_charge", 2);
+
+	 	if (compID != "NA" and compID != "MG")
 		 	continue;
 
 		IonSite is = { atom };
