@@ -266,15 +266,34 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	DistMap dist;
 	
 	std::vector<const Residue*> residues;
-	residues.reserve(p.residues().size());
-	for (auto& r: p.residues())
+
+	for (auto& poly: p.polymers())
+	{
+		for (auto& m: poly)
+		{
+			residues.emplace_back(&m);
+
+			// Add distances for atoms in this residue		
+			AddDistancesForAtoms(m, m, dist, 0);
+		}
+	}
+
+	for (auto& r: p.getNonPolymers())
 	{
 		residues.emplace_back(&r);
 
 		// Add distances for atoms in this residue		
 		AddDistancesForAtoms(r, r, dist, 0);
 	}
-	
+
+	for (auto& r: p.getBranchResidues())
+	{
+		residues.emplace_back(&r);
+
+		// Add distances for atoms in this residue		
+		AddDistancesForAtoms(r, r, dist, 0);
+	}
+
 	cif::Progress progress(residues.size() * residues.size(), "Creating distance std::map");
 	
 	for (size_t i = 0; i + 1 < residues.size(); ++i)
@@ -474,9 +493,9 @@ std::vector<Atom> DistanceMap::near(const Atom& a, float maxDistance) const
 			continue;
 		
 		if (rti > 0)
-			result.emplace_back(symmetryCopy(b, mD, cell, spacegroup, mRtOrth.at(rti)));
+			result.emplace_back(symmetryCopy(b, mD, spacegroup, cell, mRtOrth.at(rti)));
 		else if (rti < 0)
-			result.emplace_back(symmetryCopy(b, mD, cell, spacegroup, mRtOrth.at(-rti).inverse()));
+			result.emplace_back(symmetryCopy(b, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
 		else
 			result.emplace_back(b);
 	}

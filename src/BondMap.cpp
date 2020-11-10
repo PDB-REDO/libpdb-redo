@@ -32,7 +32,6 @@
 
 #include "BondMap.hpp"
 
-
 namespace mmcif
 {
 
@@ -117,17 +116,6 @@ BondMap::BondMap(const Structure& p)
 		auto c = atomMapByAsymSeqAndAtom[make_tuple(asymID, lastSeqID, "C")];
 		auto n = atomMapByAsymSeqAndAtom[make_tuple(asymID, seqID, "N")];
 
-//		auto c = db["atom_site"].find(cif::Key("label_asym_id") == asymID and cif::Key("label_seq_id") == lastSeqID and cif::Key("label_atom_id") == "C");
-//		if (c.size() != 1 and VERBOSE > 1)
-//			std::cerr << "Unexpected number (" << c.size() << ") of atoms with atom ID C in asym_id " << asymID << " with seq id " << lastSeqID << std::endl;
-//		
-//		auto n = db["atom_site"].find(cif::Key("label_asym_id") == asymID and cif::Key("label_seq_id") == seqID and cif::Key("label_atom_id") == "N");
-//		if (n.size() != 1 and VERBOSE > 1)
-//			std::cerr << "Unexpected number (" << n.size() << ") of atoms with atom ID N in asym_id " << asymID << " with seq id " << seqID << std::endl;
-//		
-//		if (not (c.empty() or n.empty()))
-//			bindAtoms(c.front()["id"].as<std::string>(), n.front()["id"].as<std::string>());
-
 		if (not (c.empty() or n.empty()))
 			bindAtoms(c, n);
 		
@@ -146,24 +134,6 @@ BondMap::BondMap(const Structure& p)
 		std::string a = atomMapByAsymSeqAndAtom[make_tuple(asym1, seqId1, atomId1)];
 		std::string b = atomMapByAsymSeqAndAtom[make_tuple(asym2, seqId2, atomId2)];
 			
-//		auto a = 
-//			l["ptnr1_label_seq_id"].empty() ?
-//				db["atom_site"].find(cif::Key("label_asym_id") == asym1 and cif::Key("label_atom_id") == atomId1) :
-//				db["atom_site"].find(cif::Key("label_asym_id") == asym1 and cif::Key("label_seq_id") == seqId1 and cif::Key("label_atom_id") == atomId1);
-//		
-//		if (a.size() != 1 and VERBOSE > 1)
-//			std::cerr << "Unexpected number (" << a.size() << ") of atoms for link with asym_id " << asym1 << " seq_id " << seqId1 << " atom_id " << atomId1 << std::endl;
-		
-//		auto b =
-//			l["ptnr2_label_seq_id"].empty() ?
-//				db["atom_site"].find(cif::Key("label_asym_id") == asym2 and cif::Key("label_atom_id") == atomId2) :
-//				db["atom_site"].find(cif::Key("label_asym_id") == asym2 and cif::Key("label_seq_id") == seqId2 and cif::Key("label_atom_id") == atomId2);
-//
-//		if (b.size() != 1 and VERBOSE > 1)
-//			std::cerr << "Unexpected number (" << b.size() << ") of atoms for link with asym_id " << asym2 << " seq_id " << seqId2 << " atom_id " << atomId2 << std::endl;
-		
-//		if (not (a.empty() or b.empty()))
-//			linkAtoms(a.front()["id"].as<std::string>(), b.front()["id"].as<std::string>());
 		if (not (a.empty() or b.empty()))
 			linkAtoms(a, b);
 	}
@@ -210,6 +180,33 @@ BondMap::BondMap(const Structure& p)
 
 		// loop over pdbx_nonpoly_scheme
 		for (auto r: db["pdbx_nonpoly_scheme"].find(cif::Key("mon_id") == c))
+		{
+			std::string asymID;
+			cif::tie(asymID) = r.get("asym_id");
+			
+			std::vector<Atom> rAtoms;
+			copy_if(atoms.begin(), atoms.end(), back_inserter(rAtoms),
+				[&](auto& a) { return a.labelAsymID() == asymID; });
+//			for (auto a: db["atom_site"].find(cif::Key("label_asym_id") == asymID))
+//				rAtoms.push_back(p.getAtomByID(a["id"].as<std::string>()));
+			
+			for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
+			{
+				for (uint32_t j = i + 1; j < rAtoms.size(); ++j)
+				{
+					if (compound->atomsBonded(rAtoms[i].labelAtomID(), rAtoms[j].labelAtomID()))
+					{
+						uint32_t ixa = index[rAtoms[i].id()];
+						uint32_t ixb = index[rAtoms[j].id()];
+						
+						bond.insert(key(ixa, ixb));
+					}
+				}
+			}
+		}
+
+		// loop over pdbx_branch_scheme
+		for (auto r: db["pdbx_branch_scheme"].find(cif::Key("mon_id") == c))
 		{
 			std::string asymID;
 			cif::tie(asymID) = r.get("asym_id");

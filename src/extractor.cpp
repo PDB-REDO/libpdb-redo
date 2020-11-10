@@ -475,6 +475,9 @@ int pr_main(int argc, char* argv[])
 	for (auto r: coord["pdbx_nonpoly_scheme"])
 		residues.push_back(r);
 
+	for (auto r: coord["pdbx_branch_scheme"])
+		residues.push_back(r);
+
 	for (auto r: residues)
 	{
 		std::string asymId, seqId, monId, pdbStrandId, pdbMonId, pdbInsCode;

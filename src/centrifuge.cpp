@@ -1567,7 +1567,7 @@ int centrifugePredict(int argc, char* argv[])
 		auto voted = distance(p.begin(), max_element(p.begin(), p.end()));
 		
 		std::cout << water.id() << '\t'
-			 << water.authAsymId() << ':' << water.authSeqId() << "\t"
+			 << water.authAsymID() << ':' << water.authSeqID() << "\t"
 			 << (isWater ? "water" : "not water") << '\t'
 			 << '(' << (p[0] * 100) << "%)"
 			 << (voted == isWater ? "!" : "")
@@ -1819,10 +1819,10 @@ int edia_test(int argc, char* argv[])
 		std::cout << asymId << '\t'
 			 << compId << '\t'
 			 << std::setprecision(2) << EDIAm << '\t'
-			 << setprecision(2) << ediaMin << '\t'
-			 << setprecision(2) << ediaMedian << '\t'
-			 << setprecision(2) << ediaMax << '\t'
-			 << setprecision(1) << OPIA << std::endl;
+			 << std::setprecision(2) << ediaMin << '\t'
+			 << std::setprecision(2) << ediaMedian << '\t'
+			 << std::setprecision(2) << ediaMax << '\t'
+			 << std::setprecision(1) << OPIA << std::endl;
 	}
 	
 	return 0;
@@ -1835,7 +1835,7 @@ int pr_main(int argc, char* argv[])
 {
 	int result = 0;
 	
-	std::string command = fs::path(argv[0]).leaf().string();
+	std::string command = fs::path(argv[0]).filename().string();
 
 	if (command == "centrifuge" and argc > 1)
 	{
@@ -1849,7 +1849,7 @@ int pr_main(int argc, char* argv[])
 	else if (command == "predict")
 		result = centrifugePredict(argc, argv);
 
-// other commands here
+	// other commands here
 	else
 	{
 		std::cout << "Usage: centrifuge command [options]" << std::endl

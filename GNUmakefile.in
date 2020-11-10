@@ -134,11 +134,11 @@ endif
 # disabled for now: centrifuge map-maker
 PROGRAMS = \
 	mtz-maker extractor prepper tls-interpreter stats isomers chiron re-ref \
-	pepflip compref flipper platonyzer
+	pepflip compref flipper platonyzer carbonanza
 
 mtz-maker_OBJECTS = MapMaker.o ResolutionCalculator.o ClipperWrapper.o
 extractor_OBJECTS = ResolutionCalculator.o
-stats_OBJECTS = AtomShape.o Statistics.o BondMap.o MapMaker.o DistanceMap.o ClipperWrapper.o ResolutionCalculator.o
+stats_OBJECTS = AtomShape.o Statistics.o BondMap.o MapMaker.o DistanceMap.o ClipperWrapper.o ResolutionCalculator.o Symmetry-2.o
 isomers_OBJECTS = utils.o
 centrifuge_OBJECTS = HBondTraits.o svm++.o
 map-maker_OBJECTS = pr-server.o

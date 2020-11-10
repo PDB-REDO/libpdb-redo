@@ -818,6 +818,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 						occSum += d->occupancy;
 						ediaSum += pow(d->edia + 0.1, -2);
 						
+						++n;
 						if (d->edia >= 0.8)
 							++m;
 					}
