@@ -7,9 +7,9 @@ AC_LANG(C++)
 AX_CXX_COMPILE_STDCXX_17([noext])
 
 AC_CONFIG_SRCDIR([src/AtomShape.cpp])
-AC_CONFIG_AUX_DIR(config)
+AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADERS([src/config.hpp])
-AC_CONFIG_MACRO_DIR([config/m4])
+# AC_CONFIG_MACRO_DIR([config/m4])
 
 AC_PREFIX_DEFAULT(/usr/local)
 
