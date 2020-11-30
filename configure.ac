@@ -218,7 +218,6 @@ AX_CHECK_LIBRARY([DLIB], [dlib/global_optimization.h], [dlib],
 		],
 		[AC_MSG_ERROR([libdlib-dev not found])])
 
-AC_SUBST([HAVE_DLIB], [1])
 AC_SUBST([DLIB_CFLAGS], [])
 AC_SUBST([DLIB_LIBS], [$DLIB_LIBS])
 
