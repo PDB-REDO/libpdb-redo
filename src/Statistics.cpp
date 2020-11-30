@@ -24,16 +24,18 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.hpp"
+#include "config.hpp"
 
 #include <fstream>
 #include <numeric>
 
 #include "cif++/Structure.hpp"
 
-#include "AtomShape.hpp"
-#include "Statistics.hpp"
+#include "pdb-redo/AtomShape.hpp"
+#include "pdb-redo/Statistics.hpp"
+#include "pdb-redo/ClipperWrapper.hpp"
 
+// --------------------------------------------------------------------
 
 namespace mmcif
 {
@@ -968,9 +970,9 @@ void StatsCollector::sumDensity(std::vector<AtomData>& atomData,
 		auto radius = data.radius;
 		double sumDensity = 0;
 
-		iterateGrid(atom.location(), radius, Fb, [&](Xmap_base::Map_reference_coord& iw)
+		iterateGrid(toClipper(atom.location()), radius, Fb, [&](Xmap_base::Map_reference_coord& iw)
 		{
-			auto p = Point(iw.coord_orth());
+			auto p = toPoint(iw.coord_orth());
 			
 			double d = Distance(p, atom.location());
 
@@ -1155,9 +1157,9 @@ void EDIAStatsCollector::calculate(std::vector<AtomData>& atomData) const
 
 		float ediaSum[2] = {};
 
-		iterateGrid(atom.location(), radius, Fb, [&](auto iw)
+		iterateGrid(toClipper(atom.location()), radius, Fb, [&](auto iw)
 		{
-			Point p = iw.coord_orth();
+			Point p = toPoint(iw.coord_orth());
 			
 			// EDIA calculations
 			float z = (Fb[iw] - mMeanDensityFb) / mRMSDensityFb;

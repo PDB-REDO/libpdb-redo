@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.hpp"
+#include "config.hpp"
 
 #include <iomanip>
 #include <fstream>
@@ -42,9 +42,9 @@
 
 #include "cif++/Cif++.hpp"
 
-#include "ClipperWrapper.hpp"
-#include "ResolutionCalculator.hpp"
-#include "MapMaker.hpp"
+#include "pdb-redo/ClipperWrapper.hpp"
+#include "pdb-redo/ResolutionCalculator.hpp"
+#include "pdb-redo/MapMaker.hpp"
 
 namespace io = boost::iostreams;
 namespace ba = boost::algorithm;

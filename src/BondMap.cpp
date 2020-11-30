@@ -24,13 +24,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.hpp"
+#include "config.hpp"
 
 #include "cif++/Cif++.hpp"
 #include "cif++/Compound.hpp"
 #include "cif++/CifUtils.hpp"
 
-#include "BondMap.hpp"
+#include "pdb-redo/BondMap.hpp"
 
 namespace mmcif
 {

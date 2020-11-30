@@ -24,9 +24,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.hpp"
+#include "config.hpp"
 
-#include "ResolutionCalculator.hpp"
+#include "pdb-redo/ResolutionCalculator.hpp"
 
 #include "cif++/Point.hpp"
 

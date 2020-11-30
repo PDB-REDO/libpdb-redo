@@ -24,9 +24,9 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.hpp"
+#include "config.hpp"
 
-#include "ClipperWrapper.hpp"
+#include "pdb-redo/ClipperWrapper.hpp"
 
 // --------------------------------------------------------------------
 

@@ -24,16 +24,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "pdb-redo.hpp"
+#include "config.hpp"
 
 #include <atomic>
 #include <mutex>
 
 #include "cif++/CifUtils.hpp"
 
-#include "DistanceMap.hpp"
-#include "ClipperWrapper.hpp"
-#include "Symmetry-2.hpp"
+#include "pdb-redo/DistanceMap.hpp"
+#include "pdb-redo/ClipperWrapper.hpp"
+#include "pdb-redo/Symmetry-2.hpp"
 
 //#define DEBUG_VOOR_BART
 
@@ -47,95 +47,6 @@ inline std::ostream& operator<<(std::ostream& os, const Atom& a)
 	os << a.labelAsymID() << ':' << a.labelSeqID() << '/' << a.labelAtomID() << a.labelAltID();
 	
 	return os;
-}
-
-// --------------------------------------------------------------------
-
-clipper::Coord_orth DistanceMap::CalculateOffsetForCell(const Structure& p, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell)
-{
-	auto& atoms = p.atoms();
-	size_t dim = atoms.size();
-	
-	std::vector<clipper::Coord_orth> locations;
-	locations.reserve(dim);
-	
-	// bounding box
-	Point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
-		  pMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
-	
-	for (auto& atom: atoms)
-	{
-		auto p = atom.location();
-		locations.push_back(p);
-
-		if (pMin.mX > p.mX)
-			pMin.mX = p.mX;
-		if (pMin.mY > p.mY)
-			pMin.mY = p.mY;
-		if (pMin.mZ > p.mZ)
-			pMin.mZ = p.mZ;
-
-		if (pMax.mX < p.mX)
-			pMax.mX = p.mX;
-		if (pMax.mY < p.mY)
-			pMax.mY = p.mY;
-		if (pMax.mZ < p.mZ)
-			pMax.mZ = p.mZ;
-	};
-	
-	// correct locations so that the median of x, y and z are inside the cell
-	std::vector<float> c(dim);
-	auto median = [&]()
-	{
-		return dim % 1 == 0
-			? c[dim / 2]
-			: (c[dim / 2 - 1] + c[dim / 2]) / 2;
-	};
-	
-	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[0]; });
-	sort(c.begin(), c.end());
-	float mx = median();
-	
-	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[1]; });
-	sort(c.begin(), c.end());
-	float my = median();
-	
-	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[2]; });
-	sort(c.begin(), c.end());
-	float mz = median();
-
-	if (cif::VERBOSE > 1)
-		std::cerr << "median position of atoms: " << Point(mx, my, mz) << std::endl;
-	
-	auto calculateD = [&](float m, float c)
-	{
-		float d = 0;
-		if (c != 0)
-		{
-			while (m + d < -(c / 2))
-				d += c;
-			while (m + d > (c / 2))
-				d -= c;
-		}
-		return d;
-	};
-
-	Point D;
-
-	if (cell.a() == 0 or cell.b() == 0 or cell.c() == 0)
-		throw std::runtime_error("Invalid cell, contains a dimension that is zero");
-
-	D.mX = calculateD(mx, cell.a());
-	D.mY = calculateD(my, cell.b());
-	D.mZ = calculateD(mz, cell.c());
-	
-	if (D.mX != 0 or D.mY != 0 or D.mZ != 0)
-	{
-		if (cif::VERBOSE)
-			std::cerr << "moving coorinates by " << D.mX << ", " << D.mY << " and " << D.mZ << std::endl;
-	}
-
-	return D;	
 }
 
 // --------------------------------------------------------------------
@@ -191,7 +102,7 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 		index[atom.id()] = ix;
 		rIndex[ix] = atom.id();
 		
-		locations[ix] = atom.location();
+		locations[ix] = toClipper(atom.location());
 		
 		auto p = atom.location();
 
@@ -248,14 +159,14 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	mD.mY = calculateD(my, cell.b());
 	mD.mZ = calculateD(mz, cell.c());
 	
-	clipper::Coord_orth D = mD;
+	clipper::Coord_orth D = toClipper(mD);
 	
 	if (mD.mX != 0 or mD.mY != 0 or mD.mZ != 0)
 	{
 		if (cif::VERBOSE)
 			std::cerr << "moving coorinates by " << mD.mX << ", " << mD.mY << " and " << mD.mZ << std::endl;
 		
-		for_each(locations.begin(), locations.end(), [&](auto& p) { p += mD; });
+		for_each(locations.begin(), locations.end(), [&](auto& p) { p += toClipper(mD); });
 	}
 	
 	pMin -= mMaxDistance;	// extend bounding box
@@ -325,8 +236,8 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 			
 			// now try all symmetry operations to see if we can move rj close to ri
 			
-			clipper::Coord_orth cI = centerI;
-			clipper::Coord_orth cJ = centerJ;
+			clipper::Coord_orth cI = toClipper(centerI);
+			clipper::Coord_orth cJ = toClipper(centerJ);
 			
 			auto minR2 = d;
 			
@@ -386,7 +297,7 @@ void DistanceMap::AddDistancesForAtoms(const Residue& a, const Residue& b, DistM
 {
 	for (auto& aa: a.atoms())
 	{
-		clipper::Coord_orth pa = aa.location();
+		clipper::Coord_orth pa = toClipper(aa.location());
 		size_t ixa = index[aa.id()];
 		
 		for (auto& bb: b.atoms())
@@ -394,7 +305,7 @@ void DistanceMap::AddDistancesForAtoms(const Residue& a, const Residue& b, DistM
 			if (aa.id() == bb.id())
 				continue;
 			
-			clipper::Coord_orth pb = bb.location();
+			clipper::Coord_orth pb = toClipper(bb.location());
 			
 			if (rtix)
 				pb = pb.transform(mRtOrth[rtix]);
