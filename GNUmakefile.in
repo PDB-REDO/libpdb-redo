@@ -28,11 +28,13 @@
 firstTarget: all
 
 CXX					= @CXX@
-CXXFLAGS			= @CXXFLAGS@ @CPPFLAGS@ @PTHREAD_CFLAGS@ @CIFPP_CFLAGS@ @GSL_CFLAGS@
+CXXFLAGS			= @CXXFLAGS@ @CPPFLAGS@ @PTHREAD_CFLAGS@ @CIFPP_CFLAGS@ @GSL_CFLAGS@ @DLIB_CFLAGS@
 LDFLAGS				= @LDFLAGS@ @PTHREAD_CFLAGS@
 LIBS				= @CIFPP_LIBS@ \
 					  @ZEEP_LIBS@ \
 					  @GSL_LIBS@ \
+					  @DLIB_LIBS@ \
+					  @CLIPPER_LIBS@ \
 					  @LIBS@
 
 prefix				= @prefix@
@@ -195,7 +197,7 @@ $(1)_OBJECTS = $$(OBJDIR)/$(1)-test.o
 
 test/$(1)-test: $(LIB_TARGET) $$($(1)_OBJECTS)
 	@ echo ">>> building $(1)-test"
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $$@ $$($(1)_OBJECTS) -L.libs -lcifpp $(LIBS)
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $$@ $$($(1)_OBJECTS) -L.libs -lpdb-redo $(LIBS)
 
 .PHONY: $(1)-test
 $(1)-test: test/$(1)-test

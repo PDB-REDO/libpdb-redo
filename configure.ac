@@ -148,12 +148,25 @@ AC_TRY_LINK(
 )
 
 AS_IF([test x"$CCP4" != x""],
-	  [
-		CPPFLAGS="$CPPFLAGS -I ${CCP4}/include"
-		CXXFLAGS="$CXXFLAGS -I ${CCP4}/include"
-		LDFLAGS="$LDFLAGS -L${CCP4}/lib -Wl,-rpath=${CCP4}/lib"
-	  ])
+	[
+	CPPFLAGS="$CPPFLAGS -I ${CCP4}/include"
+	CXXFLAGS="$CXXFLAGS -I ${CCP4}/include"
+	LDFLAGS="$LDFLAGS -L${CCP4}/lib -Wl,-rpath=${CCP4}/lib"
 
+	AC_CHECK_HEADER(
+		[clipper/clipper.h],
+		[],
+		[AC_MSG_ERROR([
+Can't find the libclipper header, clipper/clipper.h.  Make sure that libclipper
+is installed, and either use the --with-clipper option or install
+pkg-config.])])
+
+	AX_CHECK_LIBRARY([CLIPPER], [clipper/clipper.h], [clipper-core],
+		[
+			CLIPPER_LIBS="-L${CCP4}/lib -lclipper-ccp4 -lclipper-cif -lclipper-minimol -lclipper-mmdb -lclipper-cns -lclipper-phs -lclipper-contrib -lclipper-core -lccp4c -lmmdb2 -lrfftw -lfftw"
+		],
+		[AC_MSG_ERROR([libclipper not found])])
+	])
 
 dnl Check for libclipper
 
@@ -161,12 +174,12 @@ AC_ARG_WITH([clipper],
 	AS_HELP_STRING([--with-clipper=@<:@location@:>@],
 		[Use the libclipper library as specified.]),
 		[
-			AS_IF([test -d ${withval}/include], [], [
+			AS_IF([test -d ${withval}], [], [
 				AC_MSG_ERROR(['${withval}'' is not a valid directory for --with-clipper])
 			])
 
-			CLIPPER_CFLAGS="-I ${withval}/include"
-			CLIPPER_LIBS="-L${withval}/.libs -lclipper-fortran -lclipper-ccp4 -lclipper-cif -lclipper-minimol -lclipper-mmdb -lclipper-cns -lclipper-phs -lclipper-contrib -lclipper-core -lccp4c -lmmdb2"
+			CLIPPER_CFLAGS="-I ${withval}"
+			CLIPPER_LIBS="-L${withval}/lib -lclipper-ccp4 -lclipper-cif -lclipper-minimol -lclipper-mmdb -lclipper-cns -lclipper-phs -lclipper-contrib -lclipper-core -lccp4c -lmmdb2"
 
 			AC_SUBST([CLIPPER_CFLAGS], [$CLIPPER_CFLAGS])
 			AC_SUBST([CLIPPER_LIBS], [$CLIPPER_LIBS])
@@ -185,9 +198,9 @@ Can't find the libclipper header, clipper/clipper.h.  Make sure that libclipper
 is installed, and either use the --with-clipper option or install
 pkg-config.])])
 
-			AX_CHECK_LIBRARY([CLIPPER], [clipper.h], [clipper-core],
-					[ LIBS="-lclipper-fortran -lclipper-ccp4 -lclipper-cif -lclipper-minimol -lclipper-mmdb -lclipper-cns -lclipper-phs -lclipper-contrib -lclipper-core -lccp4c -lmmdb2 $LIBS" ],
-					[AC_MSG_ERROR([libclipper not found])])
+		AX_CHECK_LIBRARY([CLIPPER], [clipper.h], [clipper-core],
+				[ LIBS="-lclipper-fortran -lclipper-ccp4 -lclipper-cif -lclipper-minimol -lclipper-mmdb -lclipper-cns -lclipper-phs -lclipper-contrib -lclipper-core -lccp4c -lmmdb2 $LIBS" ],
+				[AC_MSG_ERROR([libclipper not found])])
 	fi
 ])
 
@@ -197,27 +210,17 @@ AC_COMPILE_IFELSE(
 	[AC_MSG_RESULT([ok])],
 	[AC_MSG_ERROR([The version of clipper is not up to date])])
 
-AC_ARG_WITH([newuoa],
-	AS_HELP_STRING([--with-newuoa=@<:@location@:>@],
-		[Use the newuoa library as specified.]),
-		[
-			CPPFLAGS="$CPPFLAGS -I ${withval}/include"
-			CXXFLAGS="$CXXFLAGS -I ${withval}/include"
-			LDFLAGS="$LDFLAGS -L${withval}/lib"
-		])
-
 AC_DEFINE([HAVE_CLIPPER], [1], [Use libclipper])
 
-AC_CHECK_HEADER(
-	[newuoa.h],
-	[
-		LIBS="$LIBS -lnewuoa"
-	],
-	[AC_MSG_ERROR([
-Can't find the newuoa include file newuoa.h. Please install this
-library and specify its location with --with-newuoa=<path>.
-You can find newuoa at https://github.com/elsid/newuoa-cpp.git
-])])
+AX_CHECK_LIBRARY([DLIB], [dlib/global_optimization.h], [dlib],
+		[
+			DLIB_LIBS="-ldlib $LIBS"
+		],
+		[AC_MSG_ERROR([libdlib-dev not found])])
+
+AC_SUBST([HAVE_DLIB], [1])
+AC_SUBST([DLIB_CFLAGS], [])
+AC_SUBST([DLIB_LIBS], [$DLIB_LIBS])
 
 dnl Process Makefile.in to create Makefile
 AC_OUTPUT([GNUmakefile])
