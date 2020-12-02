@@ -279,7 +279,7 @@ double DensityIntegration::integrateRadius(float perc, float occupancy, double y
 		return this->integrateDensity(x, -1, fst);
 	};
 
-	auto r = dlib::find_min_global(function, { 0 }, { 2.5 }, { false }, dlib::max_function_calls(10));
+	auto r = dlib::find_min_global(function, { 0.5 }, { 1.5 }, { false }, dlib::max_function_calls(5));
 
 	// 
 

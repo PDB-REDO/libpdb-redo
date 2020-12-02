@@ -1,5 +1,11 @@
 /* src/config.hpp.in.  Generated from configure.ac by autoheader.  */
 
+/* define if the Boost library is available */
+#undef HAVE_BOOST
+
+/* define if the Boost::IOStreams library is available */
+#undef HAVE_BOOST_IOSTREAMS
+
 /* Use CIFPP */
 #undef HAVE_CIFPP
 

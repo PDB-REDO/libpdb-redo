@@ -35,6 +35,7 @@ LIBS				= @CIFPP_LIBS@ \
 					  @GSL_LIBS@ \
 					  @DLIB_LIBS@ \
 					  @CLIPPER_LIBS@ \
+					  @BOOST_IOSTREAMS_LIB@ \
 					  @LIBS@
 
 prefix				= @prefix@
@@ -98,7 +99,7 @@ USE_RSRC			= @USE_RSRC@
 
 # targets
 
-VPATH += src:test
+VPATH += src:test:tools
 
 CXXFLAGS			+= $(DEFINES:%=-D%)
 
@@ -211,6 +212,16 @@ $(foreach part,$(TESTS),$(eval $(call TEST_template,$(part))))
 
 .PHONY: test
 test: $(TESTS:%=%-test)
+
+data/components.cif.gz:
+	echo "fetch the CCD file components.cif.gz and put it in data/"
+
+rsrc/bond-info.bin.gz: lib tools/make-bond-info data/components.cif.gz
+	LD_LIBRARY_PATH=.libs tools/make-bond-info data/components.cif.gz rsrc/bond-info.bin
+	gzip -f rsrc/bond-info.bin
+
+tools/make-bond-info: $(OBJDIR)/make-bond-info.o | lib
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ -L.libs -lpdb-redo $(LIBS)
 
 HEADERS = \
 	AtomShape.hpp \

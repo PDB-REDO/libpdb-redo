@@ -27,11 +27,20 @@
 #pragma once
 
 #include <unordered_map>
+#include <filesystem>
+#include <stdexcept>
 
 #include "cif++/Structure.hpp"
 
 namespace mmcif
 {
+
+class BondMapException : public std::runtime_error
+{
+  public:
+	BondMapException(const std::string& msg)
+		: runtime_error(msg) {}
+};
 
 class BondMap
 {
@@ -56,6 +65,9 @@ class BondMap
 	
 	// links coming from the struct_conn records:
 	std::vector<std::string> linked(const Atom& a) const;
+
+	// This list of atomID's is comming from either CCD or the CCP4 dictionaries loaded
+	static std::vector<std::string> atomIDsForCompound(const std::string& compoundID);
 	
   private:
 
@@ -85,5 +97,9 @@ class BondMap
 
 	std::map<std::string,std::set<std::string>> link;
 };
+
+// --------------------------------------------------------------------
+
+void createBondInfoFile(const std::filesystem::path& components, const std::filesystem::path& infofile);
 
 }

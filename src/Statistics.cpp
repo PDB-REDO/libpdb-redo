@@ -716,44 +716,49 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 				resAtomData.push_back(&d);
 		}
 
-		auto comp = Compound::create(compID);
-		if (comp == nullptr)
-		{
-			if (not missing.count(compID) and compID != "HOH")
-			{
-				std::cerr << "Missing information for compound '" << compID << '\'' << std::endl;
-				missing.insert(compID);
-			}
-		}
-		else
-		{
-			for (auto& compAtom: comp->atoms())
-			{
-				if (compAtom.typeSymbol == H or compAtom.id == "OXT")
-					continue;
+		std::vector<std::string> atomIDs;
 
-				for (auto d: resAtomData)
+		try
+		{
+			if (compID != "HOH" and not missing.count(compID))
+			{
+				atomIDs = BondMap::atomIDsForCompound(compID);
+
+				for (auto& compAtom: atomIDs)
 				{
-					if (d->atom.labelAtomID() != compAtom.id)
+					if (compAtom == "OXT")
 						continue;
 
-					float o_d = d->occupancy;
+					for (auto d: resAtomData)
+					{
+						if (d->atom.labelAtomID() != compAtom)
+							continue;
 
-					if (o_d == 0)
-						continue;
+						float o_d = d->occupancy;
 
-					if (o_d == 1)
-						sums += d->sums;
-					else
-						sums += d->sums * o_d;
+						if (o_d == 0)
+							continue;
+
+						if (o_d == 1)
+							sums += d->sums;
+						else
+							sums += d->sums * o_d;
+					}
+
+					resAtomData.erase(
+						std::remove_if(resAtomData.begin(), resAtomData.end(), [id = compAtom](const AtomData* d) { return d->atom.labelAtomID() == id; }),
+						resAtomData.end());
 				}
-
-				resAtomData.erase(
-					std::remove_if(resAtomData.begin(), resAtomData.end(), [id=compAtom.id](const AtomData* d) { return d->atom.labelAtomID() == id; }),
-					resAtomData.end());
 			}
 		}
-
+		catch (const BondMapException& ex)
+		{
+			std::cerr << "Missing information for compound '" << compID << '\'' << std::endl
+					  << ex.what() << std::endl;
+			
+			missing.insert(compID);
+		}
+		
 		// atoms that were present but not part of the Compound 
 		for (auto d: resAtomData)
 		{
@@ -794,36 +799,22 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 					resAtomData.push_back(&d);
 			}
 
-			if (comp == nullptr)
+			for (auto& compAtom: atomIDs)
 			{
-				for (const auto& d: resAtomData)
+				if (compAtom == "OXT")
+					continue;
+
+				for (auto d: resAtomData)
 				{
+					if (d->atom.labelAtomID() != compAtom)
+						continue;
+
 					occSum += d->occupancy;
 					ediaSum += pow(d->edia + 0.1, -2);
+					
 					++n;
 					if (d->edia >= 0.8)
 						++m;
-				}
-			}
-			else
-			{
-				for (auto& compAtom: comp->atoms())
-				{
-					if (compAtom.typeSymbol == H or compAtom.id == "OXT")
-						continue;
-
-					for (auto d: resAtomData)
-					{
-						if (d->atom.labelAtomID() != compAtom.id)
-							continue;
-
-						occSum += d->occupancy;
-						ediaSum += pow(d->edia + 0.1, -2);
-						
-						++n;
-						if (d->edia >= 0.8)
-							++m;
-					}
 				}
 			}
 
@@ -835,8 +826,16 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 			OPIA += occSum * (100. * m / n);
 		}
 
-		EDIAm /= OCC;
-		OPIA /= OCC;
+		if (atomIDs.empty())
+		{
+			EDIAm = std::nan("0");
+			OPIA = std::nan("0");
+		}
+		else
+		{
+			EDIAm /= OCC;
+			OPIA /= OCC;
+		}
 		
 		result.emplace_back(ResidueStatistics{asymID, seqID, compID,
 			authSeqID,
