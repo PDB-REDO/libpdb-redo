@@ -276,6 +276,7 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 	return ks * y;
 }
 
+#if HAVE_NEWUOA
 template <class F>
 NewuoaClosure make_closure(F &function) {
 	struct Wrap {
@@ -285,6 +286,7 @@ NewuoaClosure make_closure(F &function) {
 	};
 	return NewuoaClosure {&function, &Wrap::call};
 }
+#endif
 
 double DensityIntegration::integrateRadius(float perc, float occupancy, double yi, const std::vector<double>& fst) const
 {
@@ -331,7 +333,7 @@ double DensityIntegration::integrateRadius(float perc, float occupancy, double y
 		return this->integrateDensity(x, -1, fst);
 	};
 
-	auto r = dlib::find_min_global(function, { 1e-3 }, { 1e3 }, { false }, dlib::max_function_calls(100));
+	auto r = dlib::find_min_global(function, { 1e-3 }, { 1e3 }, { false }, dlib::max_function_calls(10));
 
 	double result = r.x(0);
 	
