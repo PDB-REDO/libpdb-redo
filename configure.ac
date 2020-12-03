@@ -220,12 +220,37 @@ AC_DEFINE([HAVE_CLIPPER], [1], [Use libclipper])
 
 AX_CHECK_LIBRARY([DLIB], [dlib/global_optimization.h], [dlib],
 		[
+			HAVE_DLIB=1
 			DLIB_LIBS="-ldlib $LIBS"
 		],
-		[AC_MSG_ERROR([libdlib-dev not found])])
+		[AC_MSG_WARN([libdlib-dev not found])])
 
 AC_SUBST([DLIB_CFLAGS], [])
 AC_SUBST([DLIB_LIBS], [$DLIB_LIBS])
+
+if test -x "$PKG_CONFIG"
+then
+	AX_PKG_CHECK_MODULES([NEWUOA], [newuoa], [], [
+		HAVE_NEWUOA=1
+		AC_DEFINE([HAVE_NEWUOA], [1])
+	], [AC_MSG_WARN([the required package libnewuoa-dev is not installed])])
+else
+	AC_CHECK_HEADER(
+		[newuoa.h], [], [AC_MSG_ERROR([
+Can't find the libcif++ header, Config.hpp.  Make sure that it
+is installed, and either use the --with-cif++ option or install
+pkg-config.])])
+
+	AX_CHECK_LIBRARY([NEWUOA], [newuoa.h], [newuoa],
+		[
+			LIBS="-lnewuoa $LIBS"
+		],
+		[AC_MSG_WARN([libnewuoa not found])])
+fi
+
+AS_IF([ test "x${HAVE_DLIB}" = "x" && test "x${HAVE_NEWUOA}" = "x" ], [
+	AC_MSG_ERROR([Either libnewuoa-dev or libdlib-dev should be installed])
+])
 
 dnl Process Makefile.in to create Makefile
 AC_OUTPUT([GNUmakefile])

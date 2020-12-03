@@ -35,7 +35,13 @@
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 
+#if HAVE_NEWUOA
+#include <newuoa.h>
+#elif HAVE_DLIB
 #include <dlib/global_optimization.h>
+#else
+#error "Should have either newuoa or dlib"
+#endif
 
 namespace mmcif
 {
@@ -270,27 +276,72 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 	return ks * y;
 }
 
+template <class F>
+NewuoaClosure make_closure(F &function) {
+	struct Wrap {
+		static double call(void *data, long n, const double *values) {
+			return reinterpret_cast<F *>(data)->operator()(n, values);
+		}
+	};
+	return NewuoaClosure {&function, &Wrap::call};
+}
+
 double DensityIntegration::integrateRadius(float perc, float occupancy, double yi, const std::vector<double>& fst) const
 {
 	double yt = perc * 0.25 * mmcif::kPI * occupancy * yi;
 
+#if HAVE_NEWUOA
+	double initialValue = 0.25;
+
+	// code from newuoa-example
+	const long variables_count = 1;
+	const long number_of_interpolation_conditions = (variables_count + 1)*(variables_count + 2)/2;
+	double variables_values[] = { initialValue };
+	const double initial_trust_region_radius = 1e-3;
+	const double final_trust_region_radius = 1e3;
+	const long max_function_calls_count = 100;
+	const size_t working_space_size = NEWUOA_WORKING_SPACE_SIZE(variables_count,
+																number_of_interpolation_conditions);
+	double working_space[working_space_size];
+
+	auto function = [&] (long n, const double *x)
+	{
+		assert(n == 1);
+		return this->integrateDensity(x[0], -1, fst);
+	};
+	auto closure = make_closure(function);
+
+	double result = newuoa_closure(
+			&closure,
+			variables_count,
+			number_of_interpolation_conditions,
+			variables_values,
+			initial_trust_region_radius,
+			final_trust_region_radius,
+			max_function_calls_count,
+			working_space);
+
+	double y1 = 0;
+	double y2 = -result;
+	double x1 = 0;
+	double x2 = variables_values[0];
+#else
 	auto function = [&](const double x)
 	{
 		return this->integrateDensity(x, -1, fst);
 	};
 
-	auto r = dlib::find_min_global(function, { 0.5 }, { 1.5 }, { false }, dlib::max_function_calls(5));
-
-	// 
+	auto r = dlib::find_min_global(function, { 1e-3 }, { 1e3 }, { false }, dlib::max_function_calls(100));
 
 	double result = r.x(0);
-	
-	const double kRE = 5e-5;
 	
 	double y1 = 0;
 	double y2 = -r.y;
 	double x1 = 0;
 	double x2 = result;
+#endif
+
+	const double kRE = 5e-5;
 	
 	if (y2 > yt)
 	{

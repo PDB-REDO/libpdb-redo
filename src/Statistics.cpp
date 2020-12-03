@@ -323,12 +323,14 @@ struct AtomData
 		: atom(atom)
 		, asymID(atom.labelAsymID())
 		, seqID(atom.labelSeqID())
+		, authSeqID(atom.authSeqID())
 		, radius(radius)
 		, occupancy(atom.occupancy()) {}
 	
 	Atom						atom;
 	std::string					asymID;
 	int							seqID;
+	std::string					authSeqID;	// required for waters
 	float						radius;
 	float						occupancy;
 	std::vector<AtomGridData>	points;
@@ -712,7 +714,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 		std::vector<const AtomData*> resAtomData;
 		for (const auto& d: atomData)
 		{
-			if (d.asymID == asymID and d.seqID == seqID)
+			if (d.asymID == asymID and d.seqID == seqID and d.authSeqID == authSeqID)
 				resAtomData.push_back(&d);
 		}
 
@@ -720,7 +722,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 		try
 		{
-			if (compID != "HOH" and not missing.count(compID))
+			if (not missing.count(compID))
 			{
 				atomIDs = BondMap::atomIDsForCompound(compID);
 
@@ -743,6 +745,8 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 							sums += d->sums;
 						else
 							sums += d->sums * o_d;
+						
+						break;
 					}
 
 					resAtomData.erase(
@@ -785,7 +789,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 			for (const auto& d: atomData)
 			{
-				if (d.asymID != asymID or d.seqID != seqID)
+				if (d.asymID != asymID or d.seqID != seqID or d.authSeqID != authSeqID)
 					continue;
 
 				if (alt.empty())
@@ -799,22 +803,36 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 					resAtomData.push_back(&d);
 			}
 
-			for (auto& compAtom: atomIDs)
+			if (atomIDs.empty())
 			{
-				if (compAtom == "OXT")
-					continue;
-
-				for (auto d: resAtomData)
+				for (const auto& d: resAtomData)
 				{
-					if (d->atom.labelAtomID() != compAtom)
-						continue;
-
 					occSum += d->occupancy;
 					ediaSum += pow(d->edia + 0.1, -2);
-					
 					++n;
 					if (d->edia >= 0.8)
 						++m;
+				}
+			}
+			else
+			{
+				for (auto& compAtom: atomIDs)
+				{
+					if (compAtom == "OXT")
+						continue;
+
+					for (auto d: resAtomData)
+					{
+						if (d->atom.labelAtomID() != compAtom)
+							continue;
+
+						occSum += d->occupancy;
+						ediaSum += pow(d->edia + 0.1, -2);
+						
+						++n;
+						if (d->edia >= 0.8)
+							++m;
+					}
 				}
 			}
 

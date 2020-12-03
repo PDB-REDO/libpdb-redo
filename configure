@@ -635,6 +635,10 @@ ac_includes_default="\
 
 ac_subst_vars='LTLIBOBJS
 LIBOBJS
+NEWUOA_LDFLAGS
+NEWUOA_CPPFLAGS
+NEWUOA_LIBS
+NEWUOA_CFLAGS
 DLIB_LIBS
 DLIB_CFLAGS
 DLIB_LDFLAGS
@@ -810,7 +814,11 @@ CLIPPER_LDFLAGS
 CLIPPER_CFLAGS
 CLIPPER_LIBS
 DLIB_CPPFLAGS
-DLIB_LDFLAGS'
+DLIB_LDFLAGS
+NEWUOA_CFLAGS
+NEWUOA_LIBS
+NEWUOA_CPPFLAGS
+NEWUOA_LDFLAGS'
 
 
 # Initialize some variables set by options.
@@ -1519,6 +1527,13 @@ Some influential environment variables:
               C preprocessor flags for DLIB headers
   DLIB_LDFLAGS
               linker flags for DLIB libraries
+  NEWUOA_CFLAGS
+              C compiler flags for NEWUOA, overriding pkg-config
+  NEWUOA_LIBS linker flags for NEWUOA, overriding pkg-config
+  NEWUOA_CPPFLAGS
+              C preprocessor flags for NEWUOA headers
+  NEWUOA_LDFLAGS
+              linker flags for NEWUOA libraries
 
 Use these variables to override the choices made by `configure' or to help
 it to find libraries and programs with nonstandard names/locations.
@@ -18379,16 +18394,214 @@ fi
 $as_echo "#define HAVE_DLIB 1" >>confdefs.h
 
 
+			HAVE_DLIB=1
 			DLIB_LIBS="-ldlib $LIBS"
 
 else
-  as_fn_error $? "libdlib-dev not found" "$LINENO" 5
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libdlib-dev not found" >&5
+$as_echo "$as_me: WARNING: libdlib-dev not found" >&2;}
 fi
 
 
 
 DLIB_LIBS=$DLIB_LIBS
 
+
+if test -x "$PKG_CONFIG"
+then
+
+
+
+
+    AX_PACKAGE_REQUIRES="$AX_PACKAGE_REQUIRES newuoa"
+    AX_PACKAGE_REQUIRES_PRIVATE="$AX_PACKAGE_REQUIRES_PRIVATE "
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for NEWUOA" >&5
+$as_echo_n "checking for NEWUOA... " >&6; }
+
+if test -n "$NEWUOA_CFLAGS"; then
+    pkg_cv_NEWUOA_CFLAGS="$NEWUOA_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"newuoa \""; } >&5
+  ($PKG_CONFIG --exists --print-errors "newuoa ") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_NEWUOA_CFLAGS=`$PKG_CONFIG --cflags "newuoa " 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$NEWUOA_LIBS"; then
+    pkg_cv_NEWUOA_LIBS="$NEWUOA_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"newuoa \""; } >&5
+  ($PKG_CONFIG --exists --print-errors "newuoa ") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_NEWUOA_LIBS=`$PKG_CONFIG --libs "newuoa " 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        NEWUOA_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "newuoa " 2>&1`
+        else
+	        NEWUOA_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "newuoa " 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$NEWUOA_PKG_ERRORS" >&5
+
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: the required package libnewuoa-dev is not installed" >&5
+$as_echo "$as_me: WARNING: the required package libnewuoa-dev is not installed" >&2;}
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: the required package libnewuoa-dev is not installed" >&5
+$as_echo "$as_me: WARNING: the required package libnewuoa-dev is not installed" >&2;}
+else
+	NEWUOA_CFLAGS=$pkg_cv_NEWUOA_CFLAGS
+	NEWUOA_LIBS=$pkg_cv_NEWUOA_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+		HAVE_NEWUOA=1
+		$as_echo "#define HAVE_NEWUOA 1" >>confdefs.h
+
+
+fi
+
+    # Substitute output.
+
+
+
+else
+	ac_fn_cxx_check_header_mongrel "$LINENO" "newuoa.h" "ac_cv_header_newuoa_h" "$ac_includes_default"
+if test "x$ac_cv_header_newuoa_h" = xyes; then :
+
+else
+  as_fn_error $? "
+Can't find the libcif++ header, Config.hpp.  Make sure that it
+is installed, and either use the --with-cif++ option or install
+pkg-config." "$LINENO" 5
+fi
+
+
+
+
+
+
+
+  if ${ax_cv_have_NEWUOA+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  save_CPPFLAGS="$CPPFLAGS"
+     save_LDFLAGS="$LDFLAGS"
+     save_LIBS="$LIBS"
+
+     if test "x$NEWUOA_CPPFLAGS" != "x"; then :
+  CPPFLAGS="$CPPFLAGS $NEWUOA_CPPFLAGS"
+fi
+
+     if test "x$NEWUOA_LDFLAGS" != "x"; then :
+  LDFLAGS="$LDFLAGS $NEWUOA_LDFLAGS"
+fi
+
+     ac_fn_cxx_check_header_mongrel "$LINENO" "newuoa.h" "ac_cv_header_newuoa_h" "$ac_includes_default"
+if test "x$ac_cv_header_newuoa_h" = xyes; then :
+
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lnewuoa" >&5
+$as_echo_n "checking for main in -lnewuoa... " >&6; }
+if ${ac_cv_lib_newuoa_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lnewuoa  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_newuoa_main=yes
+else
+  ac_cv_lib_newuoa_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_newuoa_main" >&5
+$as_echo "$ac_cv_lib_newuoa_main" >&6; }
+if test "x$ac_cv_lib_newuoa_main" = xyes; then :
+  ax_cv_have_NEWUOA=yes
+else
+  ax_cv_have_NEWUOA=no
+fi
+
+
+else
+  ax_cv_have_NEWUOA=no
+fi
+
+
+
+     CPPFLAGS="$save_CPPFLAGS"
+     LDFLAGS="$save_LDFLAGS"
+     LIBS="$save_LIBS"
+
+fi
+
+
+  if test "$ax_cv_have_NEWUOA" = "yes"; then :
+
+$as_echo "#define HAVE_NEWUOA 1" >>confdefs.h
+
+
+			LIBS="-lnewuoa $LIBS"
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: libnewuoa not found" >&5
+$as_echo "$as_me: WARNING: libnewuoa not found" >&2;}
+fi
+
+fi
+
+if  test "x${HAVE_DLIB}" = "x" && test "x${HAVE_NEWUOA}" = "x" ; then :
+
+	as_fn_error $? "Either libnewuoa-dev or libdlib-dev should be installed" "$LINENO" 5
+
+fi
 
 ac_config_files="$ac_config_files GNUmakefile"
 

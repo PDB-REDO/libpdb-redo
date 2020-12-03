@@ -27,6 +27,8 @@
 #define BOOST_TEST_MODULE Libpdb_redo_Test
 #include <boost/test/included/unit_test.hpp>
 
+#include <boost/algorithm/string.hpp>
+
 #include <stdexcept>
 #include <filesystem>
 
@@ -39,6 +41,102 @@
 namespace fs = std::filesystem;
 namespace tt = boost::test_tools;
 namespace utf = boost::unit_test;
+namespace ba = boost::algorithm;
+
+// --------------------------------------------------------------------
+
+// atom radii calculated with AtomShape and NEWUOA
+struct TestRadius {
+	std::string		type;
+	float			radius;
+} kTestRadii[] = {
+	{ "N", 1.073270559310913086f },
+	{ "C", 1.077472805976867676f },
+	{ "C", 1.060930848121643066f },
+	{ "O", 1.037933468818664551f },
+	{ "C", 1.080411434173583984f },
+	{ "C", 1.080696582794189453f },
+	{ "C", 1.090956211090087891f },
+	{ "N", 1.02884829044342041f },
+	{ "C", 1.017064213752746582f },
+	{ "C", 0.985809326171875f },
+	{ "O", 0.9498787522315979004f },
+	{ "C", 1.032562017440795898f },
+	{ "C", 1.043723225593566895f },
+	{ "O", 1.000524282455444336f },
+	{ "N", 1.057830214500427246f },
+	{ "N", 0.9573949575424194336f },
+	{ "C", 0.9534692764282226562f },
+	{ "C", 0.9520707130432128906f },
+	{ "O", 0.9262598156929016113f },
+	{ "C", 0.938775181770324707f },
+	{ "C", 0.9474387764930725098f },
+	{ "C", 0.9400410056114196777f },
+	{ "C", 0.9585416316986083984f },
+	{ "C", 0.9261589646339416504f },
+	{ "C", 0.9467949271202087402f },
+	{ "C", 0.935360252857208252f },
+	{ "N", 0.930846095085144043f },
+	{ "C", 0.9431300163269042969f },
+	{ "C", 0.9361689090728759766f },
+	{ "O", 0.9119053483009338379f },
+	{ "C", 0.9605298042297363281f },
+	{ "O", 0.9615512490272521973f },
+	{ "N", 0.9203097224235534668f },
+	{ "C", 0.9396781325340270996f },
+	{ "C", 0.9424930214881896973f },
+	{ "O", 0.9095469117164611816f },
+	{ "N", 0.9243852496147155762f },
+	{ "C", 0.9413107037544250488f },
+	{ "C", 0.9356296658515930176f },
+	{ "O", 0.9198570847511291504f },
+	{ "C", 0.9559983015060424805f },
+	{ "C", 0.9961333274841308594f },
+	{ "O", 0.9828038811683654785f },
+	{ "N", 1.007446646690368652f },
+	{ "N", 0.9110313653945922852f },
+	{ "C", 0.9231967926025390625f },
+	{ "C", 0.9301134943962097168f },
+	{ "O", 0.9059692621231079102f },
+	{ "C", 0.917514503002166748f },
+	{ "C", 0.9176003932952880859f }
+};
+
+BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001))
+{
+	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
+
+	mmcif::File file(example);
+	mmcif::Structure structure(file);
+
+	const float kResHi = 1.80009, kResLo = 7.99918; 
+
+	const size_t N = sizeof(kTestRadii) / sizeof(TestRadius);
+	size_t i = 0;
+
+	for (auto& atom: structure.atoms())
+	{
+		if (i >= N)
+			break;
+
+		mmcif::AtomShape shape(atom, kResHi, kResLo, false);
+
+		BOOST_CHECK(mmcif::AtomTypeTraits(atom.type()).symbol() == kTestRadii[i].type);
+
+		float radius = shape.radius();
+		float test = kTestRadii[i].radius;
+
+		std::cout
+			<< std::setprecision(std::numeric_limits<long double>::digits10 + 1) << radius
+			<< '\t'
+			<< test
+			<< std::endl;
+
+		BOOST_TEST(radius == test);
+
+		++i;
+	}
+}
 
 // --------------------------------------------------------------------
 
@@ -198,93 +296,13 @@ PRO OXT HXT SING N N 17
 	}
 }
 
-// --------------------------------------------------------------------
-
-// atom radii calculated with AtomShape and NEWUOA
-struct TestRadius {
-	std::string		type;
-	float			radius;
-} kTestRadii[] = {
-	{ "N", 1.07327 },
-	{ "C", 1.07747 },
-	{ "C", 1.06093 },
-	{ "O", 1.03793 },
-	{ "C", 1.08041 },
-	{ "C", 1.0807 },
-	{ "C", 1.09096 },
-	{ "N", 1.02885 },
-	{ "C", 1.01706 },
-	{ "C", 0.98581 },
-	{ "O", 0.949879 },
-	{ "C", 1.03256 },
-	{ "C", 1.04372 },
-	{ "O", 1.00052 },
-	{ "N", 1.05783 },
-	{ "N", 0.957396 },
-	{ "C", 0.95347 },
-	{ "C", 0.952071 },
-	{ "O", 0.926261 },
-	{ "C", 0.938776 },
-	{ "C", 0.947439 },
-	{ "C", 0.940042 },
-	{ "C", 0.958542 },
-	{ "C", 0.92616 },
-	{ "C", 0.946796 },
-	{ "C", 0.935361 },
-	{ "N", 0.930847 },
-	{ "C", 0.943131 },
-	{ "C", 0.93617 },
-	{ "O", 0.911906 },
-	{ "C", 0.96053 },
-	{ "O", 0.961552 },
-	{ "N", 0.92031 },
-	{ "C", 0.939679 },
-	{ "C", 0.942494 },
-	{ "O", 0.909548 },
-	{ "N", 0.924386 },
-	{ "C", 0.941311 },
-	{ "C", 0.93563 },
-	{ "O", 0.919858 },
-	{ "C", 0.955999 },
-	{ "C", 0.996134 },
-	{ "O", 0.982804 },
-	{ "N", 1.00745 },
-	{ "N", 0.911032 },
-	{ "C", 0.923198 },
-	{ "C", 0.930114 },
-	{ "O", 0.90597 },
-	{ "C", 0.917515 },
-	{ "C", 0.917601 }
-};
-
-BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.001f))
+BOOST_AUTO_TEST_CASE(bondmap_2)
 {
-	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
+	BOOST_CHECK_THROW(mmcif::BondMap::atomIDsForCompound("UN_"), mmcif::BondMapException);
 
-	mmcif::File file(example);
-	mmcif::Structure structure(file);
+	mmcif::CompoundFactory::instance().pushDictionary("./UN_.cif");
 
-	const float kResHi = 1.80009, kResLo = 7.99918; 
-
-	const size_t N = sizeof(kTestRadii) / sizeof(TestRadius);
-	size_t i = 0;
-
-	for (auto& atom: structure.atoms())
-	{
-		if (i >= N)
-			break;
-
-		mmcif::AtomShape shape(atom, kResHi, kResLo, false);
-
-		BOOST_CHECK(mmcif::AtomTypeTraits(atom.type()).symbol() == kTestRadii[i].type);
-
-		float radius = shape.radius();
-		float test = kTestRadii[i].radius;
-
-		BOOST_TEST(radius == test);
-
-		++i;
-	}
+	BOOST_CHECK(mmcif::BondMap::atomIDsForCompound("UN_").empty() == false);
 }
 
 // --------------------------------------------------------------------
@@ -335,89 +353,54 @@ BOOST_AUTO_TEST_CASE(map_maker_2)
 
 // First residues from 1cbs
 
-struct TestResidue {
+struct TestResidue
+{
 	std::string		compID;
 	std::string		asymID;
 	int				seqID;
 	double			RSR, SRSR, RSCCS;
 	size_t			NGRID;
 	double			EDIAm, OPIA;
-} kTestResidues[] = {
-	{ "PRO", "A", 1, 	0.116,	0.056,	0.849,	54,		0.008,		14.3 },
-	{ "ASN", "A", 2, 	0.079,	0.036,	0.873,	46,		0.864,		87.5 },
-	{ "PHE", "A", 3, 	0.027,	0.022,	0.980,	50,		0.863,		72.7 },
-	{ "SER", "A", 4, 	0.087,	0.038,	0.877,	36,		0.668,		50.0 },
-	{ "GLY", "A", 5, 	0.019,	0.035,	0.983,	18,		0.902,		100.0 },
-	{ "ASN", "A", 6, 	0.065,	0.030,	0.874,	40,		0.641,		37.5 },
-	{ "TRP", "A", 7, 	0.030,	0.018,	0.980,	56,		0.719,		57.1 },
-	{ "LYS", "A", 8, 	0.080,	0.031,	0.911,	54,		0.057,		66.7 },
-	{ "ILE", "A", 9, 	0.050,	0.026,	0.964,	36,		0.932,		87.5 },
-	{ "ILE", "A", 10, 	0.054,	0.025,	0.938,	42,		0.841,		75.0 },
-	{ "ARG", "A", 11, 	0.039,	0.023,	0.957,	50,		0.844,		54.5 },
-	{ "SER", "A", 12, 	0.051,	0.030,	0.856,	28,		0.849,		83.3 },
-	{ "GLU", "A", 13, 	0.047,	0.028,	0.959,	40,		0.476,		55.6 },
-	{ "ASN", "A", 14, 	0.035,	0.025,	0.970,	36,		0.821,		75.0 },
-	{ "PHE", "A", 15, 	0.036,	0.025,	0.973,	54,		0.925,		100.0 },
-	{ "GLU", "A", 16, 	0.066,	0.028,	0.940,	52,		0.589,		55.6 },
-	{ "GLU", "A", 17, 	0.103,	0.032,	0.897,	56,		0.137,		44.4 },
-	{ "LEU", "A", 18, 	0.028,	0.025,	0.962,	30,		0.749,		37.5 },
-	{ "LEU", "A", 19, 	0.039,	0.027,	0.960,	40,		0.670,		62.5 },
-	{ "LYS", "A", 20, 	0.108,	0.040,	0.911,	60,		0.221,		44.4 },
-	{ "VAL", "A", 21, 	0.058,	0.035,	0.951,	34,		0.752,		42.9 },
-	{ "LEU", "A", 22, 	0.042,	0.033,	0.958,	40,		0.658,		50.0 },
-	{ "GLY", "A", 23, 	0.078,	0.046,	0.720,	28,		1.013,		100.0 },
-	{ "VAL", "A", 24, 	0.044,	0.028,	0.954,	28,		0.654,		28.6 },
-	{ "ASN", "A", 25, 	0.080,	0.039,	0.922,	42,		0.827,		75.0 },
-	{ "VAL", "A", 26, 	0.084,	0.039,	0.871,	44,		0.602,		28.6 },
-	{ "MET", "A", 27, 	0.064,	0.033,	0.911,	52,		0.488,		62.5 },
-	{ "LEU", "A", 28, 	0.057,	0.028,	0.929,	42,		0.502,		50.0 },
-	{ "ARG", "A", 29, 	0.100,	0.027,	0.818,	68,		0.673,		36.4 },
-	{ "LYS", "A", 30, 	0.117,	0.051,	0.868,	62,		0.299,		44.4 },
-	{ "ILE", "A", 31, 	0.057,	0.029,	0.898,	44,		0.690,		50.0 },
-	{ "ALA", "A", 32, 	0.056,	0.040,	0.935,	20,		0.871,		80.0 },
-	{ "VAL", "A", 33, 	0.042,	0.035,	0.965,	36,		0.724,		28.6 },
-	{ "ALA", "A", 34, 	0.061,	0.041,	0.900,	28,		0.845,		60.0 },
-	{ "ALA", "A", 35, 	0.039,	0.030,	0.968,	26,		0.688,		20.0 },
-	{ "ALA", "A", 36, 	0.032,	0.037,	0.975,	28,		0.952,		100.0 },
-	{ "SER", "A", 37, 	0.065,	0.035,	0.926,	34,		0.816,		33.3 },
-	{ "LYS", "A", 38, 	0.130,	0.037,	0.868,	54,		0.006,		55.6 },
-	{ "PRO", "A", 39, 	0.064,	0.030,	0.953,	36,		0.909,		85.7 },
-	{ "ALA", "A", 40, 	0.058,	0.038,	0.930,	28,		1.009,		100.0 },
-	{ "VAL", "A", 41, 	0.056,	0.026,	0.929,	40,		0.776,		71.4 },
-	{ "GLU", "A", 42, 	0.080,	0.028,	0.932,	54,		0.410,		55.6 },
-	{ "ILE", "A", 43, 	0.036,	0.029,	0.968,	40,		0.715,		25.0 },
-	{ "LYS", "A", 44, 	0.091,	0.033,	0.904,	48,		0.022,		66.7 },
-	{ "GLN", "A", 45, 	0.052,	0.028,	0.932,	40,		0.589,		22.2 },
-	{ "GLU", "A", 46, 	0.152,	0.041,	0.802,	66,		0.051,		55.6 },
-	{ "GLY", "A", 47, 	0.049,	0.038,	0.956,	18,		0.712,		75.0 },
-	{ "ASP", "A", 48, 	0.056,	0.031,	0.972,	50,		0.669,		50.0 },
-	{ "THR", "A", 49, 	0.056,	0.032,	0.963,	40,		0.610,		28.6 },
-	{ "PHE", "A", 50, 	0.047,	0.025,	0.946,	54,		0.735,		54.5 },
-	{ "TYR", "A", 51, 	0.037,	0.024,	0.983,	52,		0.838,		75.0 },
-	{ "ILE", "A", 52, 	0.046,	0.023,	0.934,	40,		0.821,		75.0 },
-	{ "LYS", "A", 53, 	0.070,	0.027,	0.945,	46,		0.486,		55.6 },
-	{ "THR", "A", 54, 	0.031,	0.026,	0.972,	26,		0.908,		71.4 },
-	{ "SER", "A", 55, 	0.051,	0.030,	0.969,	26,		0.690,		66.7 },
-	{ "THR", "A", 56, 	0.032,	0.024,	0.957,	30,		0.942,		100.0 },
-	{ "THR", "A", 57, 	0.051,	0.025,	0.965,	34,		0.851,		57.1 },
-	{ "VAL", "A", 58, 	0.042,	0.027,	0.948,	30,		0.620,		42.9 },
-	{ "ARG", "A", 59, 	0.066,	0.030,	0.946,	54,		0.828,		63.6 },
-	{ "THR", "A", 60, 	0.047,	0.028,	0.952,	32,		0.688,		71.4 },
-	{ "THR", "A", 61, 	0.057,	0.030,	0.968,	32,		0.811,		85.7 },
-	{ "GLU", "A", 62, 	0.091,	0.029,	0.882,	56,		0.841,		55.6 },
-	{ "ILE", "A", 63, 	0.051,	0.029,	0.955,	36,		0.865,		75.0 },
-	{ "ASN", "A", 64, 	0.057,	0.029,	0.931,	38,		0.830,		62.5 },
-	{ "PHE", "A", 65, 	0.040,	0.022,	0.977,	52,		0.757,		36.4 },
-	{ "LYS", "A", 66, 	0.130,	0.035,	0.815,	60,		0.525,		44.4 },
-	{ "VAL", "A", 67, 	0.048,	0.038,	0.921,	34,		0.791,		71.4 },
-	{ "GLY", "A", 68, 	0.068,	0.041,	0.893,	24,		0.877,		100.0 },
 };
-
-const size_t kNResidues = sizeof(kTestResidues) / sizeof(TestResidue);
 
 BOOST_AUTO_TEST_CASE(stats_1)
 {
 	namespace c = mmcif;
+
+	// read test data first (output from previous stats version)
+
+	std::vector<TestResidue> test;
+	std::ifstream testFile("../examples/1cbs_prev.eds");
+
+	BOOST_ASSERT(testFile.is_open());
+
+	std::string line;
+	std::getline(testFile, line);
+	BOOST_ASSERT(line.substr(0, 7) == "RESIDUE");
+
+	while (std::getline(testFile, line))
+	{
+		std::vector<std::string> fields;
+		ba::split(fields, line, ba::is_any_of("\t"));
+
+		BOOST_ASSERT(fields.size() == 7);
+
+		std::vector<std::string> id;
+		ba::split(id, fields[0], ba::is_any_of("_"));
+		BOOST_ASSERT(id.size() == 3);
+
+		test.push_back({
+			id[0],
+			id[1],
+			std::stoi(id[2]),
+			std::stod(fields[1]),
+			std::stod(fields[2]),
+			std::stod(fields[3]),
+			static_cast<size_t>(std::stoi(fields[4])),
+			std::stod(fields[5]),
+			std::stod(fields[6])
+		});
+	}
 
 	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
 	mmcif::File file(example);
@@ -432,25 +415,80 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	mmcif::EDIAStatsCollector collector(mm, structure, false, bm);
 	auto r = collector.collect();
 
-	size_t i = 0;
+	auto ti = test.begin();
 	for (auto& ri: r)
 	{
-		if (i >= kNResidues)
-			break;
+		BOOST_ASSERT(ti != test.end());
 
-		auto& t = kTestResidues[i++];
+		auto t = *ti++;
 
 		BOOST_TEST(ri.asymID == t.asymID);
 		BOOST_TEST(ri.compID == t.compID);
-		BOOST_TEST(ri.seqID == t.seqID);
 
 		BOOST_TEST(std::abs(ri.RSR - t.RSR) <= 0.01, tt::tolerance(0.01));
 		BOOST_TEST(std::abs(ri.SRSR - t.SRSR) <= 0.01, tt::tolerance(0.01));
 		BOOST_TEST(std::abs(ri.RSCCS - t.RSCCS) <= 0.01, tt::tolerance(0.01));
 
-		BOOST_TEST(std::abs(ri.EDIAm - t.EDIAm) <= 0.1, tt::tolerance(0.1));
-		BOOST_TEST(std::abs(ri.OPIA - t.OPIA) <= 0.1, tt::tolerance(0.1));
+		if (not (std::isnan(ri.EDIAm) or std::isnan(t.EDIAm)))
+		{
+			BOOST_TEST(std::abs(ri.EDIAm - t.EDIAm) <= 0.1, tt::tolerance(0.1));
+			BOOST_TEST(std::abs(ri.OPIA - t.OPIA) <= 0.1, tt::tolerance(0.1));
+		}
+		else
+		{
+			BOOST_CHECK(std::isnan(ri.EDIAm) == std::isnan(t.EDIAm));
+		}
 
 		BOOST_TEST(ri.ngrid == t.NGRID);
 	}
 }
+
+// --------------------------------------------------------------------
+// test stats on a file with an unkown residue, should give nan's for EDIA
+
+BOOST_AUTO_TEST_CASE(stats_2)
+{
+	namespace c = mmcif;
+
+	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
+	mmcif::File file(example);
+
+	BOOST_CHECK(file.file().isValid());
+	
+	// Rename a compound to an unknown ID
+
+	for (auto r: file.data()["chem_comp"].find(cif::Key("id") == "ALA"))
+	{
+		r["id"] = "U_K";
+		break;
+	}
+
+	// and load this into a structure (note, structure caches data from the file, so order is important)
+
+	mmcif::Structure structure(file);
+
+	c::MapMaker<float> mm;
+	float samplingRate = 0.75;
+	mm.loadMTZ("../examples/1cbs_map.mtz", samplingRate);
+
+	mmcif::BondMap bm(structure);
+
+	mmcif::EDIAStatsCollector collector(mm, structure, false, bm);
+	auto r = collector.collect();
+
+	for (auto& ri: r)
+	{
+		BOOST_CHECK(ri.compID != "ALA");
+
+		if (ri.compID != "U_K")
+			continue;
+
+		BOOST_CHECK(not std::isnan(ri.RSR));
+		BOOST_CHECK(not std::isnan(ri.SRSR));
+		BOOST_CHECK(not std::isnan(ri.RSCCS));
+
+		BOOST_CHECK(std::isnan(ri.EDIAm));
+		BOOST_CHECK(std::isnan(ri.OPIA));
+	}
+}
+

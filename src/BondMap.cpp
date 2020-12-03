@@ -508,7 +508,7 @@ BondMap::BondMap(const Structure& p)
 		auto* compound = compound_nr < 0 ? mmcif::Compound::create(c) : nullptr;
 
 		if (compound_nr < 0 and compound == nullptr)
-			throw BondMapException("Missing bond information for compound " + c);
+			std::cerr << "Missing bond information for compound " << c << std::endl;
 
 		auto bonded = [compound_nr, compound, &compoundBondInfo](const Atom& a, const Atom& b)
 		{
@@ -517,7 +517,7 @@ BondMap::BondMap(const Structure& p)
 
 			return compound_nr >= 0
 				? compoundBondInfo.bonded(compound_nr, label_a, label_b)
-				: compound->atomsBonded(label_a, label_b);
+				: (compound ? compound->atomsBonded(label_a, label_b) : false);
 		};
 
 		// loop over poly_seq_scheme
