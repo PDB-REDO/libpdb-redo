@@ -231,14 +231,13 @@ HEADERS = \
 	BondMap.hpp \
 	ClipperWrapper.hpp \
 	DistanceMap.hpp \
-	HBondTraits.hpp \
 	MapMaker.hpp \
+	Minimizer.hpp \
 	Ramachandran.hpp \
 	ResolutionCalculator.hpp \
 	Restraints.hpp \
 	SkipList.hpp \
 	Statistics.hpp \
-	Svm++.hpp \
 	Symmetry-2.hpp
 
 .PHONY: install
