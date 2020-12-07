@@ -13,3 +13,4 @@ src/revision.hpp
 .libs/
 aclocal.m4
 libpdb-redo.la
+data/

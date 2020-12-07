@@ -104,7 +104,7 @@ struct TestRadius {
 
 BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001))
 {
-	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
+	const fs::path example("../examples/1cbs.cif.gz");
 
 	mmcif::File file(example);
 	mmcif::Structure structure(file);
@@ -125,12 +125,6 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001))
 
 		float radius = shape.radius();
 		float test = kTestRadii[i].radius;
-
-		std::cout
-			<< std::setprecision(std::numeric_limits<long double>::digits10 + 1) << radius
-			<< '\t'
-			<< test
-			<< std::endl;
 
 		BOOST_TEST(radius == test);
 
@@ -245,7 +239,7 @@ PRO CD  HD3 SING N N 16
 PRO OXT HXT SING N N 17
 )"_cf;
 
-	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
+	const fs::path example("../examples/1cbs.cif.gz");
 	mmcif::File file(example);
 	mmcif::Structure structure(file);
 
@@ -325,7 +319,7 @@ BOOST_AUTO_TEST_CASE(map_maker_2)
 {
 	namespace c = mmcif;
 
-	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
+	const fs::path example("../examples/1cbs.cif.gz");
 
 	mmcif::File file(example);
 	mmcif::Structure structure(file);
@@ -370,7 +364,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	// read test data first (output from previous stats version)
 
 	std::vector<TestResidue> test;
-	std::ifstream testFile("../examples/1cbs_prev.eds");
+	std::ifstream testFile("1cbs-test.eds");
 
 	BOOST_ASSERT(testFile.is_open());
 
@@ -402,7 +396,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 		});
 	}
 
-	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
+	const fs::path example("../examples/1cbs.cif.gz");
 	mmcif::File file(example);
 	mmcif::Structure structure(file);
 
@@ -427,7 +421,11 @@ BOOST_AUTO_TEST_CASE(stats_1)
 
 		BOOST_TEST(std::abs(ri.RSR - t.RSR) <= 0.01, tt::tolerance(0.01));
 		BOOST_TEST(std::abs(ri.SRSR - t.SRSR) <= 0.01, tt::tolerance(0.01));
-		BOOST_TEST(std::abs(ri.RSCCS - t.RSCCS) <= 0.01, tt::tolerance(0.01));
+
+		if (not (std::isnan(ri.RSCCS) and std::isnan(t.RSCCS)))
+			BOOST_TEST(std::abs(ri.RSCCS - t.RSCCS) <= 0.1, tt::tolerance(0.1));
+		else
+			BOOST_CHECK(std::isnan(ri.RSCCS) == std::isnan(t.RSCCS));
 
 		if (not (std::isnan(ri.EDIAm) or std::isnan(t.EDIAm)))
 		{
@@ -450,7 +448,7 @@ BOOST_AUTO_TEST_CASE(stats_2)
 {
 	namespace c = mmcif;
 
-	const fs::path example("/usr/share/doc/libcifpp-dev/examples/1cbs.cif.gz");
+	const fs::path example("../examples/1cbs.cif.gz");
 	mmcif::File file(example);
 
 	BOOST_CHECK(file.file().isValid());

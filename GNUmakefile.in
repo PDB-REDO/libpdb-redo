@@ -109,8 +109,8 @@ ifeq "$(DEBUG)" "1"
 	OBJDIR	:= $(OBJDIR).dbg
 endif
 
-$(OBJDIR):
-	mkdir -p $(OBJDIR)
+$(OBJDIR) data:
+	mkdir -p $@
 
 OBJECTS		= $(OBJDIR)/AtomShape.lo \
 			  $(OBJDIR)/BondMap.lo \
@@ -215,9 +215,9 @@ $(foreach part,$(TESTS),$(eval $(call TEST_template,$(part))))
 test: $(TESTS:%=%-test)
 
 data/components.cif.gz:
-	echo "fetch the CCD file components.cif.gz and put it in data/"
+	wget -O $@ ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif.gz
 
-rsrc/bond-info.bin.gz: lib tools/make-bond-info data/components.cif.gz
+rsrc/bond-info.bin.gz: lib data tools/make-bond-info data/components.cif.gz
 	LD_LIBRARY_PATH=.libs tools/make-bond-info data/components.cif.gz rsrc/bond-info.bin
 	gzip -f rsrc/bond-info.bin
 
