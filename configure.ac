@@ -41,6 +41,8 @@ AC_ARG_VAR([DEBUG], [Build a debug version of the application])
 AX_CHECK_COMPILE_FLAG([-fstandalone-debug], , , [-Werror])
 
 AC_PATH_PROG([PKG_CONFIG], [pkg-config])
+AC_PATH_PROG([MRC], [mrc], [USE_RSRC=1])
+AS_IF([ test "x$MRC" != "x" ], [AC_DEFINE([USE_RSRC], [1], [Using mrc for compiling in resources])])
 
 AC_CHECK_LIB([m], [sin])
 AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_ERROR([the required package gsl-dev is not installed])])

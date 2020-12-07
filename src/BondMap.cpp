@@ -37,6 +37,13 @@
 #include "cif++/CifUtils.hpp"
 
 #include "pdb-redo/BondMap.hpp"
+#if USE_RSRC
+#include "mrsrc.hpp"
+#endif
+
+#ifndef DATADIR
+#define DATADIR "/rsrc/"
+#endif
 
 namespace fs = std::filesystem;
 namespace io = boost::iostreams;
@@ -231,7 +238,7 @@ class CompoundBondMap
 	static CompoundBondMap& instance()
 	{
 		if (not s_instance)
-			s_instance.reset(new CompoundBondMap("/home/maarten/projects/libpdb-redo/rsrc/bond-info.bin.gz"));
+			s_instance.reset(new CompoundBondMap());
 		return *s_instance;
 	}
 
@@ -266,8 +273,9 @@ class CompoundBondMap
 
 	static std::unique_ptr<CompoundBondMap> s_instance;
 
-	CompoundBondMap(fs::path file);
-	CompoundBondMap(std::istream&& is);
+	CompoundBondMap();
+
+	void init(std::istream&& is);
 
 	int32_t atom_nr(const std::string& atomID) const
 	{
@@ -295,12 +303,31 @@ class CompoundBondMap
 
 std::unique_ptr<CompoundBondMap> CompoundBondMap::s_instance;
 
-CompoundBondMap::CompoundBondMap(fs::path file)
-	: CompoundBondMap(std::ifstream(file, std::ios::binary))
+CompoundBondMap::CompoundBondMap()
 {
+#if USE_RSRC
+	mrsrc::rsrc rsrc("bond-info.bin");
+	if (rsrc)
+	{
+		init(mrsrc::istream(rsrc));
+		return;
+	}
+#endif
+
+	fs::path bondInfoFile;
+
+	if (getenv("BOND_INFO_FILE") != nullptr)
+		bondInfoFile = fs::path(getenv("BOND_INFO_FILE"));
+	else
+		bondInfoFile = fs::path(DATADIR) / "bond-info.bin";
+
+	if (fs::exists(bondInfoFile))
+		init(std::ifstream(bondInfoFile, std::ios::binary));
+	else
+		throw BondMapException("Missing bond info file");
 }
 
-CompoundBondMap::CompoundBondMap(std::istream&& is)
+void CompoundBondMap::init(std::istream&& is)
 {
 	io::filtering_stream<io::input> in;
 	in.push(io::gzip_decompressor());

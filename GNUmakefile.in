@@ -50,6 +50,10 @@ pkgconfigdir		= $(libdir)/pkgconfig
 CCP4DIR				= @CCP4@
 CLIBD				= $(CCP4DIR:%=%/lib/data)
 
+# place to store our static data:
+DATADIR				= $(datadir)/$(LIB_NAME)
+DEFINES				+= DATADIR='"$(DATADIR)"'
+
 GNUmakefile: config.status GNUmakefile.in
 	$(SHELL) ./config.status
 
@@ -94,9 +98,6 @@ else
 CXXFLAGS			+= -O2
 DEFINES				+= NDEBUG
 endif
-
-MRC					= @MRC@
-USE_RSRC			= @USE_RSRC@
 
 # targets
 
@@ -154,9 +155,8 @@ src/revision.hpp:
 
 endif
 
-$(OBJDIR)/CifUtils.o: src/revision.hpp
+$(OBJDIR)/CifUtils.o $(OBJDIR)/CifUtils.lo: src/revision.hpp
 
-$(OBJDIR)/CifUtils.lo: src/revision.hpp
 $(LIB_TARGET): $(OBJECTS)
 	$(CXXLINK) -rpath $(libdir) $(OBJECTS) $(LIBS)
 
@@ -191,6 +191,8 @@ distclean: clean
 
 # Test rules
 
+unit-test_ENV = BOND_INFO_FILE=${CURDIR}/rsrc/bond-info.bin.gz
+
 define TEST_template =
 
 -include $$(OBJDIR)/$(1)-test.d
@@ -203,7 +205,7 @@ test/$(1)-test: $(LIB_TARGET) $$($(1)_OBJECTS)
 
 .PHONY: $(1)-test
 $(1)-test: test/$(1)-test
-	cd test; LD_LIBRARY_PATH=../.libs ./$(1)-test $$($(1)_PARAMS)
+	cd test; $$($(1)-test_ENV) LD_LIBRARY_PATH=../.libs ./$(1)-test
 
 endef
 
@@ -240,13 +242,15 @@ HEADERS = \
 	Symmetry-2.hpp
 
 .PHONY: install
-install: lib
+install: lib rsrc/bond-info.bin.gz
 	install -d $(libdir)
 	$(LIBTOOL) --mode=install install $(LIB_TARGET) $(libdir)
 	install -d $(includedir)/pdb-redo
 	for f in $(HEADERS); do install include/pdb-redo/$$f $(includedir)/pdb-redo/$$f; done
 	install -d $(pkgconfigdir)
 	install -m 644 $(LIB_NAME).pc $(pkgconfigdir)/$(LIB_NAME).pc
+	install -d $(DATADIR)
+	install -m 644 rsrc/bond-info.bin.gz $(DATADIR)/bond-info.bin
 
 dist-clean: clean
 
