@@ -18603,7 +18603,7 @@ if  test "x${HAVE_DLIB}" = "x" && test "x${HAVE_NEWUOA}" = "x" ; then :
 
 fi
 
-ac_config_files="$ac_config_files GNUmakefile"
+ac_config_files="$ac_config_files GNUmakefile libpdb-redo.pc"
 
 cat >confcache <<\_ACEOF
 # This file is a shell script that caches the results of configure
@@ -19688,6 +19688,7 @@ do
     "src/config.hpp") CONFIG_HEADERS="$CONFIG_HEADERS src/config.hpp" ;;
     "libtool") CONFIG_COMMANDS="$CONFIG_COMMANDS libtool" ;;
     "GNUmakefile") CONFIG_FILES="$CONFIG_FILES GNUmakefile" ;;
+    "libpdb-redo.pc") CONFIG_FILES="$CONFIG_FILES libpdb-redo.pc" ;;
 
   *) as_fn_error $? "invalid argument: \`$ac_config_target'" "$LINENO" 5;;
   esac

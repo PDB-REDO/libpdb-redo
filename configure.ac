@@ -253,4 +253,5 @@ AS_IF([ test "x${HAVE_DLIB}" = "x" && test "x${HAVE_NEWUOA}" = "x" ], [
 ])
 
 dnl Process Makefile.in to create Makefile
-AC_OUTPUT([GNUmakefile])
+AC_OUTPUT([GNUmakefile
+           libpdb-redo.pc])
