@@ -29,6 +29,8 @@
 #include <fstream>
 #include <algorithm>
 
+#include <endian.h>
+
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
@@ -39,6 +41,12 @@
 #include "pdb-redo/BondMap.hpp"
 #if USE_RSRC
 #include "mrsrc.hpp"
+#endif
+
+#if HAVE_ENDIAN_H
+#include "endian.h"
+#else
+#error "No endian.h, please provide an alternative containing definitions for betoh16 and friends"
 #endif
 
 #ifndef DATADIR
@@ -53,29 +61,99 @@ namespace mmcif
 
 // --------------------------------------------------------------------
 
-uint32_t to_id(const std::string& id)
+namespace
 {
-	assert(id.length() <= 4);
 
-	uint32_t result = 0;
+#if defined htobe16
 
-	for (uint8_t ch: id)
-		result = result << 8 | ch;
+template<typename T, typename> T htobe(T x);
+template<typename T, std::enable_if_t<sizeof(T) == 2, int> = 0> T htobe(T x) { return htobe16(x); }
+template<typename T, std::enable_if_t<sizeof(T) == 4, int> = 0> T htobe(T x) { return htobe32(x); }
+template<typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T htobe(T x) { return htobe64(x); }
 
-	return result;
-}
+template<typename T, typename> T betoh(T x);
+template<typename T, std::enable_if_t<sizeof(T) == 2, int> = 0> T betoh(T x) { return be16toh(x); }
+template<typename T, std::enable_if_t<sizeof(T) == 4, int> = 0> T betoh(T x) { return be32toh(x); }
+template<typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T betoh(T x) { return be64toh(x); }
 
-std::string from_id(uint32_t id)
+#else
+#error "Please implement for your system"
+#endif
+
+union atom_id_type
 {
-	std::string result;
-
-	while (id)
+	atom_id_type() : id_n(0){}
+	atom_id_type(const atom_id_type& rhs) : id_n(rhs.id_n) {}
+	atom_id_type(const std::string& s)
+		: atom_id_type()
 	{
-		result.insert(result.begin(), static_cast<char>(id & 0x0ff));
-		id >>= 8;
+		assert(s.length() <= 4);
+		if (s.length() > 4)
+			throw BondMapException("Atom ID '" + s + "' is too long");
+		std::copy(s.begin(), s.end(), id_s);
 	}
 
-	return result;
+	atom_id_type& operator=(const atom_id_type& rhs)
+	{
+		id_n = rhs.id_n;
+		return *this;
+	}
+
+	atom_id_type& operator=(const std::string& s)
+	{
+		id_n = 0;
+		assert(s.length() <= 4);
+		if (s.length() > 4)
+			throw BondMapException("Atom ID '" + s + "' is too long");
+		std::copy(s.begin(), s.end(), id_s);
+		return *this;
+	}
+
+	bool operator<(const atom_id_type& rhs) const
+	{
+		return betoh(id_n) < betoh(rhs.id_n);
+	}
+
+	bool operator<=(const atom_id_type& rhs) const
+	{
+		return betoh(id_n) <= betoh(rhs.id_n);
+	}
+
+	bool operator==(const atom_id_type& rhs) const
+	{
+		return betoh(id_n) == betoh(rhs.id_n);
+	}
+
+	char		id_s[4];
+	uint32_t	id_n;
+};
+
+static_assert(sizeof(atom_id_type) == 4, "atom_id_type should be 4 bytes");
+
+std::ostream& operator<<(std::ostream& os, const atom_id_type& id)
+{
+	os.write(id.id_s, 4);
+	return os;
+}
+
+std::istream& operator>>(std::istream& is, atom_id_type& id)
+{
+	is.read(id.id_s, 4);
+	return is;
+}
+
+template<typename T> std::ostream& write(std::ostream& os, T v)
+{
+	v = htobe(v);
+	os.write(reinterpret_cast<const char*>(&v), sizeof(v));
+	return os;
+}
+
+template<typename T> std::istream& read(std::istream& is, T& v)
+{
+	is.read(reinterpret_cast<char*>(&v), sizeof(v));
+	v = htobe(v);
+	return is;
 }
 
 // --------------------------------------------------------------------
@@ -89,12 +167,60 @@ struct CompoundBondInfoFileHeader
 	uint64_t	dataSize;
 };
 
+std::ostream& operator<<(std::ostream& os, CompoundBondInfoFileHeader header)
+{
+	os.write(header.signature, 4);
+	
+	write(os, header.headerSize);
+	write(os, header.indexEntries);
+	write(os, header.atomEntries);
+	write(os, header.dataSize);
+	
+	return os;
+}
+
+std::istream& operator>>(std::istream& is, CompoundBondInfoFileHeader& header)
+{
+	is.read(header.signature, 4);
+	
+	read(is, header.headerSize);
+	read(is, header.indexEntries);
+	read(is, header.atomEntries);
+	read(is, header.dataSize);
+	
+	return is;
+}
+
 struct CompoundBondInfo
 {
-	uint32_t	id;
-	uint32_t	nrOfAtoms;
-	int64_t		dataOffset;
+	atom_id_type	id;
+	uint32_t		nrOfAtoms;
+	int64_t			dataOffset;
 };
+
+std::ostream& operator<<(std::ostream& os, CompoundBondInfo info)
+{
+	os << info.id;
+	
+	write(os, info.nrOfAtoms);
+	write(os, info.dataOffset);
+	
+	return os;
+}
+
+std::istream& operator>>(std::istream& is, CompoundBondInfo& info)
+{
+	is >> info.id;
+	
+	read(is, info.nrOfAtoms);
+	read(is, info.dataOffset);
+	
+	return is;
+}
+
+}
+
+// --------------------------------------------------------------------
 
 void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 {
@@ -104,8 +230,8 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 
 	cif::File infile(components);
 
-	std::set<uint32_t> atomIDs;
-	std::vector<uint32_t> compoundIDs;
+	std::set<atom_id_type> atomIDs;
+	std::vector<atom_id_type> compoundIDs;
 
 	for (auto& db: infile)
 	{
@@ -119,11 +245,11 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 
 		for (const auto& [atom_id_1, atom_id_2]: chem_comp_bond->rows<std::string,std::string>({"atom_id_1", "atom_id_2"}))
 		{
-			atomIDs.insert(to_id(atom_id_1));
-			atomIDs.insert(to_id(atom_id_2));
+			atomIDs.insert(atom_id_1);
+			atomIDs.insert(atom_id_2);
 		}
 
-		compoundIDs.push_back(to_id(db.getName()));
+		compoundIDs.push_back({ db.getName() });
 	}
 
 	if (cif::VERBOSE)
@@ -134,17 +260,17 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 	header.indexEntries = compoundIDs.size();
 	header.atomEntries = atomIDs.size();
 
-	outfile.write(reinterpret_cast<char*>(&header), sizeof(header));
+	outfile << header;
 	
 	for (auto atomID: atomIDs)
-		outfile.write(reinterpret_cast<char*>(&atomID), sizeof(uint32_t));
+		outfile << atomID;
 
 	auto dataOffset = outfile.tellp();
 
 	std::vector<CompoundBondInfo> entries;
 	entries.reserve(compoundIDs.size());
 
-	std::map<uint32_t, uint16_t> atomIDMap;
+	std::map<atom_id_type, uint16_t> atomIDMap;
 	for (auto& atomID: atomIDs)
 		atomIDMap[atomID] = atomIDMap.size();
 
@@ -158,8 +284,8 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 
 		for (const auto& [atom_id_1, atom_id_2]: chem_comp_bond->rows<std::string,std::string>({"atom_id_1", "atom_id_2"}))
 		{
-			bondedAtoms.insert(atomIDMap[to_id(atom_id_1)]);
-			bondedAtoms.insert(atomIDMap[to_id(atom_id_2)]);
+			bondedAtoms.insert(atomIDMap[atom_id_1]);
+			bondedAtoms.insert(atomIDMap[atom_id_2]);
 		}
 
 		std::map<uint16_t, int32_t> bondedAtomMap;
@@ -167,7 +293,7 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 			bondedAtomMap[id] = static_cast<int32_t>(bondedAtomMap.size());
 		
 		CompoundBondInfo info = {
-			to_id(db.getName()),
+			db.getName(),
 			static_cast<uint32_t>(bondedAtomMap.size()),
 			outfile.tellp() - dataOffset
 		};
@@ -175,11 +301,11 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 		entries.push_back(info);
 
 		// An now first write the array of atom ID's in this compound
-		std::vector<uint16_t> atoms(bondedAtoms.begin(), bondedAtoms.end());
-		outfile.write(reinterpret_cast<char*>(atoms.data()), sizeof(uint16_t) * atoms.size());
+		for (uint16_t id: bondedAtoms)
+			write(outfile, id);
 
 		// And then the symmetric matrix with bonds
-		size_t N = atoms.size();
+		size_t N = bondedAtoms.size();
 		size_t M = (N * (N - 1)) / 2;
 
 		size_t K = M / 8;
@@ -190,8 +316,8 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 
 		for (const auto& [atom_id_1, atom_id_2]: chem_comp_bond->rows<std::string,std::string>({"atom_id_1", "atom_id_2"}))
 		{
-			auto a = bondedAtomMap[atomIDMap[to_id(atom_id_1)]];
-			auto b = bondedAtomMap[atomIDMap[to_id(atom_id_2)]];
+			auto a = bondedAtomMap[atomIDMap[atom_id_1]];
+			auto b = bondedAtomMap[atomIDMap[atom_id_2]];
 
 			assert(a != b);
 			assert((int)b < (int)N);
@@ -218,10 +344,11 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 		return a.id < b.id;
 	});
 
-	outfile.write(reinterpret_cast<char*>(entries.data()), sizeof(CompoundBondInfo) * entries.size());
+	for (auto& info: entries)
+		outfile << info;
 
 	outfile.seekp(0);
-	outfile.write(reinterpret_cast<char*>(&header), sizeof(header));
+	outfile << header;
 }
 
 // --------------------------------------------------------------------
@@ -252,7 +379,7 @@ class CompoundBondMap
 	int32_t compound_index_nr(const std::string& compoundID) const
 	{
 		int32_t L = 0, R = static_cast<int32_t>(m_header.indexEntries) - 1;
-		uint32_t compID = to_id(compoundID);
+		atom_id_type compID = compoundID;
 
 		while (L <= R)
 		{
@@ -279,7 +406,7 @@ class CompoundBondMap
 
 	int32_t atom_nr(const std::string& atomID) const
 	{
-		auto id = to_id(atomID);
+		atom_id_type id = atomID;
 
 		int L = 0, R = m_atom_ids.size() - 1;
 		while (L <= R)
@@ -297,7 +424,7 @@ class CompoundBondMap
 
 	CompoundBondInfoFileHeader m_header;
 	std::vector<CompoundBondInfo> m_compounds;
-	std::vector<uint32_t> m_atom_ids;
+	std::vector<atom_id_type> m_atom_ids;
 	const uint8_t* m_data = nullptr;
 };
 
@@ -333,7 +460,7 @@ void CompoundBondMap::init(std::istream&& is)
 	in.push(io::gzip_decompressor());
 	in.push(is);
 
-	in.read(reinterpret_cast<char*>(&m_header), sizeof(m_header));
+	in >> m_header;
 
 	if (m_header.signature[0] != 'C' or
 		m_header.signature[1] != 'B' or
@@ -343,17 +470,21 @@ void CompoundBondMap::init(std::istream&& is)
 		throw BondMapException("Invalid bond info file");
 
 	m_atom_ids.resize(m_header.atomEntries);
-	in.read(reinterpret_cast<char*>(m_atom_ids.data()), m_header.atomEntries * sizeof(uint32_t));
+	for (auto& id: m_atom_ids)
+		in >> id;
 
 	m_data = new uint8_t[m_header.dataSize];
 	in.read(reinterpret_cast<char*>(const_cast<uint8_t*>(m_data)), m_header.dataSize);
 
 	m_compounds.resize(m_header.indexEntries);
-	in.read(reinterpret_cast<char*>(m_compounds.data()), m_header.indexEntries * sizeof(CompoundBondInfo));
+	for (auto& comp: m_compounds)
+		in >> comp;
 }
 
 bool CompoundBondMap::bonded(int32_t compoundNr, const std::string& atomID1, const std::string& atomID2) const
 {
+	using namespace std::literals;
+
 	bool result = false;
 
 	if (compoundNr >= 0 and compoundNr < static_cast<int32_t>(m_header.indexEntries))
@@ -362,22 +493,25 @@ bool CompoundBondMap::bonded(int32_t compoundNr, const std::string& atomID1, con
 		auto a2 = atom_nr(atomID2);		if (a2 < 0) throw BondMapException("Unknown atom ID " + atomID2);
 
 		auto& comp = m_compounds[compoundNr];
-		auto comp_data = m_data + comp.dataOffset;
+		const uint8_t* comp_data = m_data + comp.dataOffset;
 
-		// memory might be unaligned (yes, I'm old...)
 		std::vector<uint16_t> comp_atoms(comp.nrOfAtoms);
-		std::memcpy(comp_atoms.data(), comp_data, comp.nrOfAtoms * sizeof(uint16_t));
+		for (size_t i = 0; i < comp.nrOfAtoms; ++i)
+		{
+			comp_atoms[i] = *comp_data++ << 8;
+			comp_atoms[i] |= *comp_data++;
+		}
 
-		auto matrix = comp_data + comp.nrOfAtoms * sizeof(uint16_t);
+		auto matrix = comp_data;
 
 		auto i = std::find(comp_atoms.begin(), comp_atoms.end(), a1);
 		if (i == comp_atoms.end())
-			throw BondMapException("Compound " + from_id(compoundNr) + " does not have an atom named " + atomID1);
+			throw BondMapException("Compound "s + comp.id.id_s + " does not have an atom named " + atomID1);
 		auto ix_1 = i - comp_atoms.begin();
 
 		i = std::find(comp_atoms.begin(), comp_atoms.end(), a2);
 		if (i == comp_atoms.end())
-			throw BondMapException("Compound " + from_id(compoundNr) + " does not have an atom named " + atomID2);
+			throw BondMapException("Compound "s + comp.id.id_s + " does not have an atom named " + atomID2);
 		auto ix_2 = i - comp_atoms.begin();
 
 		if (ix_1 > ix_2)
@@ -404,12 +538,15 @@ std::vector<std::string> CompoundBondMap::atomIDsForCompound(const std::string& 
 		auto& comp = m_compounds[comp_nr];
 		auto comp_data = m_data + comp.dataOffset;
 
-		// memory might be unaligned (yes, I'm old...)
 		std::vector<uint16_t> comp_atoms(comp.nrOfAtoms);
-		std::memcpy(comp_atoms.data(), comp_data, comp.nrOfAtoms * sizeof(uint16_t));
+		for (size_t i = 0; i < comp.nrOfAtoms; ++i)
+		{
+			comp_atoms[i] = *comp_data++ << 8;
+			comp_atoms[i] |= *comp_data++;
+		}
 
 		for (auto& compAtom: comp_atoms)
-			result.push_back(from_id(m_atom_ids[compAtom]));
+			result.push_back(m_atom_ids[compAtom].id_s);
 	}
 
 	return result;

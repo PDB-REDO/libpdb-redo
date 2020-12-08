@@ -17545,6 +17545,17 @@ else
 fi
 
 
+ac_fn_cxx_check_header_mongrel "$LINENO" "endian.h" "ac_cv_header_endian_h" "$ac_includes_default"
+if test "x$ac_cv_header_endian_h" = xyes; then :
+
+$as_echo "#define HAVE_ENDIAN_H 1" >>confdefs.h
+
+else
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: The file <endian.h> is missing, the code most likely will not build." >&5
+$as_echo "$as_me: WARNING: The file <endian.h> is missing, the code most likely will not build." >&2;}
+fi
+
+
 
 
 # Check whether --with-cif++ was given.

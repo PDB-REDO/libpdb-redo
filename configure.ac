@@ -56,6 +56,7 @@ AX_BOOST_IOSTREAMS
 dnl AX_BOOST_DATE_TIME
 
 AC_CHECK_HEADER([filesystem], [], [AC_MSG_ERROR([The file <filesystem> is missing, perhaps you should install a more recent libstdc++ implementation.])])
+AC_CHECK_HEADER([endian.h], [AC_DEFINE([HAVE_ENDIAN_H], [1], [Define to 1 if you have the <endian.h> header file.])], [AC_MSG_WARN([The file <endian.h> is missing, the code most likely will not build.])])
 
 AC_ARG_WITH([cif++],
 	AS_HELP_STRING([--with-cif++=@<:@location@:>@],

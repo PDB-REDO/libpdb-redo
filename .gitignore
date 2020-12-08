@@ -6,7 +6,6 @@ obj/
 autom4te.cache/
 .vscode/
 .gdb_history
-GNUmakefile
 src/config.hpp
 src/config.hpp.in~
 src/revision.hpp
@@ -14,3 +13,4 @@ src/revision.hpp
 aclocal.m4
 libpdb-redo.la
 data/
+GNUmakefile
