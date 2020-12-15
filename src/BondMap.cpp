@@ -534,6 +534,8 @@ std::vector<std::string> CompoundBondMap::atomIDsForCompound(const std::string& 
 	std::vector<std::string> result;
 
 	auto comp_nr = compound_index_nr(compoundID);
+
+	if (comp_nr >= 0)
 	{
 		auto& comp = m_compounds[comp_nr];
 		auto comp_data = m_data + comp.dataOffset;
@@ -548,6 +550,8 @@ std::vector<std::string> CompoundBondMap::atomIDsForCompound(const std::string& 
 		for (auto& compAtom: comp_atoms)
 			result.push_back(m_atom_ids[compAtom].id_s);
 	}
+	else if (cif::VERBOSE)
+		std::cerr << "Missing compound bond info for " << compoundID << std::endl;
 
 	return result;
 }
