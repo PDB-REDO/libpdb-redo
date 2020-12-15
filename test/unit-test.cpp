@@ -416,6 +416,9 @@ BOOST_AUTO_TEST_CASE(stats_1)
 
 		auto t = *ti++;
 
+		if (std::isnan(t.RSCCS))
+			continue;
+
 		BOOST_TEST(ri.asymID == t.asymID);
 		BOOST_TEST(ri.compID == t.compID);
 
