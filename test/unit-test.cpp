@@ -102,7 +102,7 @@ struct TestRadius {
 	{ "C", 0.9176003932952880859f }
 };
 
-BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001))
+BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 {
 	const fs::path example("../examples/1cbs.cif.gz");
 

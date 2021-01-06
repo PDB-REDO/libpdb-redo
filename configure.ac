@@ -9,7 +9,7 @@ AX_CXX_COMPILE_STDCXX_17([noext])
 AC_CONFIG_SRCDIR([src/AtomShape.cpp])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADERS([src/config.hpp])
-# AC_CONFIG_MACRO_DIR([config/m4])
+AC_CONFIG_MACRO_DIR([config/m4])
 
 AC_PREFIX_DEFAULT(/usr/local)
 
@@ -40,9 +40,28 @@ AC_ARG_VAR([DEBUG], [Build a debug version of the application])
 
 AX_CHECK_COMPILE_FLAG([-fstandalone-debug], , , [-Werror])
 
-AC_PATH_PROG([PKG_CONFIG], [pkg-config])
-AC_PATH_PROG([MRC], [mrc], [USE_RSRC=1])
-AS_IF([ test "x$MRC" != "x" ], [AC_DEFINE([USE_RSRC], [1], [Using mrc for compiling in resources])])
+PKG_PROG_PKG_CONFIG
+
+dnl using resources?
+USE_RSRC=0
+
+if test "x$MRC" = "x"; then
+	AC_PATH_PROG([MRC], [mrc])
+fi
+
+if test "x$MRC" = "x"; then
+	AC_MSG_WARN([The mrc application was not found, not using resources.])
+else
+	AC_ARG_ENABLE(
+		resources,
+		[AS_HELP_STRING([--enable-resources], [Use mrc to store data in resources])])
+
+	AS_IF([test "x$enable_resources" = "xyes" ], [
+		USE_RSRC=1
+	])
+fi
+
+AC_SUBST([USE_RSRC], [$USE_RSRC])
 
 AC_CHECK_LIB([m], [sin])
 AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_ERROR([the required package gsl-dev is not installed])])
