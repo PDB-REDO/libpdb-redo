@@ -169,6 +169,8 @@ else
 		[],
 		[AC_MSG_ERROR([Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed.])])
 
+		AX_CHECK_LIBRARY([GSLBLAS], [gsl/gsl_version.h], [gslcblas],
+				[], [AC_MSG_ERROR([libgslcblas not found])])
 		AX_CHECK_LIBRARY([GSL], [gsl/gsl_version.h], [gsl],
 				[ GSL_LIBS="-lgsl -lgslcblas -lm" ],
 				[AC_MSG_ERROR([libgsl not found])])

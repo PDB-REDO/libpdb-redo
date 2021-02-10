@@ -658,6 +658,8 @@ ZEEP_LIBS
 ZEEP_CFLAGS
 GSL_LDFLAGS
 GSL_CPPFLAGS
+GSLBLAS_LDFLAGS
+GSLBLAS_CPPFLAGS
 GSL_LIBS
 GSL_CFLAGS
 CIFPP_LDFLAGS
@@ -821,6 +823,8 @@ CIFPP_CPPFLAGS
 CIFPP_LDFLAGS
 GSL_CFLAGS
 GSL_LIBS
+GSLBLAS_CPPFLAGS
+GSLBLAS_LDFLAGS
 GSL_CPPFLAGS
 GSL_LDFLAGS
 ZEEP_CFLAGS
@@ -1543,6 +1547,10 @@ Some influential environment variables:
               linker flags for CIFPP libraries
   GSL_CFLAGS  C compiler flags for GSL, overriding pkg-config
   GSL_LIBS    linker flags for GSL, overriding pkg-config
+  GSLBLAS_CPPFLAGS
+              C preprocessor flags for GSLBLAS headers
+  GSLBLAS_LDFLAGS
+              linker flags for GSLBLAS libraries
   GSL_CPPFLAGS
               C preprocessor flags for GSL headers
   GSL_LDFLAGS linker flags for GSL libraries
@@ -18338,6 +18346,87 @@ else
 fi
 
 
+
+
+
+
+
+  if ${ax_cv_have_GSLBLAS+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  save_CPPFLAGS="$CPPFLAGS"
+     save_LDFLAGS="$LDFLAGS"
+     save_LIBS="$LIBS"
+
+     if test "x$GSLBLAS_CPPFLAGS" != "x"; then :
+  CPPFLAGS="$CPPFLAGS $GSLBLAS_CPPFLAGS"
+fi
+
+     if test "x$GSLBLAS_LDFLAGS" != "x"; then :
+  LDFLAGS="$LDFLAGS $GSLBLAS_LDFLAGS"
+fi
+
+     ac_fn_cxx_check_header_mongrel "$LINENO" "gsl/gsl_version.h" "ac_cv_header_gsl_gsl_version_h" "$ac_includes_default"
+if test "x$ac_cv_header_gsl_gsl_version_h" = xyes; then :
+
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lgslcblas" >&5
+$as_echo_n "checking for main in -lgslcblas... " >&6; }
+if ${ac_cv_lib_gslcblas_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgslcblas  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_gslcblas_main=yes
+else
+  ac_cv_lib_gslcblas_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gslcblas_main" >&5
+$as_echo "$ac_cv_lib_gslcblas_main" >&6; }
+if test "x$ac_cv_lib_gslcblas_main" = xyes; then :
+  ax_cv_have_GSLBLAS=yes
+else
+  ax_cv_have_GSLBLAS=no
+fi
+
+
+else
+  ax_cv_have_GSLBLAS=no
+fi
+
+
+
+     CPPFLAGS="$save_CPPFLAGS"
+     LDFLAGS="$save_LDFLAGS"
+     LIBS="$save_LIBS"
+
+fi
+
+
+  if test "$ax_cv_have_GSLBLAS" = "yes"; then :
+
+$as_echo "#define HAVE_GSLBLAS 1" >>confdefs.h
+
+
+else
+  as_fn_error $? "libgslcblas not found" "$LINENO" 5
+fi
 
 
 
