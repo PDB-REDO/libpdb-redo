@@ -23,7 +23,7 @@ AC_DEFUN([read_test], [AC_LANG_SOURCE(
 
 AC_PROG_INSTALL
 
-LT_INIT([pic-only])
+LT_INIT([disable-shared pic-only])
 AC_SUBST(LIBTOOL_DEPS)
 
 dnl versioning, first for libtool
