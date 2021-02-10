@@ -29,8 +29,6 @@
 #include <fstream>
 #include <algorithm>
 
-#include <endian.h>
-
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 
@@ -44,7 +42,9 @@
 #endif
 
 #if HAVE_ENDIAN_H
-#include "endian.h"
+#include <endian.h>
+#elif HAVE_SYS_ENDIAN_H
+#include <sys/endian.h>
 #else
 #error "No endian.h, please provide an alternative containing definitions for betoh16 and friends"
 #endif

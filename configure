@@ -18028,12 +18028,23 @@ if test "x$ac_cv_header_endian_h" = xyes; then :
 
 $as_echo "#define HAVE_ENDIAN_H 1" >>confdefs.h
 
-else
-  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: The file <endian.h> is missing, the code most likely will not build." >&5
-$as_echo "$as_me: WARNING: The file <endian.h> is missing, the code most likely will not build." >&2;}
 fi
 
 
+ac_fn_cxx_check_header_mongrel "$LINENO" "sys/endian.h" "ac_cv_header_sys_endian_h" "$ac_includes_default"
+if test "x$ac_cv_header_sys_endian_h" = xyes; then :
+
+$as_echo "#define HAVE_SYS_ENDIAN_H 1" >>confdefs.h
+
+fi
+
+
+
+if  test "x$HAVE_ENDIAN_H" = "x" && test "x$HAVE_SYS_ENDIAN_H" = "x" ; then :
+  { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: The files <endian.h> and <sys/endian.h> are both missing, the code most likely will not build." >&5
+$as_echo "$as_me: WARNING: The files <endian.h> and <sys/endian.h> are both missing, the code most likely will not build." >&2;}
+
+fi
 
 CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
 LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"

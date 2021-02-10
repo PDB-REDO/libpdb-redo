@@ -114,7 +114,12 @@ AC_TRY_LINK(
 	]
 )
 
-AC_CHECK_HEADER([endian.h], [AC_DEFINE([HAVE_ENDIAN_H], [1], [Define to 1 if you have the <endian.h> header file.])], [AC_MSG_WARN([The file <endian.h> is missing, the code most likely will not build.])])
+AC_CHECK_HEADER([endian.h], [AC_DEFINE([HAVE_ENDIAN_H], [1], [Define to 1 if you have the <endian.h> header file.])])
+AC_CHECK_HEADER([sys/endian.h], [AC_DEFINE([HAVE_SYS_ENDIAN_H], [1], [Define to 1 if you have the <sys/endian.h> header file.])])
+
+AS_IF([ test "x$HAVE_ENDIAN_H" = "x" && test "x$HAVE_SYS_ENDIAN_H" = "x" ], 
+	[AC_MSG_WARN([The files <endian.h> and <sys/endian.h> are both missing, the code most likely will not build.])]
+)
 
 CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
 LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"
