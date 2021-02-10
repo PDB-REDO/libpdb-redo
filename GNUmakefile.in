@@ -28,8 +28,8 @@
 firstTarget: all
 
 CXX					= @CXX@
-CXXFLAGS			= @CXXFLAGS@ @CPPFLAGS@ @PTHREAD_CFLAGS@ @CIFPP_CFLAGS@ @GSL_CFLAGS@ @DLIB_CFLAGS@ @NEWUOA_CFLAGS@
-LDFLAGS				= @LDFLAGS@ @PTHREAD_CFLAGS@
+CXXFLAGS			= @CXXFLAGS@ @BOOST_CPPFLAGS@ @CPPFLAGS@ @PTHREAD_CFLAGS@ @CIFPP_CFLAGS@ @GSL_CFLAGS@ @DLIB_CFLAGS@ @NEWUOA_CFLAGS@
+LDFLAGS				= @LDFLAGS@ @PTHREAD_CFLAGS@ @BOOST_LDFLAGS@
 LIBS				= @CIFPP_LIBS@ \
 					  @ZEEP_LIBS@ \
 					  @GSL_LIBS@ \
@@ -37,6 +37,8 @@ LIBS				= @CIFPP_LIBS@ \
 					  @NEWUOA_LIBS@ \
 					  @CLIPPER_LIBS@ \
 					  @BOOST_IOSTREAMS_LIB@ \
+					  @BOOST_DATE_TIME_LIB@ \
+					  @BOOST_REGEX_LIB@ \
 					  @LIBS@
 
 prefix				= $(DESTDIR)@prefix@
@@ -164,7 +166,7 @@ $(LIB_TARGET): $(OBJECTS)
 lib: $(LIB_TARGET)
 
 .PHONY: all
-all: $(LIB_TARGET)
+all: lib rsrc/bond-info.bin.gz
 
 -include $(OBJECTS:%.lo=%.d)
 
@@ -217,9 +219,10 @@ $(foreach part,$(TESTS),$(eval $(call TEST_template,$(part))))
 test: $(TESTS:%=%-test)
 
 data/components.cif.gz:
+	mkdir -p data
 	wget -O $@ ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif.gz
 
-rsrc/bond-info.bin.gz: lib data tools/make-bond-info data/components.cif.gz
+rsrc/bond-info.bin.gz: tools/make-bond-info data/components.cif.gz
 	LD_LIBRARY_PATH=.libs tools/make-bond-info data/components.cif.gz rsrc/bond-info.bin
 	gzip -f rsrc/bond-info.bin
 
@@ -241,7 +244,7 @@ HEADERS = \
 	Symmetry-2.hpp
 
 .PHONY: install
-install: lib rsrc/bond-info.bin.gz
+install: all
 	install -d $(libdir)
 	$(LIBTOOL) --mode=install install $(LIB_TARGET) $(libdir)
 	install -d $(includedir)/pdb-redo

@@ -3,13 +3,19 @@
 /* define if the Boost library is available */
 #undef HAVE_BOOST
 
+/* define if the Boost::Date_Time library is available */
+#undef HAVE_BOOST_DATE_TIME
+
 /* define if the Boost::IOStreams library is available */
 #undef HAVE_BOOST_IOSTREAMS
 
-/* Use CIFPP */
+/* define if the Boost::Regex library is available */
+#undef HAVE_BOOST_REGEX
+
+/* Define to 1 if CIFPP is found */
 #undef HAVE_CIFPP
 
-/* Use libclipper */
+/* Define to 1 if CLIPPER is found */
 #undef HAVE_CLIPPER
 
 /* define if the compiler supports basic C++17 syntax */
@@ -27,8 +33,14 @@
 /* Define to 1 if you have the <inttypes.h> header file. */
 #undef HAVE_INTTYPES_H
 
+/* Define to 1 if LIBBZ2 is found */
+#undef HAVE_LIBBZ2
+
 /* Define to 1 if you have the `m' library (-lm). */
 #undef HAVE_LIBM
+
+/* Define to 1 if LIBZ is found */
+#undef HAVE_LIBZ
 
 /* Define to 1 if you have the <memory.h> header file. */
 #undef HAVE_MEMORY_H
@@ -63,7 +75,7 @@
 /* Define to 1 if you have the <unistd.h> header file. */
 #undef HAVE_UNISTD_H
 
-/* Use libzeep */
+/* Define to 1 if ZEEP is found */
 #undef HAVE_ZEEP
 
 /* Define to the sub-directory where libtool stores uninstalled libraries. */
@@ -93,3 +105,6 @@
 
 /* Define to 1 if you have the ANSI C header files. */
 #undef STDC_HEADERS
+
+/* Use mrc to store resources */
+#undef USE_RSRC

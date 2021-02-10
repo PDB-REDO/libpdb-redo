@@ -263,7 +263,7 @@ clipper::Spgr_descr GetCCP4SpacegroupDescr(int nr)
 
 // --------------------------------------------------------------------
 
-std::string describe_rt_operation(const clipper::Spacegroup& spacegroup, const clipper::Cell& cell, const clipper::RTop_orth& rt)
+std::string describeRToperation(const clipper::Spacegroup& spacegroup, const clipper::Cell& cell, const clipper::RTop_orth& rt)
 {
 	if (not (rt.is_null() or rt.equals(clipper::RTop_orth::identity(), 0.0001f)))
 	{
@@ -321,7 +321,7 @@ mmcif::Atom symmetryCopy(const mmcif::Atom& atom, const mmcif::Point& d,
 	loc = toPoint(toClipper(loc).transform(rt));
 	loc -= d;
 
-	std::string rt_operation = describe_rt_operation(spacegroup, cell, rt);
+	std::string rt_operation = describeRToperation(spacegroup, cell, rt);
 
 	return mmcif::Atom(atom, loc, rt_operation);
 }

@@ -6,6 +6,11 @@ dnl Switch to a decent C++ compiler, and check if it works.
 AC_LANG(C++)
 AX_CXX_COMPILE_STDCXX_17([noext])
 
+AX_CHECK_COMPILE_FLAG([-fstandalone-debug],
+	[
+		CXXFLAGS="$CXXFLAGS -fstandalone-debug"
+	] , , [-Werror])
+
 AC_CONFIG_SRCDIR([src/AtomShape.cpp])
 AC_CONFIG_AUX_DIR([config])
 AC_CONFIG_HEADERS([src/config.hpp])
@@ -18,7 +23,7 @@ AC_DEFUN([read_test], [AC_LANG_SOURCE(
 
 AC_PROG_INSTALL
 
-LT_INIT
+LT_INIT([pic-only])
 AC_SUBST(LIBTOOL_DEPS)
 
 dnl versioning, first for libtool
@@ -38,7 +43,7 @@ AC_SUBST(LIBPDB_REDO_SEMANTIC_VERSION)
 
 AC_ARG_VAR([DEBUG], [Build a debug version of the application])
 
-AX_CHECK_COMPILE_FLAG([-fstandalone-debug], , , [-Werror])
+AC_ARG_VAR([MRC], [Specify a location for the mrc executable])
 
 PKG_PROG_PKG_CONFIG
 
@@ -54,14 +59,27 @@ if test "x$MRC" = "x"; then
 else
 	AC_ARG_ENABLE(
 		resources,
-		[AS_HELP_STRING([--enable-resources], [Use mrc to store data in resources])])
+		[AS_HELP_STRING([--disable-resources], [Use mrc to store data in resources])])
 
-	AS_IF([test "x$enable_resources" = "xyes" ], [
+	AS_IF([test "x$enable_resources" != "xno" ], [
 		USE_RSRC=1
 	])
 fi
 
 AC_SUBST([USE_RSRC], [$USE_RSRC])
+
+AC_DEFINE_UNQUOTED([USE_RSRC], [$USE_RSRC], [Use mrc to store resources])
+
+dnl revision numbering is something used internally at the NKI
+AC_ARG_ENABLE(
+	revision,
+	[AS_HELP_STRING([--enable-revision], [Create a build number as revision])])
+
+AS_IF([test "x$enable_revision" = "xyes" ], [
+	UPDATE_REVISION=1
+])
+
+AC_SUBST([UPDATE_REVISION], [$UPDATE_REVISION])
 
 AC_CHECK_LIB([m], [sin])
 AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_ERROR([the required package gsl-dev is not installed])])
@@ -72,10 +90,35 @@ AX_BOOST_BASE([1.71], [], [
 	AC_MSG_ERROR([Sorry, your boost is not found or not up-to-date.])
 ])
 AX_BOOST_IOSTREAMS
-dnl AX_BOOST_DATE_TIME
+AX_BOOST_DATE_TIME
+AX_BOOST_REGEX
+
 
 AC_CHECK_HEADER([filesystem], [], [AC_MSG_ERROR([The file <filesystem> is missing, perhaps you should install a more recent libstdc++ implementation.])])
+
+dnl check if we need stdc++fs as library
+AC_TRY_LINK(
+	[#include <filesystem>],
+	[(void)std::filesystem::current_path();],
+	[],
+	[
+		LIBS="$LIBS -lstdc++fs"
+
+		AC_TRY_LINK(
+			[#include <filesystem>],
+			[(void)std::filesystem::current_path();],
+			[],
+			[
+				AC_MSG_ERROR([Could not link filesystem])
+			]
+		)
+	]
+)
+
 AC_CHECK_HEADER([endian.h], [AC_DEFINE([HAVE_ENDIAN_H], [1], [Define to 1 if you have the <endian.h> header file.])], [AC_MSG_WARN([The file <endian.h> is missing, the code most likely will not build.])])
+
+CPPFLAGS="$CPPFLAGS $BOOST_CPPFLAGS"
+LDFLAGS="$LDFLAGS $BOOST_LDFLAGS"
 
 AC_ARG_WITH([cif++],
 	AS_HELP_STRING([--with-cif++=@<:@location@:>@],
@@ -86,18 +129,21 @@ AC_ARG_WITH([cif++],
 			])
 			CIFPP_CFLAGS="-I ${withval}/include"
 			CIFPP_LIBS="-L${withval}/.libs -lcifpp"
+			CIFPP_RSRC="${withval}/rsrc"
 
 			AC_SUBST([CIFPP_CFLAGS], [$CIFPP_CFLAGS])
 			AC_SUBST([CIFPP_LIBS], [$CIFPP_LIBS])
 		])
 
+AC_SUBST([CIFPP_RSRC], [$CIFPP_RSRC])
+
 AS_IF([test "x$CIFPP_LIBS" = "x"], [
 	if test -x "$PKG_CONFIG"
 	then
-		AX_PKG_CHECK_MODULES([CIFPP], [libcifpp], [], [], [AC_MSG_ERROR([the required package libcif++ is not installed])])
+		AX_PKG_CHECK_MODULES([CIFPP], [libcifpp], [], [], [AC_MSG_ERROR([the required package libcifpp is not installed])])
 	else
 		AC_CHECK_HEADER(
-	        [cif++/Config.hpp],
+	        [cif++/Cif++.hpp],
 	        [
 				dnl CIFPP_CFLAGS="-I ${withval}/include"
 			],
@@ -106,15 +152,13 @@ Can't find the libcif++ header, Config.hpp.  Make sure that it
 is installed, and either use the --with-cif++ option or install
 pkg-config.])])
 
-			AX_CHECK_LIBRARY([CIFPP], [cif++/Config.hpp], [cifpp],
+			AX_CHECK_LIBRARY([CIFPP], [cif++/Cif++.hpp], [cifpp],
 				 [
 					 LIBS="-lcifpp $LIBS"
 				 ],
                  [AC_MSG_ERROR([libcif++ not found])])
 	fi
 ])
-
-AC_DEFINE([HAVE_CIFPP], [1], [Use CIFPP])
 
 dnl Check for libzeep
 
@@ -151,8 +195,6 @@ pkg-config.])])
 					[AC_MSG_ERROR([libzeep not found])])
 	fi
 ])
-
-AC_DEFINE([HAVE_ZEEP], [1], [Use libzeep])
 
 AC_ARG_VAR([CCP4], [The location where CCP4 is installed])
 
@@ -238,7 +280,6 @@ AC_COMPILE_IFELSE(
 	[AC_MSG_RESULT([ok])],
 	[AC_MSG_ERROR([The version of clipper is not up to date])])
 
-AC_DEFINE([HAVE_CLIPPER], [1], [Use libclipper])
 
 AX_CHECK_LIBRARY([DLIB], [dlib/global_optimization.h], [dlib],
 		[
@@ -273,6 +314,16 @@ fi
 AS_IF([ test "x${HAVE_DLIB}" = "x" && test "x${HAVE_NEWUOA}" = "x" ], [
 	AC_MSG_ERROR([Either libnewuoa-dev or libdlib-dev should be installed])
 ])
+
+dnl These are still needed outside the Debian environment
+AX_CHECK_LIBRARY([LIBZ], [zlib.h], [z],
+	[ LIBS="$LIBS -lz" ],
+	[AC_MSG_ERROR([libz not found - compressed files not supported])])
+AX_CHECK_LIBRARY([LIBBZ2], [bzlib.h], [bz2],
+	[ LIBS="$LIBS -lbz2"],
+	[AC_MSG_ERROR([libbz2 not found - compressed files not supported])])
+
+AC_SUBST([LIBS], [$LIBS])
 
 dnl Process Makefile.in to create Makefile
 AC_OUTPUT([GNUmakefile

@@ -28,8 +28,7 @@
 
 #include "cif++/Structure.hpp"
 
-#include <clipper/core/coords.h>
-#include <clipper/core/symop.h>
+#include "pdb-redo/ClipperWrapper.hpp"
 
 // --------------------------------------------------------------------
 // Functions to use when working with symmetry stuff
@@ -42,26 +41,20 @@ std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup& spac
 mmcif::Atom symmetryCopy(const mmcif::Atom& atom, const mmcif::Point& d,
 	const clipper::Spacegroup& spacegroup, const clipper::Cell& cell, const clipper::RTop_orth& rt);
 
+std::string describeRToperation(const clipper::Spacegroup& spacegroup, const clipper::Cell& cell, const clipper::RTop_orth& rt);
+
 // --------------------------------------------------------------------
 // To iterate over all symmetry copies of an atom
 
 class SymmetryAtomIteratorFactory
 {
   public:
-	// SymmetryAtomIteratorFactory(const Structure& p);
-
-	// SymmetryAtomIteratorFactory(const Structure& p, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell)
-	// 	: mSpacegroupNr(spacegroup.spacegroup_number())
-	// 	, mSpacegroup(spacegroup)
-	// 	, mD(CalculateOffsetForCell(p, spacegroup, cell))
-	// 	, mRtOrth(AlternativeSites(spacegroup, cell))
-	// 	, mCell(cell) {}
-
 	SymmetryAtomIteratorFactory(const mmcif::Structure& p, int spacegroupNr, const clipper::Cell& cell);
 
 	SymmetryAtomIteratorFactory(const SymmetryAtomIteratorFactory&) = delete;
 	SymmetryAtomIteratorFactory& operator=(const SymmetryAtomIteratorFactory&) = delete;
 
+	template<typename ConditionFunc>
 	class SymmetryAtomIterator : public std::iterator<std::forward_iterator_tag, const mmcif::Atom>
 	{
 	  public:
@@ -69,17 +62,21 @@ class SymmetryAtomIteratorFactory
 		typedef typename baseType::pointer									pointer;
 		typedef typename baseType::reference								reference;
 
-		SymmetryAtomIterator(const SymmetryAtomIteratorFactory& factory, const mmcif::Atom& atom)
-			: m_f(&factory), m_i(0), m_a(atom), m_c(atom) {}
+		SymmetryAtomIterator(const SymmetryAtomIteratorFactory& factory, const mmcif::Atom& atom, ConditionFunc& cond)
+			: m_f(&factory), m_i(0), m_a(atom), m_c(atom), m_cond(cond)
+		{
+			while (not test() and m_i < m_f->mRtOrth.size())
+				++m_i;
+		}
 
-		SymmetryAtomIterator(const SymmetryAtomIteratorFactory& factory, const mmcif::Atom& atom, int)
-			: SymmetryAtomIterator(factory, atom)
+		SymmetryAtomIterator(const SymmetryAtomIteratorFactory& factory, const mmcif::Atom& atom, ConditionFunc& cond, int)
+			: SymmetryAtomIterator(factory, atom, cond)
 		{
 			m_i = m_f->mRtOrth.size();
 		}
 
 		SymmetryAtomIterator(const SymmetryAtomIterator& iter)
-			: m_f(iter.m_f), m_i(iter.m_i), m_a(iter.m_a), m_c(iter.m_c) {}
+			: m_f(iter.m_f), m_i(iter.m_i), m_a(iter.m_a), m_c(iter.m_c), m_cond(iter.m_cond) {}
 
 		SymmetryAtomIterator& operator=(const SymmetryAtomIterator& iter)
 		{
@@ -98,8 +95,13 @@ class SymmetryAtomIteratorFactory
 
 		SymmetryAtomIterator operator++()
 		{
-			if (++m_i < m_f->mRtOrth.size())
-				m_c = symmetryCopy(m_a, m_f->mD, m_f->mSpacegroup, m_f->mCell, m_f->mRtOrth[m_i]);
+			while (m_i < m_f->mRtOrth.size())
+			{
+				++m_i;
+				if (test())
+					break;
+			}
+
 			return *this;
 		}
 
@@ -121,35 +123,64 @@ class SymmetryAtomIteratorFactory
 		}
 
 	  private:
+
+		bool test()
+		{
+			bool result = false;
+
+			if (m_i < m_f->mRtOrth.size())
+			{
+				auto& rt = m_f->mRtOrth[m_i];
+				auto loc = m_a.location();
+
+				loc += m_f->mD;
+				loc = toPoint(toClipper(loc).transform(rt));
+				loc -= m_f->mD;
+
+				if (m_cond(loc))
+				{
+					std::string rt_operation = describeRToperation(m_f->mSpacegroup, m_f->mCell, rt);
+					m_c = mmcif::Atom(m_a, loc, rt_operation);
+					result = true;
+				}
+			}
+
+			return result;
+		}
+
 		const SymmetryAtomIteratorFactory* m_f;
 		size_t m_i;
 		mmcif::Atom m_a, m_c;
+		ConditionFunc& m_cond;
 	};
 
+	template<typename ConditionFunc>
 	class SymmetryAtomIteratorRange
 	{
 	  public:
-		SymmetryAtomIteratorRange(const SymmetryAtomIteratorFactory& f, const mmcif::Atom& a)
-			: m_f(f), m_a(a) {}
+		SymmetryAtomIteratorRange(const SymmetryAtomIteratorFactory& f, const mmcif::Atom& a, ConditionFunc&& cond)
+			: m_f(f), m_a(a), m_cond(std::move(cond)) {}
 
-		SymmetryAtomIterator begin()
+		SymmetryAtomIterator<ConditionFunc> begin()
 		{
-			return SymmetryAtomIterator(m_f, m_a);
+			return SymmetryAtomIterator(m_f, m_a, m_cond);
 		}
 
-		SymmetryAtomIterator end()
+		SymmetryAtomIterator<ConditionFunc> end()
 		{
-			return SymmetryAtomIterator(m_f, m_a, 1);
+			return SymmetryAtomIterator(m_f, m_a, m_cond, 1);
 		}
 
 	  private:
 		const SymmetryAtomIteratorFactory& m_f;
 		mmcif::Atom m_a;
+		ConditionFunc m_cond;
 	};
 
-	SymmetryAtomIteratorRange operator()(const mmcif::Atom& a) const
+	template<typename ConditionFunc>
+	SymmetryAtomIteratorRange<ConditionFunc> operator()(const mmcif::Atom& a, ConditionFunc&& cond) const
 	{
-		return SymmetryAtomIteratorRange(*this, a);
+		return SymmetryAtomIteratorRange(*this, a, std::forward<ConditionFunc>(cond));
 	}
 
 	// std::string symop_mmcif(const mmcif::Atom& a) const;

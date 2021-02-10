@@ -14,3 +14,7 @@ aclocal.m4
 libpdb-redo.la
 data/
 GNUmakefile
+.gitignore
+rsrc/bond-info.bin.gz
+tools/make-bond-info
+libtool
