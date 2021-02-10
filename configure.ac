@@ -82,7 +82,6 @@ AS_IF([test "x$enable_revision" = "xyes" ], [
 AC_SUBST([UPDATE_REVISION], [$UPDATE_REVISION])
 
 AC_CHECK_LIB([m], [sin])
-AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_ERROR([the required package gsl-dev is not installed])])
 
 AX_PTHREAD
 
@@ -159,6 +158,21 @@ pkg-config.])])
                  [AC_MSG_ERROR([libcif++ not found])])
 	fi
 ])
+
+dnl check for GSL
+if test -x "$PKG_CONFIG"
+then
+	AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_ERROR([the required package gsl-dev is not installed])])
+else
+	AC_CHECK_HEADER(
+		[gsl/gsl_version.h],
+		[],
+		[AC_MSG_ERROR([Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed.])])
+
+		AX_CHECK_LIBRARY([GSL], [gsl/gsl_version.h], [gsl],
+				[ GSL_LIBS="-lgsl -lgslcblas -lm" ],
+				[AC_MSG_ERROR([libgsl not found])])
+fi
 
 dnl Check for libzeep
 

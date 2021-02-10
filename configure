@@ -656,8 +656,14 @@ ZEEP_LDFLAGS
 ZEEP_CPPFLAGS
 ZEEP_LIBS
 ZEEP_CFLAGS
+GSL_LDFLAGS
+GSL_CPPFLAGS
+GSL_LIBS
+GSL_CFLAGS
 CIFPP_LDFLAGS
 CIFPP_CPPFLAGS
+AX_PACKAGE_REQUIRES_PRIVATE
+AX_PACKAGE_REQUIRES
 CIFPP_RSRC
 CIFPP_LIBS
 CIFPP_CFLAGS
@@ -670,10 +676,6 @@ PTHREAD_CFLAGS
 PTHREAD_LIBS
 PTHREAD_CC
 ax_pthread_config
-AX_PACKAGE_REQUIRES_PRIVATE
-AX_PACKAGE_REQUIRES
-GSL_LIBS
-GSL_CFLAGS
 UPDATE_REVISION
 USE_RSRC
 PKG_CONFIG_LIBDIR
@@ -813,12 +815,14 @@ MRC
 PKG_CONFIG
 PKG_CONFIG_PATH
 PKG_CONFIG_LIBDIR
-GSL_CFLAGS
-GSL_LIBS
 CIFPP_CFLAGS
 CIFPP_LIBS
 CIFPP_CPPFLAGS
 CIFPP_LDFLAGS
+GSL_CFLAGS
+GSL_LIBS
+GSL_CPPFLAGS
+GSL_LDFLAGS
 ZEEP_CFLAGS
 ZEEP_LIBS
 ZEEP_CPPFLAGS
@@ -1530,8 +1534,6 @@ Some influential environment variables:
               directories to add to pkg-config's search path
   PKG_CONFIG_LIBDIR
               path overriding pkg-config's built-in search path
-  GSL_CFLAGS  C compiler flags for GSL, overriding pkg-config
-  GSL_LIBS    linker flags for GSL, overriding pkg-config
   CIFPP_CFLAGS
               C compiler flags for CIFPP, overriding pkg-config
   CIFPP_LIBS  linker flags for CIFPP, overriding pkg-config
@@ -1539,6 +1541,11 @@ Some influential environment variables:
               C preprocessor flags for CIFPP headers
   CIFPP_LDFLAGS
               linker flags for CIFPP libraries
+  GSL_CFLAGS  C compiler flags for GSL, overriding pkg-config
+  GSL_LIBS    linker flags for GSL, overriding pkg-config
+  GSL_CPPFLAGS
+              C preprocessor flags for GSL headers
+  GSL_LDFLAGS linker flags for GSL libraries
   ZEEP_CFLAGS C compiler flags for ZEEP, overriding pkg-config
   ZEEP_LIBS   linker flags for ZEEP, overriding pkg-config
   ZEEP_CPPFLAGS
@@ -16291,89 +16298,6 @@ fi
 
 
 
-    AX_PACKAGE_REQUIRES="$AX_PACKAGE_REQUIRES gsl"
-    AX_PACKAGE_REQUIRES_PRIVATE="$AX_PACKAGE_REQUIRES_PRIVATE "
-
-
-pkg_failed=no
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for GSL" >&5
-$as_echo_n "checking for GSL... " >&6; }
-
-if test -n "$GSL_CFLAGS"; then
-    pkg_cv_GSL_CFLAGS="$GSL_CFLAGS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"gsl \""; } >&5
-  ($PKG_CONFIG --exists --print-errors "gsl ") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_GSL_CFLAGS=`$PKG_CONFIG --cflags "gsl " 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-if test -n "$GSL_LIBS"; then
-    pkg_cv_GSL_LIBS="$GSL_LIBS"
- elif test -n "$PKG_CONFIG"; then
-    if test -n "$PKG_CONFIG" && \
-    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"gsl \""; } >&5
-  ($PKG_CONFIG --exists --print-errors "gsl ") 2>&5
-  ac_status=$?
-  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
-  test $ac_status = 0; }; then
-  pkg_cv_GSL_LIBS=`$PKG_CONFIG --libs "gsl " 2>/dev/null`
-		      test "x$?" != "x0" && pkg_failed=yes
-else
-  pkg_failed=yes
-fi
- else
-    pkg_failed=untried
-fi
-
-
-
-if test $pkg_failed = yes; then
-   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-
-if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
-        _pkg_short_errors_supported=yes
-else
-        _pkg_short_errors_supported=no
-fi
-        if test $_pkg_short_errors_supported = yes; then
-	        GSL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "gsl " 2>&1`
-        else
-	        GSL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "gsl " 2>&1`
-        fi
-	# Put the nasty error message in config.log where it belongs
-	echo "$GSL_PKG_ERRORS" >&5
-
-	as_fn_error $? "the required package gsl-dev is not installed" "$LINENO" 5
-elif test $pkg_failed = untried; then
-     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
-$as_echo "no" >&6; }
-	as_fn_error $? "the required package gsl-dev is not installed" "$LINENO" 5
-else
-	GSL_CFLAGS=$pkg_cv_GSL_CFLAGS
-	GSL_LIBS=$pkg_cv_GSL_LIBS
-        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
-$as_echo "yes" >&6; }
-
-fi
-
-    # Substitute output.
-
-
-
-
-
-
-
 
 ac_ext=c
 ac_cpp='$CPP $CPPFLAGS'
@@ -18317,6 +18241,184 @@ else
 fi
 
 	fi
+
+fi
+
+if test -x "$PKG_CONFIG"
+then
+
+
+
+
+    AX_PACKAGE_REQUIRES="$AX_PACKAGE_REQUIRES gsl"
+    AX_PACKAGE_REQUIRES_PRIVATE="$AX_PACKAGE_REQUIRES_PRIVATE "
+
+
+pkg_failed=no
+{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for GSL" >&5
+$as_echo_n "checking for GSL... " >&6; }
+
+if test -n "$GSL_CFLAGS"; then
+    pkg_cv_GSL_CFLAGS="$GSL_CFLAGS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"gsl \""; } >&5
+  ($PKG_CONFIG --exists --print-errors "gsl ") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_GSL_CFLAGS=`$PKG_CONFIG --cflags "gsl " 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+if test -n "$GSL_LIBS"; then
+    pkg_cv_GSL_LIBS="$GSL_LIBS"
+ elif test -n "$PKG_CONFIG"; then
+    if test -n "$PKG_CONFIG" && \
+    { { $as_echo "$as_me:${as_lineno-$LINENO}: \$PKG_CONFIG --exists --print-errors \"gsl \""; } >&5
+  ($PKG_CONFIG --exists --print-errors "gsl ") 2>&5
+  ac_status=$?
+  $as_echo "$as_me:${as_lineno-$LINENO}: \$? = $ac_status" >&5
+  test $ac_status = 0; }; then
+  pkg_cv_GSL_LIBS=`$PKG_CONFIG --libs "gsl " 2>/dev/null`
+		      test "x$?" != "x0" && pkg_failed=yes
+else
+  pkg_failed=yes
+fi
+ else
+    pkg_failed=untried
+fi
+
+
+
+if test $pkg_failed = yes; then
+   	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+
+if $PKG_CONFIG --atleast-pkgconfig-version 0.20; then
+        _pkg_short_errors_supported=yes
+else
+        _pkg_short_errors_supported=no
+fi
+        if test $_pkg_short_errors_supported = yes; then
+	        GSL_PKG_ERRORS=`$PKG_CONFIG --short-errors --print-errors --cflags --libs "gsl " 2>&1`
+        else
+	        GSL_PKG_ERRORS=`$PKG_CONFIG --print-errors --cflags --libs "gsl " 2>&1`
+        fi
+	# Put the nasty error message in config.log where it belongs
+	echo "$GSL_PKG_ERRORS" >&5
+
+	as_fn_error $? "the required package gsl-dev is not installed" "$LINENO" 5
+elif test $pkg_failed = untried; then
+     	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
+$as_echo "no" >&6; }
+	as_fn_error $? "the required package gsl-dev is not installed" "$LINENO" 5
+else
+	GSL_CFLAGS=$pkg_cv_GSL_CFLAGS
+	GSL_LIBS=$pkg_cv_GSL_LIBS
+        { $as_echo "$as_me:${as_lineno-$LINENO}: result: yes" >&5
+$as_echo "yes" >&6; }
+
+fi
+
+    # Substitute output.
+
+
+
+else
+	ac_fn_cxx_check_header_mongrel "$LINENO" "gsl/gsl_version.h" "ac_cv_header_gsl_gsl_version_h" "$ac_includes_default"
+if test "x$ac_cv_header_gsl_gsl_version_h" = xyes; then :
+
+else
+  as_fn_error $? "Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed." "$LINENO" 5
+fi
+
+
+
+
+
+
+
+  if ${ax_cv_have_GSL+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  save_CPPFLAGS="$CPPFLAGS"
+     save_LDFLAGS="$LDFLAGS"
+     save_LIBS="$LIBS"
+
+     if test "x$GSL_CPPFLAGS" != "x"; then :
+  CPPFLAGS="$CPPFLAGS $GSL_CPPFLAGS"
+fi
+
+     if test "x$GSL_LDFLAGS" != "x"; then :
+  LDFLAGS="$LDFLAGS $GSL_LDFLAGS"
+fi
+
+     ac_fn_cxx_check_header_mongrel "$LINENO" "gsl/gsl_version.h" "ac_cv_header_gsl_gsl_version_h" "$ac_includes_default"
+if test "x$ac_cv_header_gsl_gsl_version_h" = xyes; then :
+
+       { $as_echo "$as_me:${as_lineno-$LINENO}: checking for main in -lgsl" >&5
+$as_echo_n "checking for main in -lgsl... " >&6; }
+if ${ac_cv_lib_gsl_main+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+  ac_check_lib_save_LIBS=$LIBS
+LIBS="-lgsl  $LIBS"
+cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+
+int
+main ()
+{
+return main ();
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ac_cv_lib_gsl_main=yes
+else
+  ac_cv_lib_gsl_main=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+LIBS=$ac_check_lib_save_LIBS
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ac_cv_lib_gsl_main" >&5
+$as_echo "$ac_cv_lib_gsl_main" >&6; }
+if test "x$ac_cv_lib_gsl_main" = xyes; then :
+  ax_cv_have_GSL=yes
+else
+  ax_cv_have_GSL=no
+fi
+
+
+else
+  ax_cv_have_GSL=no
+fi
+
+
+
+     CPPFLAGS="$save_CPPFLAGS"
+     LDFLAGS="$save_LDFLAGS"
+     LIBS="$save_LIBS"
+
+fi
+
+
+  if test "$ax_cv_have_GSL" = "yes"; then :
+
+$as_echo "#define HAVE_GSL 1" >>confdefs.h
+
+     GSL_LIBS="-lgsl -lgslcblas -lm"
+else
+  as_fn_error $? "libgsl not found" "$LINENO" 5
+fi
 
 fi
 
