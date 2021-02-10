@@ -18347,6 +18347,8 @@ fi
 
 
 
+		saved_LIBS="$LIBS"
+
 
 
 
@@ -18423,10 +18425,11 @@ fi
 
 $as_echo "#define HAVE_GSLBLAS 1" >>confdefs.h
 
-
+     LIBS="$LIBS -lgslcblas"
 else
   as_fn_error $? "libgslcblas not found" "$LINENO" 5
 fi
+
 
 
 
@@ -18509,6 +18512,8 @@ else
   as_fn_error $? "libgsl not found" "$LINENO" 5
 fi
 
+
+		LIBS="$saved_LIBS"
 fi
 
 

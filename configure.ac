@@ -169,11 +169,16 @@ else
 		[],
 		[AC_MSG_ERROR([Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed.])])
 
+		saved_LIBS="$LIBS"
+
 		AX_CHECK_LIBRARY([GSLBLAS], [gsl/gsl_version.h], [gslcblas],
-				[], [AC_MSG_ERROR([libgslcblas not found])])
+				[ LIBS="$LIBS -lgslcblas" ], [AC_MSG_ERROR([libgslcblas not found])])
+
 		AX_CHECK_LIBRARY([GSL], [gsl/gsl_version.h], [gsl],
 				[ GSL_LIBS="-lgsl -lgslcblas -lm" ],
 				[AC_MSG_ERROR([libgsl not found])])
+		
+		LIBS="$saved_LIBS"
 fi
 
 dnl Check for libzeep
