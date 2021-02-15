@@ -18026,7 +18026,9 @@ rm -f core conftest.err conftest.$ac_objext \
 ac_fn_cxx_check_header_mongrel "$LINENO" "endian.h" "ac_cv_header_endian_h" "$ac_includes_default"
 if test "x$ac_cv_header_endian_h" = xyes; then :
 
-$as_echo "#define HAVE_ENDIAN_H 1" >>confdefs.h
+	HAVE_ENDIAN_H=1
+
+$as_echo "#define HAVE_ENDIAN_H \$HAVE_ENDIAN_H" >>confdefs.h
 
 fi
 
@@ -18034,13 +18036,15 @@ fi
 ac_fn_cxx_check_header_mongrel "$LINENO" "sys/endian.h" "ac_cv_header_sys_endian_h" "$ac_includes_default"
 if test "x$ac_cv_header_sys_endian_h" = xyes; then :
 
-$as_echo "#define HAVE_SYS_ENDIAN_H 1" >>confdefs.h
+	HAVE_SYS_ENDIAN_H=1
+
+$as_echo "#define HAVE_SYS_ENDIAN_H \$HAVE_SYS_ENDIAN_H" >>confdefs.h
 
 fi
 
 
 
-if  test "x$HAVE_ENDIAN_H" = "x" && test "x$HAVE_SYS_ENDIAN_H" = "x" ; then :
+if  test "x${HAVE_ENDIAN_H}" = "x" && test "x${HAVE_SYS_ENDIAN_H}" = "x" ; then :
   { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: The files <endian.h> and <sys/endian.h> are both missing, the code most likely will not build." >&5
 $as_echo "$as_me: WARNING: The files <endian.h> and <sys/endian.h> are both missing, the code most likely will not build." >&2;}
 
@@ -18786,7 +18790,45 @@ if test x"$CCP4" != x""; then :
 
 	CPPFLAGS="$CPPFLAGS -I ${CCP4}/include"
 	CXXFLAGS="$CXXFLAGS -I ${CCP4}/include"
-	LDFLAGS="$LDFLAGS -L${CCP4}/lib -Wl,-rpath=${CCP4}/lib"
+	LDFLAGS="$LDFLAGS -L${CCP4}/lib"
+
+		{ $as_echo "$as_me:${as_lineno-$LINENO}: checking whether the linker accepts -Wl,-rpath=/tmp" >&5
+$as_echo_n "checking whether the linker accepts -Wl,-rpath=/tmp... " >&6; }
+if ${ax_cv_check_ldflags___Wl__rpath__tmp+:} false; then :
+  $as_echo_n "(cached) " >&6
+else
+
+  ax_check_save_flags=$LDFLAGS
+  LDFLAGS="$LDFLAGS  -Wl,-rpath=/tmp"
+  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
+/* end confdefs.h.  */
+
+int
+main ()
+{
+
+  ;
+  return 0;
+}
+_ACEOF
+if ac_fn_cxx_try_link "$LINENO"; then :
+  ax_cv_check_ldflags___Wl__rpath__tmp=yes
+else
+  ax_cv_check_ldflags___Wl__rpath__tmp=no
+fi
+rm -f core conftest.err conftest.$ac_objext \
+    conftest$ac_exeext conftest.$ac_ext
+  LDFLAGS=$ax_check_save_flags
+fi
+{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $ax_cv_check_ldflags___Wl__rpath__tmp" >&5
+$as_echo "$ax_cv_check_ldflags___Wl__rpath__tmp" >&6; }
+if test "x$ax_cv_check_ldflags___Wl__rpath__tmp" = xyes; then :
+
+		LDFLAGS="$LDFLAGS -Wl,-rpath=${CCP4}/lib"
+else
+  :
+fi
+
 
 	ac_fn_cxx_check_header_mongrel "$LINENO" "clipper/clipper.h" "ac_cv_header_clipper_clipper_h" "$ac_includes_default"
 if test "x$ac_cv_header_clipper_clipper_h" = xyes; then :

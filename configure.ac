@@ -114,10 +114,14 @@ AC_TRY_LINK(
 	]
 )
 
-AC_CHECK_HEADER([endian.h], [AC_DEFINE([HAVE_ENDIAN_H], [1], [Define to 1 if you have the <endian.h> header file.])])
-AC_CHECK_HEADER([sys/endian.h], [AC_DEFINE([HAVE_SYS_ENDIAN_H], [1], [Define to 1 if you have the <sys/endian.h> header file.])])
+AC_CHECK_HEADER([endian.h], [
+	HAVE_ENDIAN_H=1
+	AC_DEFINE([HAVE_ENDIAN_H], [$HAVE_ENDIAN_H], [Define to 1 if you have the <endian.h> header file.])])
+AC_CHECK_HEADER([sys/endian.h], [
+	HAVE_SYS_ENDIAN_H=1
+	AC_DEFINE([HAVE_SYS_ENDIAN_H], [$HAVE_SYS_ENDIAN_H], [Define to 1 if you have the <sys/endian.h> header file.])])
 
-AS_IF([ test "x$HAVE_ENDIAN_H" = "x" && test "x$HAVE_SYS_ENDIAN_H" = "x" ], 
+AS_IF([ test "x${HAVE_ENDIAN_H}" = "x" && test "x${HAVE_SYS_ENDIAN_H}" = "x" ], 
 	[AC_MSG_WARN([The files <endian.h> and <sys/endian.h> are both missing, the code most likely will not build.])]
 )
 
@@ -216,9 +220,9 @@ Can't find the libzeep header, zeep/json/element.hpp.  Make sure that libzeep
 is installed, and either use the --with-zeep option or install
 pkg-config.])])
 
-			AX_CHECK_LIBRARY([ZEEP], [zeep/json/element.hpp], [zeep],
-					[ LIBS="-lzeep $LIBS" ],
-					[AC_MSG_ERROR([libzeep not found])])
+		AX_CHECK_LIBRARY([ZEEP], [zeep/json/element.hpp], [zeep],
+				[ LIBS="-lzeep $LIBS" ],
+				[AC_MSG_ERROR([libzeep not found])])
 	fi
 ])
 
@@ -247,7 +251,11 @@ AS_IF([test x"$CCP4" != x""],
 	[
 	CPPFLAGS="$CPPFLAGS -I ${CCP4}/include"
 	CXXFLAGS="$CXXFLAGS -I ${CCP4}/include"
-	LDFLAGS="$LDFLAGS -L${CCP4}/lib -Wl,-rpath=${CCP4}/lib"
+	LDFLAGS="$LDFLAGS -L${CCP4}/lib"
+
+	dnl since rpath is apparently something that is not ubiquitously available
+	AX_CHECK_LINK_FLAG([-Wl,-rpath=/tmp], [
+		LDFLAGS="$LDFLAGS -Wl,-rpath=${CCP4}/lib"])
 
 	AC_CHECK_HEADER(
 		[clipper/clipper.h],
