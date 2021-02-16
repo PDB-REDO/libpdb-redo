@@ -62,19 +62,7 @@ namespace mmcif
 namespace
 {
 
-#if defined htobe16
-
-template<typename T, typename> T htobe(T x);
-template<typename T, std::enable_if_t<sizeof(T) == 2, int> = 0> T htobe(T x) { return htobe16(x); }
-template<typename T, std::enable_if_t<sizeof(T) == 4, int> = 0> T htobe(T x) { return htobe32(x); }
-template<typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T htobe(T x) { return htobe64(x); }
-
-template<typename T, typename> T betoh(T x);
-template<typename T, std::enable_if_t<sizeof(T) == 2, int> = 0> T betoh(T x) { return be16toh(x); }
-template<typename T, std::enable_if_t<sizeof(T) == 4, int> = 0> T betoh(T x) { return be32toh(x); }
-template<typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T betoh(T x) { return be64toh(x); }
-
-#elif defined(__APPLE__)
+#if defined(__APPLE__)
 
 #include <libkern/OSByteOrder.h>
 
@@ -93,9 +81,24 @@ template<typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T betoh(T x) { r
 #define be64toh(x) OSSwapBigToHostInt64(x)
 #define le64toh(x) OSSwapLittleToHostInt64(x)
 
+#endif
+
+#if defined htobe16
+
+template<typename T, typename> T htobe(T x);
+template<typename T, std::enable_if_t<sizeof(T) == 2, int> = 0> T htobe(T x) { return htobe16(x); }
+template<typename T, std::enable_if_t<sizeof(T) == 4, int> = 0> T htobe(T x) { return htobe32(x); }
+template<typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T htobe(T x) { return htobe64(x); }
+
+template<typename T, typename> T betoh(T x);
+template<typename T, std::enable_if_t<sizeof(T) == 2, int> = 0> T betoh(T x) { return be16toh(x); }
+template<typename T, std::enable_if_t<sizeof(T) == 4, int> = 0> T betoh(T x) { return be32toh(x); }
+template<typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T betoh(T x) { return be64toh(x); }
+
 #else
 #error "Please implement for your system"
 #endif
+
 
 union atom_id_type
 {
