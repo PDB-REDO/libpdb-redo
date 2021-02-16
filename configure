@@ -17969,7 +17969,6 @@ fi
 
 
 
-
 ac_fn_cxx_check_header_mongrel "$LINENO" "filesystem" "ac_cv_header_filesystem" "$ac_includes_default"
 if test "x$ac_cv_header_filesystem" = xyes; then :
 
@@ -18742,50 +18741,6 @@ fi
 
 
 
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <filesystem>
-int
-main ()
-{
-(void)std::filesystem::current_path();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-
-else
-
-		LIBS="$LIBS -lstdc++fs"
-
-		cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <filesystem>
-int
-main ()
-{
-(void)std::filesystem::current_path();
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_cxx_try_link "$LINENO"; then :
-
-else
-
-				as_fn_error $? "Could not link filesystem" "$LINENO" 5
-
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-
-
-fi
-rm -f core conftest.err conftest.$ac_objext \
-    conftest$ac_exeext conftest.$ac_ext
-
 if test x"$CCP4" != x""; then :
 
 	CPPFLAGS="$CPPFLAGS -I ${CCP4}/include"
@@ -18927,7 +18882,6 @@ fi
 
 
 fi
-
 
 
 # Check whether --with-clipper was given.

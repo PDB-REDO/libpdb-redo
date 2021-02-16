@@ -92,7 +92,6 @@ AX_BOOST_IOSTREAMS
 AX_BOOST_DATE_TIME
 AX_BOOST_REGEX
 
-
 AC_CHECK_HEADER([filesystem], [], [AC_MSG_ERROR([The file <filesystem> is missing, perhaps you should install a more recent libstdc++ implementation.])])
 
 dnl check if we need stdc++fs as library
@@ -228,25 +227,6 @@ pkg-config.])])
 
 AC_ARG_VAR([CCP4], [The location where CCP4 is installed])
 
-dnl check if we need stdc++fs as library
-AC_TRY_LINK(
-	[#include <filesystem>],
-	[(void)std::filesystem::current_path();],
-	[],
-	[
-		LIBS="$LIBS -lstdc++fs"
-
-		AC_TRY_LINK(
-			[#include <filesystem>],
-			[(void)std::filesystem::current_path();],
-			[],
-			[
-				AC_MSG_ERROR([Could not link filesystem])
-			]
-		)
-	]
-)
-
 AS_IF([test x"$CCP4" != x""],
 	[
 	CPPFLAGS="$CPPFLAGS -I ${CCP4}/include"
@@ -273,7 +253,6 @@ pkg-config.])])
 	])
 
 dnl Check for libclipper
-
 AC_ARG_WITH([clipper],
 	AS_HELP_STRING([--with-clipper=@<:@location@:>@],
 		[Use the libclipper library as specified.]),
