@@ -45,8 +45,6 @@
 #include <endian.h>
 #elif HAVE_SYS_ENDIAN_H
 #include <sys/endian.h>
-#else
-#error "No endian.h, please provide an alternative containing definitions for betoh16 and friends"
 #endif
 
 #ifndef DATADIR
@@ -64,6 +62,27 @@ namespace mmcif
 namespace
 {
 
+#if defined(__APPLE__)
+
+#include <libkern/OSByteOrder.h>
+
+#define htobe16(x) OSSwapHostToBigInt16(x)
+#define htole16(x) OSSwapHostToLittleInt16(x)
+#define be16toh(x) OSSwapBigToHostInt16(x)
+#define le16toh(x) OSSwapLittleToHostInt16(x)
+
+#define htobe32(x) OSSwapHostToBigInt32(x)
+#define htole32(x) OSSwapHostToLittleInt32(x)
+#define be32toh(x) OSSwapBigToHostInt32(x)
+#define le32toh(x) OSSwapLittleToHostInt32(x)
+
+#define htobe64(x) OSSwapHostToBigInt64(x)
+#define htole64(x) OSSwapHostToLittleInt64(x)
+#define be64toh(x) OSSwapBigToHostInt64(x)
+#define le64toh(x) OSSwapLittleToHostInt64(x)
+
+#endif
+
 #if defined htobe16
 
 template<typename T, typename> T htobe(T x);
@@ -79,6 +98,7 @@ template<typename T, std::enable_if_t<sizeof(T) == 8, int> = 0> T betoh(T x) { r
 #else
 #error "Please implement for your system"
 #endif
+
 
 union atom_id_type
 {
