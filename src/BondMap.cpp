@@ -31,6 +31,7 @@
 
 #include <boost/iostreams/filtering_stream.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/copy.hpp>
 
 #include "cif++/Cif++.hpp"
 #include "cif++/Compound.hpp"
@@ -244,9 +245,9 @@ std::istream& operator>>(std::istream& is, CompoundBondInfo& info)
 
 void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 {
-	std::ofstream outfile(infofile, std::ios::binary);
+	std::ofstream outfile(infofile.string() + ".tmp", std::ios::binary);
 	if (not outfile.is_open())
-		throw BondMapException("Could not create bond info file " + infofile.string());
+		throw BondMapException("Could not create bond info file " + infofile.string() + ".tmp");
 
 	cif::File infile(components);
 
@@ -369,6 +370,24 @@ void createBondInfoFile(const fs::path& components, const fs::path& infofile)
 
 	outfile.seekp(0);
 	outfile << header;
+
+	// compress
+	outfile.close();
+
+	std::ifstream in(infofile.string() + ".tmp", std::ios::binary);
+	std::ofstream out(infofile, std::ios::binary);
+
+	{
+		io::filtering_stream<io::output> os;
+		os.push(io::gzip_compressor());
+		os.push(out);
+		io::copy(in, os);
+	}
+
+	in.close();
+	out.close();
+
+	fs::remove(infofile.string() + ".tmp");
 }
 
 // --------------------------------------------------------------------

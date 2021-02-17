@@ -53,8 +53,8 @@ CCP4DIR				= @CCP4@
 CLIBD				= $(CCP4DIR:%=%/lib/data)
 
 # place to store our static data:
-DATADIR				= $(datadir)/$(LIB_NAME)
-DEFINES				+= DATADIR='"$(DATADIR)"'
+DATA_DIR			= @DATA_LIB_DIR@
+DEFINES				+= DATADIR='"$(DATA_DIR)"'
 
 GNUmakefile: config.status GNUmakefile.in
 	$(SHELL) ./config.status
@@ -166,7 +166,7 @@ $(LIB_TARGET): $(OBJECTS)
 lib: $(LIB_TARGET)
 
 .PHONY: all
-all: lib rsrc/bond-info.bin.gz
+all: lib rsrc/bond-info.bin
 
 -include $(OBJECTS:%.lo=%.d)
 
@@ -193,7 +193,7 @@ distclean: clean
 
 # Test rules
 
-unit-test_ENV = BOND_INFO_FILE=${CURDIR}/rsrc/bond-info.bin.gz
+unit-test_ENV = BOND_INFO_FILE=${CURDIR}/rsrc/bond-info.bin
 
 define TEST_template =
 
@@ -222,12 +222,11 @@ data/components.cif.gz:
 	mkdir -p data
 	wget -O $@ ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif.gz
 
-rsrc/bond-info.bin.gz: tools/make-bond-info data/components.cif.gz
+rsrc/bond-info.bin: tools/make-bond-info data/components.cif.gz
 	LD_LIBRARY_PATH=.libs tools/make-bond-info data/components.cif.gz rsrc/bond-info.bin
-	gzip -f rsrc/bond-info.bin
 
-tools/make-bond-info: $(OBJDIR)/make-bond-info.o | lib
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $^ -L.libs -lpdb-redo $(LIBS)
+tools/make-bond-info: $(OBJDIR)/make-bond-info.o $(OBJECTS) | lib
+	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJDIR)/make-bond-info.o -L.libs -lpdb-redo $(LIBS)
 
 HEADERS = \
 	AtomShape.hpp \
@@ -251,8 +250,8 @@ install: all
 	for f in $(HEADERS); do install include/pdb-redo/$$f $(includedir)/pdb-redo/$$f; done
 	install -d $(pkgconfigdir)
 	install -m 644 $(LIB_NAME).pc $(pkgconfigdir)/$(LIB_NAME).pc
-	install -d $(DATADIR)
-	install -m 644 rsrc/bond-info.bin.gz $(DATADIR)/bond-info.bin
+	install -d $(DATA_DIR)
+	install -m 644 rsrc/bond-info.bin $(DATA_DIR)/bond-info.bin
 
 dist-clean: clean
 

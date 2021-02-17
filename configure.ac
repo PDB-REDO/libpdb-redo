@@ -136,13 +136,10 @@ AC_ARG_WITH([cif++],
 			])
 			CIFPP_CFLAGS="-I ${withval}/include"
 			CIFPP_LIBS="-L${withval}/.libs -lcifpp"
-			CIFPP_RSRC="${withval}/rsrc"
 
 			AC_SUBST([CIFPP_CFLAGS], [$CIFPP_CFLAGS])
 			AC_SUBST([CIFPP_LIBS], [$CIFPP_LIBS])
 		])
-
-AC_SUBST([CIFPP_RSRC], [$CIFPP_RSRC])
 
 AS_IF([test "x$CIFPP_LIBS" = "x"], [
 	if test -x "$PKG_CONFIG"
@@ -338,6 +335,11 @@ AX_CHECK_LIBRARY([LIBBZ2], [bzlib.h], [bz2],
 	[AC_MSG_ERROR([libbz2 not found - compressed files not supported])])
 
 AC_SUBST([LIBS], [$LIBS])
+
+dnl Set output variables for the various directories
+AC_ARG_VAR([DATA_LIB_DIR], [The location where to store auxiliary files])
+AC_SUBST([DATA_LIB_DIR])
+DATA_LIB_DIR=$datadir/libcifpp
 
 dnl Process Makefile.in to create Makefile
 AC_OUTPUT([GNUmakefile
