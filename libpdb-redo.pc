@@ -10,5 +10,5 @@ Version: 1.0
 
 Libs: -L${libdir} -lpdb-redo
 Cflags: -I${includedir}
-Requires:  gsl libzeep newuoa
-Requires.private:    
+Requires:  libzeep newuoa
+Requires.private:   

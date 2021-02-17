@@ -164,34 +164,6 @@ pkg-config.])])
 	fi
 ])
 
-dnl check for GSL
-if test -x "$PKG_CONFIG"
-then
-	AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_WARN([the required package gsl-dev is not installed])])
-fi
-
-AS_IF([ test "$HAVE_GSL" = "" ],
-	[
-		AC_CHECK_HEADER(
-			[gsl/gsl_version.h],
-			[],
-			[AC_MSG_ERROR([Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed.])])
-
-		saved_LIBS="$LIBS"
-
-		AX_CHECK_LIBRARY([GSLBLAS], [gsl/gsl_version.h], [gslcblas],
-				[ LIBS="$LIBS -lgslcblas" ], [AC_MSG_ERROR([libgslcblas not found])])
-
-		AX_CHECK_LIBRARY([GSL], [gsl/gsl_version.h], [gsl],
-				[ GSL_LIBS="-lgsl -lgslcblas -lm" ],
-				[AC_MSG_ERROR([libgsl not found])])
-		
-		LIBS="$saved_LIBS"
-		HAVE_GSL=1
-		AC_SUBST([HAVE_GSL], [1])
-	]
-)
-
 dnl Check for libzeep
 
 AC_ARG_WITH([zeep],
@@ -253,7 +225,22 @@ pkg-config.])])
 			CLIPPER_LIBS="-L${CCP4}/lib -lclipper-ccp4 -lclipper-cif -lclipper-minimol -lclipper-mmdb -lclipper-cns -lclipper-phs -lclipper-contrib -lclipper-core -lccp4c -lmmdb2 -lrfftw -lfftw"
 		],
 		[AC_MSG_ERROR([libclipper not found])])
-	])
+
+	dnl check for gsl as well here
+
+	AC_CHECK_HEADER(
+		[gsl/gsl_version.h],
+		[],
+		[AC_MSG_ERROR([Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed.])])
+
+	AX_CHECK_LIBRARY([GSLBLAS], [gsl/gsl_version.h], [gslcblas],
+		[ LIBS="$LIBS -lgslcblas" ],
+		[ AC_MSG_ERROR([libgslcblas not found])])
+
+	AX_CHECK_LIBRARY([GSL], [gsl/gsl_version.h], [gsl],
+		[ GSL_LIBS="-lgsl -lgslcblas -lm" ],
+		[AC_MSG_ERROR([libgsl not found])])
+])
 
 dnl Check for libclipper
 AC_ARG_WITH([clipper],
@@ -289,6 +276,36 @@ pkg-config.])])
 				[AC_MSG_ERROR([libclipper not found])])
 	fi
 ])
+
+dnl gsl?
+
+dnl check for GSL
+AS_IF([test "x$GSL_LIBS" = "x" ],
+	[
+		if test -x "$PKG_CONFIG"
+		then
+			AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_ERROR([the required package gsl-dev is not installed])])
+		else
+			AC_CHECK_HEADER(
+				[gsl/gsl_version.h],
+				[],
+				[AC_MSG_ERROR([Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed.])])
+
+			saved_LIBS="$LIBS"
+
+			AX_CHECK_LIBRARY([GSLBLAS], [gsl/gsl_version.h], [gslcblas],
+					[ LIBS="$LIBS -lgslcblas" ], [AC_MSG_ERROR([libgslcblas not found])])
+
+			AX_CHECK_LIBRARY([GSL], [gsl/gsl_version.h], [gsl],
+					[ GSL_LIBS="-lgsl -lgslcblas -lm" ],
+					[AC_MSG_ERROR([libgsl not found])])
+			
+			LIBS="$saved_LIBS"
+			HAVE_GSL=1
+			AC_SUBST([HAVE_GSL], [1])
+		fi
+	]
+)
 
 AC_MSG_CHECKING([clipper version])
 AC_COMPILE_IFELSE(
