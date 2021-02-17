@@ -19574,7 +19574,7 @@ LIBS=$LIBS
 
 
 
-DATA_LIB_DIR=$datadir/libcifpp
+DATA_LIB_DIR=$datadir/libpdb-redo
 
 ac_config_files="$ac_config_files GNUmakefile libpdb-redo.pc"
 

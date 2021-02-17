@@ -339,7 +339,7 @@ AC_SUBST([LIBS], [$LIBS])
 dnl Set output variables for the various directories
 AC_ARG_VAR([DATA_LIB_DIR], [The location where to store auxiliary files])
 AC_SUBST([DATA_LIB_DIR])
-DATA_LIB_DIR=$datadir/libcifpp
+DATA_LIB_DIR=$datadir/libpdb-redo
 
 dnl Process Makefile.in to create Makefile
 AC_OUTPUT([GNUmakefile
