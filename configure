@@ -18334,11 +18334,13 @@ fi
 	# Put the nasty error message in config.log where it belongs
 	echo "$GSL_PKG_ERRORS" >&5
 
-	as_fn_error $? "the required package gsl-dev is not installed" "$LINENO" 5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: the required package gsl-dev is not installed" >&5
+$as_echo "$as_me: WARNING: the required package gsl-dev is not installed" >&2;}
 elif test $pkg_failed = untried; then
      	{ $as_echo "$as_me:${as_lineno-$LINENO}: result: no" >&5
 $as_echo "no" >&6; }
-	as_fn_error $? "the required package gsl-dev is not installed" "$LINENO" 5
+	{ $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: the required package gsl-dev is not installed" >&5
+$as_echo "$as_me: WARNING: the required package gsl-dev is not installed" >&2;}
 else
 	GSL_CFLAGS=$pkg_cv_GSL_CFLAGS
 	GSL_LIBS=$pkg_cv_GSL_LIBS

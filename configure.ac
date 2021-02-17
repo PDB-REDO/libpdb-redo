@@ -167,7 +167,7 @@ pkg-config.])])
 dnl check for GSL
 if test -x "$PKG_CONFIG"
 then
-	AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_ERROR([the required package gsl-dev is not installed])])
+	AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_WARN([the required package gsl-dev is not installed])])
 fi
 
 AS_IF([ test "$HAVE_GSL" = "" ],
