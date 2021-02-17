@@ -441,7 +441,7 @@ class CompoundBondMap
 
 	CompoundBondMap();
 
-	void init(std::istream&& is);
+	void init(std::istream& is);
 
 	int32_t atom_nr(const std::string& atomID) const
 	{
@@ -471,29 +471,14 @@ std::unique_ptr<CompoundBondMap> CompoundBondMap::s_instance;
 
 CompoundBondMap::CompoundBondMap()
 {
-#if USE_RSRC
-	mrsrc::rsrc rsrc("bond-info.bin");
-	if (rsrc)
-	{
-		init(mrsrc::istream(rsrc));
-		return;
-	}
-#endif
+	auto bondInfo = cif::loadResource("bond-info.bin");
 
-	fs::path bondInfoFile;
-
-	if (getenv("BOND_INFO_FILE") != nullptr)
-		bondInfoFile = fs::path(getenv("BOND_INFO_FILE"));
-	else
-		bondInfoFile = fs::path(DATADIR) / "bond-info.bin";
-
-	if (fs::exists(bondInfoFile))
-		init(std::ifstream(bondInfoFile, std::ios::binary));
-	else
+	if (not bondInfo)
 		throw BondMapException("Missing bond info file");
+	init(*bondInfo);
 }
 
-void CompoundBondMap::init(std::istream&& is)
+void CompoundBondMap::init(std::istream& is)
 {
 	io::filtering_stream<io::input> in;
 	in.push(io::gzip_decompressor());

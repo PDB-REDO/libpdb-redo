@@ -657,6 +657,7 @@ ZEEP_LDFLAGS
 ZEEP_CPPFLAGS
 ZEEP_LIBS
 ZEEP_CFLAGS
+HAVE_GSL
 GSL_LDFLAGS
 GSL_CPPFLAGS
 GSLBLAS_LDFLAGS
@@ -18350,8 +18351,11 @@ fi
 
 
 
-else
-	ac_fn_cxx_check_header_mongrel "$LINENO" "gsl/gsl_version.h" "ac_cv_header_gsl_gsl_version_h" "$ac_includes_default"
+fi
+
+if  test "$HAVE_GSL" = "" ; then :
+
+		ac_fn_cxx_check_header_mongrel "$LINENO" "gsl/gsl_version.h" "ac_cv_header_gsl_gsl_version_h" "$ac_includes_default"
 if test "x$ac_cv_header_gsl_gsl_version_h" = xyes; then :
 
 else
@@ -18527,6 +18531,11 @@ fi
 
 
 		LIBS="$saved_LIBS"
+		HAVE_GSL=1
+		HAVE_GSL=1
+
+
+
 fi
 
 

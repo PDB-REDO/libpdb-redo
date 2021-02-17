@@ -168,11 +168,14 @@ dnl check for GSL
 if test -x "$PKG_CONFIG"
 then
 	AX_PKG_CHECK_MODULES([GSL], [gsl], [], [], [AC_MSG_ERROR([the required package gsl-dev is not installed])])
-else
-	AC_CHECK_HEADER(
-		[gsl/gsl_version.h],
-		[],
-		[AC_MSG_ERROR([Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed.])])
+fi
+
+AS_IF([ test "$HAVE_GSL" = "" ],
+	[
+		AC_CHECK_HEADER(
+			[gsl/gsl_version.h],
+			[],
+			[AC_MSG_ERROR([Can't find the gsl header, gsl/gsl_version.h.  Make sure that libgsl is installed.])])
 
 		saved_LIBS="$LIBS"
 
@@ -184,7 +187,10 @@ else
 				[AC_MSG_ERROR([libgsl not found])])
 		
 		LIBS="$saved_LIBS"
-fi
+		HAVE_GSL=1
+		AC_SUBST([HAVE_GSL], [1])
+	]
+)
 
 dnl Check for libzeep
 
