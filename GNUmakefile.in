@@ -226,7 +226,7 @@ rsrc/bond-info.bin: tools/make-bond-info data/components.cif.gz
 	LD_LIBRARY_PATH=.libs tools/make-bond-info data/components.cif.gz rsrc/bond-info.bin
 
 tools/make-bond-info: $(OBJDIR)/make-bond-info.o $(OBJECTS) | lib
-	$(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJDIR)/make-bond-info.o -L.libs -lpdb-redo $(LIBS)
+	$(LIBTOOL) --mode=link $(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJDIR)/make-bond-info.o -L.libs -lpdb-redo $(LIBS)
 
 HEADERS = \
 	AtomShape.hpp \
