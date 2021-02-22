@@ -68,16 +68,6 @@ DEFINES				+= DATADIR='"$(DATA_DIR)"'
 GNUmakefile: config.status GNUmakefile.in
 	$(SHELL) ./config.status
 
-ifeq "$(CHECK_CONFIG)" "1"
-
-config.status: configure
-	$(SHELL) ./config.status --recheck
-
-configure: configure.ac
-	autoconf
-
-endif
-
 LIB_NAME			= @PACKAGE_NAME@
 LIB_VERSION			= @LIBPDB_REDO_LT_VERSION@
 LIB_CURRENT			= @LIBPDB_REDO_LT_CURRENT@

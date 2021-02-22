@@ -6,9 +6,9 @@ datalibdir=${prefix}/share/libpdb-redo
 
 Name: libpdb-redo
 Description: Library containing shared code for the various programs in the PDB-REDO project
-Version: 1.0
+Version: 2.0.0
 
 Libs: -L${libdir} -lpdb-redo
 Cflags: -I${includedir}
-Requires:  libzeep newuoa
-Requires.private:   
+Requires:  libzeep newuoa gsl
+Requires.private:    
