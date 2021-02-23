@@ -69,7 +69,6 @@ AX_FILESYSTEM
 
 AC_CHECK_LIB([m], [sin])
 
-
 AX_BOOST_BASE([1.71], [], [AC_MSG_ERROR([Sorry, your boost is not found or not up-to-date.])])
 AX_BOOST_IOSTREAMS
 AX_BOOST_DATE_TIME
