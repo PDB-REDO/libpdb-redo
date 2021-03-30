@@ -31,11 +31,15 @@
 
 #include "config.hpp"
 
-#include <fstream>
 #include <filesystem>
+#include <fstream>
 
-#include <zeep/xml/serialize.hpp>
 #include <zeep/xml/document.hpp>
+#include <zeep/xml/serialize.hpp>
+
+#include <zeep/json/element.hpp>
+#include <zeep/json/serializer.hpp>
+#include <zeep/json/parser.hpp>
 
 #include "pdb-redo/SkipList.hpp"
 
@@ -44,163 +48,180 @@ namespace zx = zeep::xml;
 
 // --------------------------------------------------------------------
 
-struct SkipResidueLabel
-{
-	std::string	asymID;
-	int			seqID;
-	std::string	monID;
-
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int version)
-	{
-		ar & zx::make_attribute_nvp("asym-id", asymID)
-		   & zx::make_attribute_nvp("seq-id", seqID)
-		   & zx::make_attribute_nvp("mon-id", monID);
-	}
-};
-
 // --------------------------------------------------------------------
 
-struct SkipResiduePDB
+void writeOLDSkipList(std::ostream &os, const SkipList &list)
 {
-	std::string	strandID;
-	int			seqNum;
-	std::string	monID;
-	std::string	insCode;
-
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int version)
-	{
-		ar & zx::make_attribute_nvp("strand-id", strandID)
-		   & zx::make_attribute_nvp("seq-num", seqNum)
-		   & zx::make_attribute_nvp("mon-id", monID)
-		   & zx::make_attribute_nvp("ins-code", insCode);
-	}
-};
-
-//struct SkipResidueAuth
-//{
-//	std::string	asymID;
-//	int			seqID;
-//	std::string	compID;
-//
-//	template<class Archive>
-//	void serialize(Archive& ar, const unsigned int version)
-//	{
-//		ar & zx::make_attribute_nvp("asym-id", asymID)
-//		   & zx::make_attribute_nvp("seq-id", seqID)
-//		   & zx::make_attribute_nvp("comp-id", compID);
-//	}
-//};
-
-// --------------------------------------------------------------------
-
-template<typename T>
-struct SkipResidueList
-{
-	std::vector<T>	res;
-	
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int version)
-	{
-		ar & zx::make_element_nvp("residue", res);
-	}
-};
-
-// --------------------------------------------------------------------
-
-struct SkipListContainer
-{
-	SkipListNumberingScheme scheme;
-	SkipResidueList<SkipResidueLabel> label;
-	SkipResidueList<SkipResiduePDB> pdb;
-//	std::vector<SkipResidueAuth> auth;
-
-	template<class Archive>
-	void serialize(Archive& ar, const unsigned int version)
-	{
-		ar & zx::make_attribute_nvp("scheme", scheme);
-		
-		switch (scheme)
-		{
-			case sl_Label:
-				ar & zx::make_element_nvp("residues", label);
-				break;
-			
-			case sl_PDB:
-				ar & zx::make_element_nvp("residues", pdb);
-				break;
-				
-			default:
-				throw std::runtime_error("Unimplemented skiplist scheme");
-		}
-	}
-};
-
-// --------------------------------------------------------------------
-
-class SkipListInitializer
-{
-  public:
-	SkipListInitializer();
-};
-
-SkipListInitializer::SkipListInitializer()
-{
-	zeep::value_serializer<SkipListNumberingScheme>::init("SkipListNumberingScheme", {
-		{ sl_Label, "label" },
-		{ sl_PDB, "pdb" }
-	});
+	os << ':';
+	for (auto& res: list)
+		os << res.auth_asym_id << res.auth_seq_id << (res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : ' ') << ':';
 }
 
-SkipListInitializer sInitSkipListTypes;
+void writeJSONSkipList(std::ostream &os, const SkipList &list)
+{
+	zeep::json::element e;
+	zeep::json::to_element(e, list);
+	os << e;
+}
+
+void writeCIFSkipList(std::ostream &os, const SkipList &list)
+{
+	cif::File file;
+	auto db = new cif::Datablock("skip");
+	file.append(db);
+
+	auto&& [cat, ignore] = db->emplace("skip_list");
+
+	for (auto& res: list)
+		cat->emplace({
+			{ "auth_asym_id", res.auth_asym_id },
+			{ "auth_comp_id", res.auth_comp_id },
+			{ "auth_seq_id", res.auth_seq_id },
+			{ "pdbx_PDB_ins_code", std::string{ res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : '?' } },
+			{ "label_asym_id", res.label_asym_id },
+			{ "label_comp_id", res.label_comp_id },
+			{ "label_seq_id", res.label_seq_id }
+		});
+	
+	file.save(os);
+}
 
 // --------------------------------------------------------------------
 
-SkipList readSkipList(const fs::path& file, const mmcif::Structure& structure)
+void writeSkipList(std::ostream &os, const SkipList &list, SkipListFormat format)
 {
-	std::ifstream is(file);
-	if (not is.is_open())
-		throw std::runtime_error("Could not open skip list file " + file.string());
-	
-	zx::document doc(is);
-	
-	SkipListContainer list;
-	doc.deserialize("skip-list", list);
-	
-	SkipList result;
-	
-	switch (list.scheme)
+	switch (format)
 	{
-		case sl_Label:
-			for (auto& r: list.label.res)
-				result.push_back({r.asymID, r.seqID, r.monID});
+		case SkipListFormat::OLD:
+			writeOLDSkipList(os, list);
 			break;
-		
-		case sl_PDB:
-			for (auto& r: list.pdb.res)
-			{
-				SkipResidue lr;
-				std::tie(lr.asymID, lr.seqID, lr.monID) =
-					structure.MapPDBToLabel(r.strandID, r.seqNum, r.monID, r.insCode);
-				
-				if (lr.asymID.empty())
-					throw std::runtime_error("Could not map residue specified in skip list (" +
-						r.monID + ' ' + r.strandID + std::to_string(r.seqNum) + r.insCode + ')');
-				
-				result.emplace_back(std::move(lr));
-			}
+
+		case SkipListFormat::JSON:
+			writeJSONSkipList(os, list);
 			break;
-		
+
+		case SkipListFormat::CIF:
+			writeCIFSkipList(os, list);
+			break;
+
 		default:
-			throw std::runtime_error("Unknown skip list scheme");
+			break;
 	}
-	
+}
+
+void writeSkipList(const fs::path &file, const SkipList &list, SkipListFormat format)
+{
+	std::ofstream os(file);
+	writeSkipList(os, list, format);
+}
+
+// --------------------------------------------------------------------
+
+SkipList readOLDSkipList(std::istream &is)
+{
+	SkipList result;
+
+	char separator = 0;
+	if (is.rdbuf()->in_avail() > 0)
+		is.read(&separator, 1);
+	if (separator != ':')
+		throw std::runtime_error("Not an old format skip list");
+
+	while (not is.eof())
+	{
+		ResidueSpec spec{};
+
+		char chain = 0;
+
+		is.read(&chain, 1);
+
+		int seq_nr;
+		is >> seq_nr;
+
+		char ins_code = 0;
+		is.read(&ins_code, 1);
+		
+		if (is.rdbuf()->in_avail() > 0)
+			is.read(&separator, 1);
+
+		if (chain == 0)
+			break;
+		
+		if (separator != ':' and separator != 0)
+			throw std::runtime_error("Invalid old format skiplist");
+
+		spec.auth_asym_id.push_back(chain);
+		spec.auth_seq_id = std::to_string(seq_nr);
+		if (ins_code != ' ' and ins_code != 0)
+			spec.pdbx_PDB_ins_code = ins_code;
+
+		result.push_back(spec);
+	}
+
 	return result;
 }
 
-void writeSkipList(const fs::path& file, const mmcif::Structure& structure,
-	const SkipList& list, SkipListNumberingScheme scheme)
+SkipList readJSONSkipList(std::istream &is)
 {
-	
+	SkipList result;
+
+	zeep::json::element e;
+	zeep::json::parse_json(is, e);
+
+	from_element(e, result);
+
+	return result;
+}
+
+SkipList readCIFSkipList(std::istream &is)
+{
+	SkipList result;
+
+	cif::File file;
+	file.load(is);
+
+	auto& db = file.firstDatablock();
+	auto& cat = db["skip_list"];
+
+	for (const auto& [auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id]:
+		cat.rows<std::string,std::string,std::string,std::string,std::string,std::string,int>({"auth_asym_id", "auth_comp_id", "auth_seq_id", "pdbx_PDB_ins_code", "label_asym_id", "label_comp_id", "label_seq_id"}))
+	{
+		result.emplace_back(auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id);
+	}
+
+	return result;
+}
+
+SkipList readSkipList(std::istream &is)
+{
+	try
+	{
+		return readCIFSkipList(is);
+	}
+	catch (const std::exception &e)
+	{
+		if (cif::VERBOSE)
+			std::cerr << e.what() << std::endl;
+		is.rdbuf()->pubseekpos(0);
+	}
+
+	try
+	{
+		return readJSONSkipList(is);
+	}
+	catch (const std::exception &e)
+	{
+		if (cif::VERBOSE)
+			std::cerr << e.what() << std::endl;
+		is.rdbuf()->pubseekpos(0);
+	}
+
+	return readOLDSkipList(is);
+}
+
+
+SkipList readSkipList(std::filesystem::path &file)
+{
+	std::ifstream is(file);
+	return readSkipList(is);
 }

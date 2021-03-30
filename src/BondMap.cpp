@@ -471,11 +471,20 @@ std::unique_ptr<CompoundBondMap> CompoundBondMap::s_instance;
 
 CompoundBondMap::CompoundBondMap()
 {
-	auto bondInfo = cif::loadResource("bond-info.bin");
+	const char* bond_info_env = getenv("BOND_INFO_FILE");
+	if (bond_info_env != nullptr and fs::exists(bond_info_env))
+	{
+		std::ifstream bond_info_file(bond_info_env);
+		init(bond_info_file);
+	}
+	else
+	{
+		auto bondInfo = cif::loadResource("bond-info.bin");
 
-	if (not bondInfo)
-		throw BondMapException("Missing bond info file");
-	init(*bondInfo);
+		if (not bondInfo)
+			throw BondMapException("Missing bond info file");
+		init(*bondInfo);
+	}
 }
 
 void CompoundBondMap::init(std::istream& is)

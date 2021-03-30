@@ -37,11 +37,62 @@
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/Statistics.hpp"
+#include "pdb-redo/SkipList.hpp"
 
 namespace fs = std::filesystem;
 namespace tt = boost::test_tools;
 namespace utf = boost::unit_test;
 namespace ba = boost::algorithm;
+
+
+// --------------------------------------------------------------------
+// skip list test
+
+BOOST_AUTO_TEST_CASE(skip_1)
+{
+	namespace c = mmcif;
+
+	const fs::path example("../examples/1cbs.cif.gz");
+	mmcif::File file(example);
+
+	c::Structure structure(file);
+
+	auto& chain = structure.polymers().front();
+
+	SkipList skiplist;
+
+	int n = 10;
+	for (auto& res: chain)
+	{
+		skiplist.emplace_back(res);
+		if (--n == 0)
+			break;
+	}
+
+	for (const auto fmt: { SkipListFormat::OLD, SkipListFormat::JSON, SkipListFormat::CIF })
+	{
+		std::stringstream ss;
+		writeSkipList(ss, skiplist, fmt);
+
+		BOOST_CHECK(skiplist.size() == 10);
+
+		// std::cout << ss.str() << std::endl;
+
+		SkipList list2 = readSkipList(ss);
+		
+		BOOST_CHECK(list2.size() == skiplist.size());
+
+		if (list2.size() != skiplist.size())
+			continue;
+
+		for (std::size_t i = 0; i < skiplist.size(); ++i)
+		{
+			BOOST_CHECK(skiplist[i].auth_asym_id == list2[i].auth_asym_id);
+			BOOST_CHECK(skiplist[i].auth_seq_id == list2[i].auth_seq_id);
+			BOOST_CHECK(skiplist[i].pdbx_PDB_ins_code == list2[i].pdbx_PDB_ins_code);
+		}
+	}
+}
 
 // --------------------------------------------------------------------
 
@@ -492,4 +543,3 @@ BOOST_AUTO_TEST_CASE(stats_2)
 		BOOST_CHECK(std::isnan(ri.OPIA));
 	}
 }
-
