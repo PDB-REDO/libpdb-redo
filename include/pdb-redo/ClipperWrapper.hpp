@@ -40,3 +40,8 @@ inline mmcif::Point toPoint(const clipper::Coord_orth& pt)
 {
 	return { static_cast<float>(pt.x()), static_cast<float>(pt.y()), static_cast<float>(pt.z()) };
 }
+
+// --------------------------------------------------------------------
+
+clipper::Spacegroup getSpacegroup(const mmcif::Structure& structure);
+clipper::Cell getCell(const mmcif::Structure& structure);
