@@ -116,17 +116,17 @@ $(OBJDIR) data:
 	mkdir -p $@
 
 OBJECTS		= $(OBJDIR)/AtomShape.lo \
-			  $(OBJDIR)/BondMap.lo \
 			  $(OBJDIR)/ClipperWrapper.lo \
 			  $(OBJDIR)/DistanceMap.lo \
 			  $(OBJDIR)/MapMaker.lo \
-			  $(OBJDIR)/Minimizer.lo \
 			  $(OBJDIR)/Ramachandran.lo \
 			  $(OBJDIR)/ResolutionCalculator.lo \
-			  $(OBJDIR)/Restraints.lo \
 			  $(OBJDIR)/SkipList.lo \
 			  $(OBJDIR)/Statistics.lo \
 			  $(OBJDIR)/Symmetry-2.lo
+
+			#   $(OBJDIR)/Minimizer.lo \
+			#   $(OBJDIR)/Restraints.lo \
 
 # We have development releases and official releases, for each we
 # maintain different versioning schemes.
@@ -166,7 +166,7 @@ $(LIB_TARGET): $(OBJECTS)
 lib: $(LIB_TARGET)
 
 .PHONY: all
-all: lib rsrc/bond-info.bin
+all: lib
 
 -include $(OBJECTS:%.lo=%.d)
 
@@ -192,8 +192,6 @@ distclean: clean
 	rm -f GNUmakefile
 
 # Test rules
-
-unit-test_ENV = BOND_INFO_FILE=${CURDIR}/rsrc/bond-info.bin
 
 define TEST_template =
 
@@ -222,25 +220,19 @@ data/components.cif.gz:
 	mkdir -p data
 	wget -O $@ ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif.gz
 
-rsrc/bond-info.bin: tools/make-bond-info data/components.cif.gz
-	LD_LIBRARY_PATH=.libs tools/make-bond-info data/components.cif.gz rsrc/bond-info.bin
-
-tools/make-bond-info: $(OBJDIR)/make-bond-info.o $(OBJECTS) | lib
-	$(LIBTOOL) --mode=link $(CXX) $(CXXFLAGS) $(LDFLAGS) -o $@ $(OBJDIR)/make-bond-info.o -L.libs -lpdb-redo $(LIBS)
-
 HEADERS = \
 	AtomShape.hpp \
-	BondMap.hpp \
 	ClipperWrapper.hpp \
 	DistanceMap.hpp \
 	MapMaker.hpp \
-	Minimizer.hpp \
 	Ramachandran.hpp \
 	ResolutionCalculator.hpp \
-	Restraints.hpp \
 	SkipList.hpp \
 	Statistics.hpp \
 	Symmetry-2.hpp
+
+	# Minimizer.hpp \
+	# Restraints.hpp \
 
 .PHONY: install
 install: all
@@ -251,7 +243,6 @@ install: all
 	install -d $(pkgconfigdir)
 	install -m 644 $(LIB_NAME).pc $(pkgconfigdir)/$(LIB_NAME).pc
 	install -d $(DATA_DIR)
-	install -m 644 rsrc/bond-info.bin $(DATA_DIR)/bond-info.bin
 
 dist-clean: clean
 

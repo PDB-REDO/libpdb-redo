@@ -36,7 +36,7 @@
 #include "cif++/Structure.hpp"
 
 #include "pdb-redo/MapMaker.hpp"
-#include "pdb-redo/BondMap.hpp"
+#include "cif++/BondMap.hpp"
 #include "pdb-redo/Restraints.hpp"
 
 // --------------------------------------------------------------------
