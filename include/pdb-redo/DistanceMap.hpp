@@ -31,6 +31,7 @@
 #include <clipper/clipper.h>
 
 #include "cif++/Structure.hpp"
+#include "pdb-redo/ClipperWrapper.hpp"
 
 namespace mmcif
 {
@@ -41,6 +42,9 @@ class DistanceMap
 	DistanceMap(const Structure& p, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell,
 		float maxDistance);
 
+	DistanceMap(const Structure& p, float maxDistance)
+		: DistanceMap(p, getSpacegroup(p), getCell(p), maxDistance) {}
+
 	// simplified version for subsets of atoms (used in refining e.g.)
 //	DistanceMap(const Structure& p, const std::vector<Atom>& atoms);
 	
@@ -50,7 +54,7 @@ class DistanceMap
 	float operator()(const Atom& a, const Atom& b) const;
 
 	std::vector<Atom> near(const Atom& a, float maxDistance = 3.5f) const;
-	std::vector<Atom> near(const Point& p, float maxDistance = 3.5f) const;
+	// std::vector<Atom> near(const Point& p, float maxDistance = 3.5f) const;
 
 	static std::vector<clipper::RTop_orth>
 		AlternativeSites(const clipper::Spacegroup& spacegroup, const clipper::Cell& cell);

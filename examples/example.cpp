@@ -3,6 +3,7 @@
 #include <filesystem>
 
 #include <pdb-redo/Statistics.hpp>
+#include "cif++/BondMap.hpp"
 
 namespace fs = std::filesystem;
 

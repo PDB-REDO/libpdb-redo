@@ -26,6 +26,7 @@
 
 #include "config.hpp"
 
+#include "cif++/Symmetry.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 
 // --------------------------------------------------------------------
@@ -79,6 +80,45 @@ clipper::Atom toClipper(const mmcif::Atom& atom)
 	}
 	
 	return result;
+}
+
+// --------------------------------------------------------------------
+
+clipper::Spacegroup getSpacegroup(const mmcif::Structure& structure)
+{
+	auto &db = structure.getFile().data();
+
+	auto refine = db["refine"][cif::Key("entry_id") == db.getName()];
+	if (refine.empty())
+		throw std::runtime_error("No refinement data found");
+	
+	double reso, hires = 99, lowres = 0;
+	cif::tie(reso, hires, lowres) = refine.get("ls_d_res_high", "ls_d_res_high", "ls_d_res_low");
+	
+	std::string spacegroup = db["symmetry"]
+		[cif::Key("entry_id") == db.getName()]
+		["space_group_name_H-M"].as<std::string>();
+	
+	if (spacegroup == "P 1-")
+		spacegroup = "P -1";
+	else if (spacegroup == "P 21 21 2 A")
+		spacegroup = "P 21 21 2 (a)";
+	else if (spacegroup.empty())
+		throw std::runtime_error("No spacegroup, cannot continue");
+	
+	return clipper::Spacegroup{clipper::Spgr_descr(mmcif::GetSpacegroupNumber(spacegroup))};
+}
+
+clipper::Cell getCell(const mmcif::Structure& structure)
+{
+	auto &db = structure.getFile().data();
+
+	double a, b, c, alpha, beta, gamma;
+	cif::tie(a, b, c, alpha, beta, gamma) = db["cell"][cif::Key("entry_id") == db.getName()]
+		.get("length_a", "length_b", "length_c",
+			 "angle_alpha", "angle_beta", "angle_gamma");
+
+	return clipper::Cell{clipper::Cell_descr(a, b, c, alpha, beta, gamma)};
 }
 
 
