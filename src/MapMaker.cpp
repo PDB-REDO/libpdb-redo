@@ -46,6 +46,11 @@
 #include "pdb-redo/ResolutionCalculator.hpp"
 #include "pdb-redo/MapMaker.hpp"
 
+#ifdef _MSC_VER
+#include <io.h>
+#define mkstemp _mktemp
+#endif
+
 namespace io = boost::iostreams;
 namespace ba = boost::algorithm;
 namespace fs = std::filesystem;

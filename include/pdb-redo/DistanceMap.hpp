@@ -33,6 +33,10 @@
 #include "cif++/Structure.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 
+#ifdef near
+#undef near
+#endif
+
 namespace mmcif
 {
 
