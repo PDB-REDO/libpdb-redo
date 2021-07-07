@@ -38,8 +38,8 @@
 #include <zeep/xml/serialize.hpp>
 
 #include <zeep/json/element.hpp>
-#include <zeep/json/serializer.hpp>
 #include <zeep/json/parser.hpp>
+#include <zeep/json/serializer.hpp>
 
 #include "pdb-redo/SkipList.hpp"
 
@@ -53,7 +53,7 @@ namespace zx = zeep::xml;
 void writeOLDSkipList(std::ostream &os, const SkipList &list)
 {
 	os << ':';
-	for (auto& res: list)
+	for (auto &res : list)
 		os << res.auth_asym_id << res.auth_seq_id << (res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : ' ') << ':';
 }
 
@@ -70,7 +70,7 @@ void writeCIFSkipList(std::ostream &os, const SkipList &list)
 	auto db = new cif::Datablock("skip");
 	file.append(db);
 
-	auto&& [cat, ignore] = db->emplace("skip_list");
+	auto &&[cat, ignore] = db->emplace("skip_list");
 
 	for (auto& res: list)
 		cat->emplace({
@@ -82,7 +82,7 @@ void writeCIFSkipList(std::ostream &os, const SkipList &list)
 			{ "label_comp_id", res.label_comp_id },
 			{ "label_seq_id", res.label_seq_id }
 		});
-	
+
 	file.save(os);
 }
 
@@ -140,13 +140,13 @@ SkipList readOLDSkipList(std::istream &is)
 
 		char ins_code = 0;
 		is.read(&ins_code, 1);
-		
+
 		if (is.rdbuf()->in_avail() > 0)
 			is.read(&separator, 1);
 
 		if (chain == 0)
 			break;
-		
+
 		if (separator != ':' and separator != 0)
 			throw std::runtime_error("Invalid old format skiplist");
 
@@ -180,11 +180,11 @@ SkipList readCIFSkipList(std::istream &is)
 	cif::File file;
 	file.load(is);
 
-	auto& db = file.firstDatablock();
-	auto& cat = db["skip_list"];
+	auto &db = file.firstDatablock();
+	auto &cat = db["skip_list"];
 
-	for (const auto& [auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id]:
-		cat.rows<std::string,std::string,std::string,std::string,std::string,std::string,int>({"auth_asym_id", "auth_comp_id", "auth_seq_id", "pdbx_PDB_ins_code", "label_asym_id", "label_comp_id", "label_seq_id"}))
+	for (const auto &[auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id] :
+		cat.rows<std::string, std::string, std::string, std::string, std::string, std::string, int>({"auth_asym_id", "auth_comp_id", "auth_seq_id", "pdbx_PDB_ins_code", "label_asym_id", "label_comp_id", "label_seq_id"}))
 	{
 		result.emplace_back(auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id);
 	}
@@ -218,7 +218,6 @@ SkipList readSkipList(std::istream &is)
 
 	return readOLDSkipList(is);
 }
-
 
 SkipList readSkipList(std::filesystem::path &file)
 {

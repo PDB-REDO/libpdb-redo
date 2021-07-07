@@ -39,12 +39,20 @@
 
 #include "cif++/Structure.hpp"
 
+#if __has_include(<experimental/optional>)
+#include <experimental/optional>
+using std::experimental::optional;
+#else
+#include <optional>
+using std::optional;
+#endif
+
 struct ResidueSpec
 {
 	std::string auth_asym_id;
 	std::string auth_comp_id;
 	std::string auth_seq_id;
-	std::optional<char> pdbx_PDB_ins_code;
+	optional<char> pdbx_PDB_ins_code;
 	std::string label_asym_id;
 	std::string label_comp_id;
 	int label_seq_id;
@@ -72,7 +80,11 @@ struct ResidueSpec
 		: auth_asym_id(auth_asym_id)
 		, auth_comp_id(auth_comp_id)
 		, auth_seq_id(auth_seq_id)
-		, pdbx_PDB_ins_code(pdbx_PDB_ins_code.empty() ? std::optional<char>{} : std::make_optional(pdbx_PDB_ins_code.c_str()[0]))
+#if __has_include(<experimental/optional>)
+		, pdbx_PDB_ins_code(pdbx_PDB_ins_code.empty() ? optional<char>{} : std::experimental::make_optional(pdbx_PDB_ins_code.c_str()[0]))
+#else
+		, pdbx_PDB_ins_code(pdbx_PDB_ins_code.empty() ? optional<char>{} : std::make_optional(pdbx_PDB_ins_code.c_str()[0]))
+#endif
 		, label_asym_id(label_asym_id)
 		, label_comp_id(label_comp_id)
 		, label_seq_id(label_seq_id)

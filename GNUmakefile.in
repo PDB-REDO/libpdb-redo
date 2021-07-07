@@ -51,7 +51,7 @@ LIBS				= @CIFPP_LIBS@ \
 					  @BOOST_REGEX_LIB@ \
 					  @LIBS@
 
-prefix				= $(DESTDIR)@prefix@
+prefix				= @prefix@
 exec_prefix			= @exec_prefix@
 libdir				= @libdir@
 includedir			= @includedir@
@@ -218,7 +218,7 @@ test: $(TESTS:%=%-test)
 
 data/components.cif.gz:
 	mkdir -p data
-	wget -O $@ ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif.gz
+	curl --output $@ ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif.gz
 
 HEADERS = \
 	AtomShape.hpp \
@@ -236,13 +236,13 @@ HEADERS = \
 
 .PHONY: install
 install: all
-	install -d $(libdir)
-	$(LIBTOOL) --mode=install install $(LIB_TARGET) $(libdir)
-	install -d $(includedir)/pdb-redo
-	for f in $(HEADERS); do install include/pdb-redo/$$f $(includedir)/pdb-redo/$$f; done
-	install -d $(pkgconfigdir)
-	install -m 644 $(LIB_NAME).pc $(pkgconfigdir)/$(LIB_NAME).pc
-	install -d $(DATA_DIR)
+	install -d ${DESTDIR}$(libdir)
+	$(LIBTOOL) --mode=install install $(LIB_TARGET) ${DESTDIR}$(libdir)
+	install -d ${DESTDIR}$(includedir)/pdb-redo
+	for f in $(HEADERS); do install include/pdb-redo/$$f ${DESTDIR}$(includedir)/pdb-redo/$$f; done
+	install -d ${DESTDIR}$(pkgconfigdir)
+	install -m 644 $(LIB_NAME).pc ${DESTDIR}$(pkgconfigdir)/$(LIB_NAME).pc
+	install -d ${DESTDIR}$(DATA_DIR)
 
 dist-clean: clean
 

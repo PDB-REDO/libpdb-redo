@@ -106,7 +106,66 @@ clipper::Spacegroup getSpacegroup(const mmcif::Structure& structure)
 	else if (spacegroup.empty())
 		throw std::runtime_error("No spacegroup, cannot continue");
 	
-	return clipper::Spacegroup{clipper::Spgr_descr(mmcif::GetSpacegroupNumber(spacegroup))};
+	try
+	{
+		return clipper::Spacegroup{clipper::Spgr_descr(mmcif::GetSpacegroupNumber(spacegroup))};
+	}
+	catch (const clipper::Message_fatal& m)
+	{
+		// std::cout << m.text() << std::endl;
+	}
+
+	try
+	{
+		return clipper::Spacegroup{clipper::Spgr_descr(spacegroup)};
+	}
+	catch (const clipper::Message_fatal& e)
+	{
+		std::cerr << e.text() << std::endl;
+	}
+	
+	throw std::runtime_error("Unsupported spacegroup: " + spacegroup);
+
+	// // reconstruct a clipper spacegroup.
+
+	// int sg = mmcif::GetSpacegroupNumber(spacegroup);
+
+	// // locate the symmetry operations
+	// int L = 0, R = mmcif::kSymopNrTableSize - 1;
+	// while (R >= L)
+	// {
+	// 	int i = (L + R) / 2;
+	// 	if (mmcif::kSymopNrTable[i].spacegroup() < sg)
+	// 		L = i + 1;
+	// 	else
+	// 		R = i - 1;
+	// }
+
+	// if (mmcif::kSymopNrTable[L].spacegroup() != sg)
+	// 	throw std::runtime_error("Could not locate spacegroup " + spacegroup);
+	
+	// clipper::Spgr_descr::Symop_codes codes;
+
+	// for (int i = L; i < mmcif::kSymopNrTableSize and mmcif::kSymopNrTable[i].spacegroup() == sg; ++i)
+	// {
+	// 	auto data = mmcif::kSymopNrTable[i].symop().data();
+
+	// 	clipper::Mat33<> m(
+	// 			data[0], data[1], data[2],
+	// 			data[3], data[4], data[5],
+	// 			data[6], data[7], data[8]);
+
+	// 	clipper::Vec3<> v(
+	// 		1.0f * data[ 9] / data[10],
+	// 		1.0f * data[11] / data[12],
+	// 		1.0f * data[13] / data[14]);
+
+	// 	clipper::RTop<> rtop(m, v);
+
+	// 	codes.emplace_back(clipper::Symop{rtop});
+	// }
+
+	// return clipper::Spacegroup{clipper::Spgr_descr{codes}};
 }
 
 clipper::Cell getCell(const mmcif::Structure& structure)
