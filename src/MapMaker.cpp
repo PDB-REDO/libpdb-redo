@@ -485,16 +485,25 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 	
 	mtzin.import_hkl_info(mHKLInfo);
 	
-	bool hasFAN = false;
+	bool hasFAN = false, hasFREE = false;
 	const std::regex rx(R"(^/[^/]+/[^/]+/(.+) \S$)");
 	
 	for (auto& label: mtzin.column_labels())
 	{
 		std::smatch m;
-		if (std::regex_match(label, m, rx) and m[1] == "FAN")
+		if (not std::regex_match(label, m, rx))
+			continue;
+
+		if (m[1] == "FAN")
 		{
 			hasFAN = true;
-			break;
+			continue;
+		}
+
+		if (m[1] == "FREE")
+		{
+			hasFREE = true;
+			continue;
 		}
 	}
 		
@@ -509,8 +518,11 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 		(boost::format(kBasePath) % "*" % "*" % ba::join(foLabels, ",")).str());
 	mtzin.import_hkl_data(mFcData,
 		(boost::format(kBasePath) % "*" % "*" % ba::join(fcLabels, ",")).str());
-	mtzin.import_hkl_data(mFreeData,
-		(boost::format(kBasePath) % "*" % "*" % "FREE").str());
+
+	if (hasFREE)
+		mtzin.import_hkl_data(mFreeData,
+			(boost::format(kBasePath) % "*" % "*" % "FREE").str());
+
 	mtzin.import_hkl_data(mPhiFomData,
 		(boost::format(kBasePath) % "*" % "*" % "PHWT,FOM").str());
 
