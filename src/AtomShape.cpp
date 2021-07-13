@@ -444,7 +444,7 @@ struct AtomShapeImpl
 	{
 		float result = mIntegrator.integrateRadius(perc, mOccupancy, mYi, mFst);
 		
-		assert(not isnan(result));
+		assert(not std::isnan(result));
 		
 		return result;
 	}

@@ -350,7 +350,7 @@ std::tuple<float,float> CalculateMapStatistics(const Xmap<float>& f)
 	{
 		auto v = f[ix];
 		
-		if (isnan(v))
+		if (std::isnan(v))
 			throw std::runtime_error("map contains NaN values");
 		
 		++count;
@@ -997,7 +997,7 @@ void StatsCollector::sumDensity(std::vector<AtomData>& atomData,
 			{
 				double density = shape.calculatedDensity(p);
 				
-				assert(not isnan(density));
+				assert(not std::isnan(density));
 	
 				gridPointDensity[iw.coord()] += density;
 				data.points.emplace_back(iw.coord(), density);

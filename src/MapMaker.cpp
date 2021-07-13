@@ -322,7 +322,7 @@ void Map<FTYPE>::calculateStats()
 	{
 		auto v = mMap[ix];
 		
-		if (isnan(v))
+		if (std::isnan(v))
 			throw std::runtime_error("map contains NaN values");
 		
 		if (mMinDensity > v)
