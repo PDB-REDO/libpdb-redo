@@ -2,6 +2,4 @@
 .gdb_history
 data/
 .gitignore
-rsrc/bond-info.bin.gz
-tools/make-bond-info
 build

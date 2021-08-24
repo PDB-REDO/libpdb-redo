@@ -1,9 +1,9 @@
 @PACKAGE_INIT@
 
-INCLUDE("${CMAKE_CURRENT_LIST_DIR}/cifppTargets.cmake")
+INCLUDE("${CMAKE_CURRENT_LIST_DIR}/pdb-redoTargets.cmake")
 
-set_and_check(CIFPP_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@")
-set_and_check(CIFPP_LIBRARY_DIR "@PACKAGE_LIBRARY_INSTALL_DIR@")
-set_and_check(CIFPP_SHARE_DIR "@PACKAGE_SHARE_INSTALL_DIR@")
+set_and_check(PDB-REDO_INCLUDE_DIR "@PACKAGE_INCLUDE_INSTALL_DIR@")
+set_and_check(PDB-REDO_LIBRARY_DIR "@PACKAGE_LIBRARY_INSTALL_DIR@")
+set_and_check(PDB-REDO_SHARE_DIR "@PACKAGE_SHARE_INSTALL_DIR@")
 
-check_required_components(cifpp)
+check_required_components(pdb-redo)
