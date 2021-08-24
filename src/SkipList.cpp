@@ -29,8 +29,6 @@
    Date: maandag 07 januari, 2019
 */
 
-#include "config.hpp"
-
 #include <filesystem>
 #include <fstream>
 

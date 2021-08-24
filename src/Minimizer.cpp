@@ -29,8 +29,6 @@
    Date: dinsdag 22 mei, 2018
 */
 
-#include "config.hpp"
-
 #include <future>
 #include <regex>
 #include <iomanip>

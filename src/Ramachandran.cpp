@@ -29,8 +29,6 @@
    Date: dinsdag 19 juni, 2018
 */
 
-#include "config.hpp"
-
 #include <cmath>
 #include <cassert>
 

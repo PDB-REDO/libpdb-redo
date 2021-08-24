@@ -24,8 +24,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.hpp"
-
 #include <thread>
 #include <mutex>
 
@@ -35,10 +33,17 @@
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 
-#if HAVE_NEWUOA
+#if __has_include(<newuoa.h>)
+
 #include <newuoa.h>
-#elif HAVE_DLIB
+#define HAVE_NEWUOA 1
+
+#elif __has_include(<dlib/global_optimization.h>)
+
 #include <dlib/global_optimization.h>
+
+#define HAVE_DLIB 1
+
 #else
 #error "Should have either newuoa or dlib"
 #endif

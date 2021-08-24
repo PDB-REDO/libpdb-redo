@@ -106,20 +106,17 @@ find_package(ZLIB)
 find_package(BZip2)
 find_package(GSL)
 find_package(zeep REQUIRED)
+find_package(cifpp 1.1 REQUIRED)
 
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
 check_include_file( "newuoa.h" HAVE_NEWUOA )
 
-find_library(CIFPP_LIBRARY cifpp REQUIRED)
-find_path(CIFPP_INCLUDE_DIR cif++/Cif++.hpp)
-check_include_file( "cif++/Cif++.hpp" HAVE_CIFPP )
-
 find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4 clipper-mmdb
                            clipper-contrib clipper-minimol)
 
 include_directories(${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR})
-link_libraries(${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+link_libraries(${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CCP4_LIBRARIES} cifpp::cifpp zeep::zeep ${NEWUOA_LIBRARY})
 
 # Create a revision file, containing the current git version info
 
@@ -179,42 +176,6 @@ target_include_directories(pdb-redo
 if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
 endif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-
-# download the components.cif file from CCD
-set(COMPONENTS_CIF ${PROJECT_SOURCE_DIR}/data/components.cif)
-
-if (NOT EXISTS ${COMPONENTS_CIF})
-
-	if (NOT EXISTS ${PROJECT_SOURCE_DIR}/data)
-		file(MAKE_DIRECTORY ${PROJECT_SOURCE_DIR}/data/)
-	endif()
-
-	if(${CMAKE_VERSION} VERSION_LESS "3.18.0")
-		find_program(GUNZIP gunzip)
-
-		if(GUNZIP)
-			file(DOWNLOAD ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif.gz ${COMPONENTS_CIF}.gz
-				SHOW_PROGRESS)
-			add_custom_command(OUTPUT ${COMPONENTS_CIF}
-				COMMAND ${GUNZIP} ${COMPONENTS_CIF}.gz
-				WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/data/)
-		else()
-			file(DOWNLOAD ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif ${COMPONENTS_CIF}
-				SHOW_PROGRESS)
-		endif()
-	else()
-		file(DOWNLOAD ftp://ftp.wwpdb.org/pub/pdb/data/monomers/components.cif.gz ${COMPONENTS_CIF}.gz
-			SHOW_PROGRESS)
-		file(ARCHIVE_EXTRACT INPUT ${COMPONENTS_CIF}.gz
-			DESTINATION ${CMAKE_SOURCE_DIR}/data/
-			VERBOSE)
-	endif()
-endif()
-
-add_custom_target(COMPONENTS ALL DEPENDS ${COMPONENTS_CIF})
-
-include_directories(${Boost_INCLUDE_DIRS})
-link_libraries(${Boost_LIBRARIES})
 
 set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR} )
 set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
@@ -286,57 +247,54 @@ write_basic_package_version_file(
 
 # Unit tests
 
-option(CIFPP_BUILD_TESTS "Build test exectuables" OFF)
+option(PDB_REDO_BUILD_TESTS "Build test exectuables" OFF)
 
-if(CIFPP_BUILD_TESTS)
+if(PDB_REDO_BUILD_TESTS)
 
 	if(USE_RSRC)
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj
-			COMMAND ${MRC} -o ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj ${CMAKE_SOURCE_DIR}/rsrc/mmcif_pdbx_v50.dic ${COFF_SPEC}
+			COMMAND ${MRC} -o ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj ${CIFPP_SHARE_DIR}/mmcif_pdbx_v50.dic ${COFF_SPEC}
 		)
-		set(CIFPP_TEST_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj)
+		set(PDB_REDO_TEST_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj)
 	endif()
 
-	list(APPEND CIFPP_tests
-		# pdb2cif
-		rename-compound
-		unit)
+	list(APPEND PDB_REDO_tests unit)
 
-	foreach(CIFPP_TEST IN LISTS CIFPP_tests)
-		set(CIFPP_TEST "${CIFPP_TEST}-test")
-		set(CIFPP_TEST_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/test/${CIFPP_TEST}.cpp")
+	foreach(PDB_REDO_TEST IN LISTS PDB_REDO_tests)
+		set(PDB_REDO_TEST "${PDB_REDO_TEST}-test")
+		set(PDB_REDO_TEST_SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/test/${PDB_REDO_TEST}.cpp")
 
-		add_executable(${CIFPP_TEST} ${CIFPP_TEST_SOURCE} ${CIFPP_TEST_RESOURCE})
+		add_executable(${PDB_REDO_TEST} ${PDB_REDO_TEST_SOURCE} ${PDB_REDO_TEST_RESOURCE})
 
-		target_include_directories(${CIFPP_TEST} PRIVATE
+		target_include_directories(${PDB_REDO_TEST} PRIVATE
 			${CMAKE_CURRENT_SOURCE_DIR}/include
 			${CMAKE_CURRENT_BINARY_DIR}  # for config.h
 		)
 
-		target_link_libraries(${CIFPP_TEST} Threads::Threads ${Boost_LIBRARIES} pdb-redo)
+		target_link_libraries(${PDB_REDO_TEST} Threads::Threads ${Boost_LIBRARIES} pdb-redo cifpp::cifpp)
 
 		if(${ZLIB_FOUND})
-			target_link_libraries(${CIFPP_TEST} ZLIB::ZLIB)
+			target_link_libraries(${PDB_REDO_TEST} ZLIB::ZLIB)
 		endif()
 
 		if(${BZip2_FOUND})
-			target_link_libraries(${CIFPP_TEST} BZip2::BZip2)
+			target_link_libraries(${PDB_REDO_TEST} BZip2::BZip2)
 		endif()
 	
 		if(MSVC)
 			# Specify unwind semantics so that MSVC knowns how to handle exceptions
-			target_compile_options(${CIFPP_TEST} PRIVATE /EHsc)
+			target_compile_options(${PDB_REDO_TEST} PRIVATE /EHsc)
 		endif()
 
-		add_custom_target("run-${CIFPP_TEST}" DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Run${CIFPP_TEST}.touch ${CIFPP_TEST})
+		add_custom_target("run-${PDB_REDO_TEST}" DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/Run${PDB_REDO_TEST}.touch ${PDB_REDO_TEST})
 
 		add_custom_command(
-			OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Run${CIFPP_TEST}.touch
-			COMMAND $<TARGET_FILE:${CIFPP_TEST}>
+			OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Run${PDB_REDO_TEST}.touch
+			COMMAND $<TARGET_FILE:${PDB_REDO_TEST}>
 			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/test)
 
-		add_test(NAME ${CIFPP_TEST}
-			COMMAND $<TARGET_FILE:${CIFPP_TEST}>
+		add_test(NAME ${PDB_REDO_TEST}
+			COMMAND $<TARGET_FILE:${PDB_REDO_TEST}>
 			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/test)
 
 	endforeach()

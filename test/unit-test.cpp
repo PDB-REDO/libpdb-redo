@@ -333,6 +333,10 @@ BOOST_AUTO_TEST_CASE(stats_1)
 		if (not (std::isnan(ri.EDIAm) or std::isnan(t.EDIAm)))
 		{
 			BOOST_TEST(std::abs(ri.EDIAm - t.EDIAm) <= 0.1, tt::tolerance(0.1));
+
+			if (std::abs(ri.EDIAm - t.EDIAm) > 0.1)
+				std::cerr << ri << std::endl;
+
 			BOOST_TEST(std::abs(ri.OPIA - t.OPIA) <= 0.1, tt::tolerance(0.1));
 		}
 		else
