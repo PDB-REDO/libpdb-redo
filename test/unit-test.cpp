@@ -301,7 +301,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	mmcif::Structure structure(file);
 
 	c::MapMaker<float> mm;
-	float samplingRate = 0.75;
+	float samplingRate = 1.5;
 	mm.loadMTZ("../examples/1cbs_map.mtz", samplingRate);
 
 	mmcif::BondMap bm(structure);
