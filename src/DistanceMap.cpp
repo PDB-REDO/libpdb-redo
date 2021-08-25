@@ -40,15 +40,6 @@ namespace mmcif
 
 // --------------------------------------------------------------------
 
-inline std::ostream& operator<<(std::ostream& os, const Atom& a)
-{
-	os << a.labelAsymID() << ':' << a.labelSeqID() << '/' << a.labelAtomID() << a.labelAltID();
-	
-	return os;
-}
-
-// --------------------------------------------------------------------
-
 std::vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spacegroup& spacegroup,
 	const clipper::Cell& cell)
 {
