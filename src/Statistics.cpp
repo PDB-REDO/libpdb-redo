@@ -1176,10 +1176,12 @@ void EDIAStatsCollector::calculate(std::vector<AtomData>& atomData) const
 			Point p = toPoint(iw.coord_orth());
 			
 			// EDIA calculations
-			float z = (Fb[iw] - mMeanDensityFb) / mRMSDensityFb;
+			auto fb = Fb[iw];
+
+			float z = 0;
+			if (fb >= mMeanDensityFb + mRMSDensityFb)
+				z = (fb - mMeanDensityFb) / mRMSDensityFb;
 			
-			if (z < 0)
-				z = 0;
 			if (z > 1.2)
 				z = 1.2;
 			
