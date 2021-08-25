@@ -880,7 +880,6 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 				d.edia,											// ediam
 				(d.edia > 0.8 ? 100. : 0.),						// opia
 				static_cast<int>(round(mVF * d.sums.ngrid))});	// ngrid
-	
 		}
 	}
 	
@@ -1165,7 +1164,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData>& atomData) const
 		PointWeightFunction w(atom.location(), radius);
 		
 		std::vector<Atom> atomsNearBy = mDistanceMap.near(atom, 3.5f);
-	
+
 		std::vector<PointWeightFunction> wn;
 		for (auto a: atomsNearBy)
 			wn.emplace_back(a.location(), mRadii.at(a.type()));
@@ -1256,11 +1255,12 @@ void EDIAStatsCollector::calculate(std::vector<AtomData>& atomData) const
 			ediaSum[0] += z * wp * o;
 			if (wp > 0)
 				ediaSum[1] += wp;
-
 		});
 
 		data.edia = ediaSum[0] / ediaSum[1];
-		
+		if (data.edia < 0)
+			data.edia = 0;
+
 		progress.consumed(1);
 	}
 }
