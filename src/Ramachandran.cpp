@@ -87,15 +87,15 @@ std::mutex RamachandranTables::sMutex;
 float calculateRamachandranZScore(const std::string& aa, bool prePro, float phi, float psi)
 {
 	auto& table = RamachandranTables::instance().table(aa, prePro);
-	return table.probability(phi * mmcif::kPI / 180, psi * mmcif::kPI / 180);
+	return static_cast<float>(table.probability(phi * mmcif::kPI / 180, psi * mmcif::kPI / 180));
 }
 
 RamachandranScore calculateRamachandranScore(const std::string& aa, bool prePro, float phi, float psi)
 {
 	auto& table = RamachandranTables::instance().table(aa, prePro);
 
-	phi *= mmcif::kPI / 180;
-	psi *= mmcif::kPI / 180;
+	phi *= static_cast<float>(mmcif::kPI / 180);
+	psi *= static_cast<float>(mmcif::kPI / 180);
 	
 	RamachandranScore result;
 

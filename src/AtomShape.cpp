@@ -426,8 +426,8 @@ struct AtomShapeImpl
 
 		for (size_t i = 0; i < 6; ++i)
 		{
-			mBW[i] = -4 * kPI * kPI / (D.b[i] + bIso);
-			mAW[i] = D.a[i] * pow(-mBW[i] / kPI, 1.5);
+			mBW[i] = static_cast<float>(-4 * kPI * kPI / (D.b[i] + bIso));
+			mAW[i] = static_cast<float>(D.a[i] * std::pow(-mBW[i] / kPI, 1.5));
 		}
 	}
 	
@@ -447,7 +447,7 @@ struct AtomShapeImpl
 	
 	float integratedRadius(float perc) const
 	{
-		float result = mIntegrator.integrateRadius(perc, mOccupancy, mYi, mFst);
+		float result = static_cast<float>(mIntegrator.integrateRadius(perc, mOccupancy, mYi, mFst));
 		
 		assert(not std::isnan(result));
 		
@@ -474,14 +474,14 @@ struct AtomShapeImpl
 struct AtomShapeAnisoImpl : public AtomShapeImpl
 {
 	AtomShapeAnisoImpl(Point location, AtomType symbol, int charge, clipper::U_aniso_orth& anisou, float occupancy, float resHigh, float resLow, bool electronScattering)
-		: AtomShapeImpl(location, symbol, charge, anisou.u_iso(), occupancy, resHigh, resLow, electronScattering)
+		: AtomShapeImpl(location, symbol, charge, static_cast<float>(anisou.u_iso()), occupancy, resHigh, resLow, electronScattering)
 		, mAnisoU(anisou)
 	{
 		auto& D = 
 			mElectronScattering ? AtomTypeTraits(symbol).elsf() : AtomTypeTraits(symbol).wksf(charge);
 		
-		const float fourpi2 = 4 * kPI * kPI;
-		const float pi3 = kPI * kPI * kPI;
+		const float fourpi2 = static_cast<float>(4 * kPI * kPI);
+		const float pi3 = static_cast<float>(kPI * kPI * kPI);
 		
 		for (int i = 0; i < 6; ++i)
 		{
@@ -495,8 +495,8 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 
 			double det = - mAnisoInv[i].det();
 			
-			mAW[i] = D.a[i] * sqrt(det / pi3);
-			mBW[i] = -pow(det, 1.0/3);
+			mAW[i] = static_cast<float>(D.a[i] * std::sqrt(det / pi3));
+			mBW[i] = static_cast<float>(-std::pow(det, 1.0f/3));
 		}
 	}
 	
@@ -505,13 +505,13 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 		const Point l = p - mLocation;
 		const clipper::Coord_orth dxyz(l.mX, l.mY, l.mZ);
 		return mOccupancy *
-			(
-				mAW[0] * exp(mAnisoInv[0].quad_form(dxyz)) +
-				mAW[1] * exp(mAnisoInv[1].quad_form(dxyz)) +
-				mAW[2] * exp(mAnisoInv[2].quad_form(dxyz)) +
-				mAW[3] * exp(mAnisoInv[3].quad_form(dxyz)) +
-				mAW[4] * exp(mAnisoInv[4].quad_form(dxyz)) +
-				mAW[5] * exp(mAnisoInv[5].quad_form(dxyz))
+			static_cast<float>(
+				mAW[0] * std::exp(mAnisoInv[0].quad_form(dxyz)) +
+				mAW[1] * std::exp(mAnisoInv[1].quad_form(dxyz)) +
+				mAW[2] * std::exp(mAnisoInv[2].quad_form(dxyz)) +
+				mAW[3] * std::exp(mAnisoInv[3].quad_form(dxyz)) +
+				mAW[4] * std::exp(mAnisoInv[4].quad_form(dxyz)) +
+				mAW[5] * std::exp(mAnisoInv[5].quad_form(dxyz))
 			);
 	}
 	
@@ -540,7 +540,7 @@ AtomShape::AtomShape(const Atom& atom, float resHigh, float resLow, bool electro
 }
 
 AtomShape::AtomShape(const Atom& atom, float resHigh, float resLow, bool electronScattering, float bFactor)
-	: mImpl(new AtomShapeImpl(atom.location(), atom.type(), atom.charge(), clipper::Util::b2u(bFactor),
+	: mImpl(new AtomShapeImpl(atom.location(), atom.type(), atom.charge(), static_cast<float>(clipper::Util::b2u(bFactor)),
 		1.0, resHigh, resLow, electronScattering))
 {
 }
@@ -552,7 +552,7 @@ AtomShape::~AtomShape()
 
 float AtomShape::radius() const
 {
-	return mImpl->integratedRadius(0.95);
+	return mImpl->integratedRadius(0.95f);
 }
 
 float AtomShape::calculatedDensity(float r) const
