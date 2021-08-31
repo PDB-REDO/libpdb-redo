@@ -1,3 +1,6 @@
+Version 1.1.0
+- Now with cmake instead of GNU configure
+
 Version 1.0.0
 
 - First public release as a split-out library
