@@ -78,7 +78,7 @@ if(UNIX AND NOT APPLE)
 endif()
 
 # Optionally use mrc to create resources
-find_program(MRC mrc HINTS "$ENV{LOCALAPPDATA}/mrc" "$ENV{HOME}/.local/bin" "${CMAKE_INSTALL_PREFIX}/../mrc" "/usr/local/bin")
+find_program(MRC mrc HINTS "$ENV{LOCALAPPDATA}/mrc" "$ENV{LOCALAPPDATA}/mrc/bin" "$ENV{HOME}/.local/bin" "${CMAKE_INSTALL_PREFIX}/../mrc" "/usr/local/bin")
 
 if(MRC)
 	option(USE_RSRC "Use mrc to create resources" ON)
@@ -99,21 +99,21 @@ set(CMAKE_THREAD_PREFER_PTHREAD)
 set(THREADS_PREFER_PTHREAD_FLAG)
 find_package(Threads)
 
+find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4 clipper-mmdb
+                           clipper-contrib clipper-minimol)
+
 set (Boost_DETAILED_FAILURE_MSG ON)
-find_package(Boost 1.71.0 REQUIRED COMPONENTS system iostreams regex date_time program_options)
+find_package(Boost 1.70.0 REQUIRED COMPONENTS system iostreams regex date_time program_options)
 
 find_package(ZLIB)
 find_package(BZip2)
-find_package(GSL)
+# find_package(GSL)		# Will be required once we revive the minimizer code
 find_package(zeep REQUIRED)
 find_package(cifpp 1.1 REQUIRED)
 
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
 check_include_file( "newuoa.h" HAVE_NEWUOA )
-
-find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4 clipper-mmdb
-                           clipper-contrib clipper-minimol)
 
 include_directories(${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR})
 link_libraries(${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CCP4_LIBRARIES} cifpp::cifpp zeep::zeep ${NEWUOA_LIBRARY})
@@ -130,7 +130,7 @@ if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
 else()
     message(WARNING "Git not found, cannot set version info")
 
-    SET(BUILD_VERSION_STRING "unknown")
+    SET(BUILD_VERSION_STRING ${PROJECT_VERSION})
 endif()
 
 # generate version.h
@@ -284,7 +284,7 @@ if(PDB_REDO_BUILD_TESTS)
 			${CMAKE_CURRENT_BINARY_DIR}  # for config.h
 		)
 
-		target_link_libraries(${PDB_REDO_TEST} Threads::Threads ${Boost_LIBRARIES} pdb-redo cifpp::cifpp)
+		target_link_libraries(${PDB_REDO_TEST} pdb-redo)
 
 		if(${ZLIB_FOUND})
 			target_link_libraries(${PDB_REDO_TEST} ZLIB::ZLIB)
@@ -312,76 +312,3 @@ if(PDB_REDO_BUILD_TESTS)
 
 	endforeach()
 endif()
-
-message("Still to do: libpdb-redo.pc, package, tools, create symop_Data")
-
-
-# include_directories(
-#     ${PROJECT_SOURCE_DIR}/include
-#     ${PROJECT_SOURCE_DIR}/src
-# )
-
-# add_library(${PROJECT_NAME} ${project_sources} ${project_headers})
-
-# configure_file(${PROJECT_SOURCE_DIR}/src/config.hpp.cmakein ${CMAKE_BINARY_DIR}/config.hpp)
-# target_include_directories(${PROJECT_NAME} PUBLIC "${PROJECT_BINARY_DIR}")
-# install(FILES ${CMAKE_BINARY_DIR}/config.hpp DESTINATION ${INCLUDE_INSTALL_DIR}/pdb-redo/)
-
-# if(BUILD_SHARED_LIBS)
-# set(prefix      ${CMAKE_INSTALL_PREFIX})
-# set(exec_prefix ${CMAKE_INSTALL_PREFIX})
-# set(libdir      ${CMAKE_INSTALL_PREFIX}/lib)
-# set(includedir  ${CMAKE_INSTALL_PREFIX}/include)
-# configure_file(${PROJECT_SOURCE_DIR}/libpdb-redo.pc.cmakein
-#    ${CMAKE_BINARY_DIR}/libpdb-redo.pc.in @ONLY)
-# file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc
-#    INPUT ${CMAKE_BINARY_DIR}/libpdb-redo.pc.in)
-# install(FILES ${CMAKE_BINARY_DIR}/libpdb-redo.pc DESTINATION ${LIB_INSTALL_DIR}/pkgconfig)
-# endif(BUILD_SHARED_LIBS)
-
-# target_include_directories(${PROJECT_NAME} PUBLIC "${PROJECT_BINARY_DIR}")
-
-# configure_file(${PROJECT_SOURCE_DIR}/include/pdb-redo/revision.hpp.in revision.hpp @ONLY)
-# install(FILES ${CMAKE_BINARY_DIR}/revision.hpp DESTINATION ${INCLUDE_INSTALL_DIR}/pdb-redo/)
-
-# #if(Boost_FOUND)
-#     include_directories(${PROJECT_NAME} PUBLIC ${Boost_INCLUDE_DIRS})
-#     target_link_libraries(${PROJECT_NAME} ${Boost_LIBRARIES})
-# #endif()
-# #if(CCP4_FOUND)
-#     include_directories(${PROJECT_NAME} PUBLIC ${CCP4_INCLUDE_DIRS})
-#     target_link_libraries(${PROJECT_NAME} ${CCP4_LIBRARIES})
-# #endif()
-# #if(ZEEP_FOUND)
-#     target_link_libraries(${PROJECT_NAME} ${ZEEP_LIBRARY})
-#     include_directories(${PROJECT_NAME} PUBLIC ${ZEEP_INCLUDE_DIR})
-# #endif()
-# #if(NEWUOA_FOUND)
-#     target_link_libraries(${PROJECT_NAME} ${NEWUOA_LIBRARY})
-#     include_directories(${PROJECT_NAME} PUBLIC ${NEWUOA_INCLUDE_DIR})
-# #endif()
-# #if(NEWUOA_FOUND)
-#     target_link_libraries(${PROJECT_NAME} ${CIFPP_LIBRARY})
-#     include_directories(${PROJECT_NAME} PUBLIC ${CIFPP_INCLUDE_DIR})
-# #endif()
-# #if(GSL_FOUND)
-#     target_link_libraries(${PROJECT_NAME} GSL::gsl GSL::gslcblas)
-#     include_directories(${PROJECT_NAME} PUBLIC GSL_INCLUDE_DIRS)
-# #endif()
-
-# install(DIRECTORY include/pdb-redo DESTINATION ${INCLUDE_INSTALL_DIR})
-
-# install(TARGETS ${PROJECT_NAME}
-#     LIBRARY DESTINATION ${LIB_INSTALL_DIR}
-#     ARCHIVE DESTINATION ${LIB_INSTALL_DIR}
-#     RUNTIME DESTINATION ${BIN_INSTALL_DIR}
-# )
-
-# target_compile_definitions(${PROJECT_NAME}
-# 	PUBLIC "" CACHE_DIR="${SHARE_INSTALL_DIR}/libpdb-redo" DATA_DIR="${SHARE_INSTALL_DIR}/libpdb-redo" )
-
-# if(MSVC)
-#     # make msvc standards compliant...
-#     target_compile_options(${PROJECT_NAME} PRIVATE /permissive-)
-# endif()
-

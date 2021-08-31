@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(skip_1)
 	namespace c = mmcif;
 
 	const fs::path example("../examples/1cbs.cif.gz");
-	mmcif::File file(example);
+	mmcif::File file(example.string());
 
 	c::Structure structure(file);
 
@@ -157,7 +157,7 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 {
 	const fs::path example("../examples/1cbs.cif.gz");
 
-	mmcif::File file(example);
+	mmcif::File file(example.string());
 	mmcif::Structure structure(file);
 
 	const float kResHi = 1.80009, kResLo = 7.99918; 
@@ -221,7 +221,7 @@ BOOST_AUTO_TEST_CASE(map_maker_2)
 
 	const fs::path example("../examples/1cbs.cif.gz");
 
-	mmcif::File file(example);
+	mmcif::File file(example.string());
 	mmcif::Structure structure(file);
 
 	c::MapMaker<float> mm;
@@ -297,7 +297,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	}
 
 	const fs::path example("../examples/1cbs.cif.gz");
-	mmcif::File file(example);
+	mmcif::File file(example.string());
 	mmcif::Structure structure(file);
 
 	c::MapMaker<float> mm;
@@ -356,7 +356,7 @@ BOOST_AUTO_TEST_CASE(stats_2)
 	namespace c = mmcif;
 
 	const fs::path example("../examples/1cbs.cif.gz");
-	mmcif::File file(example);
+	mmcif::File file(example.string());
 
 	BOOST_CHECK(file.file().isValid());
 	

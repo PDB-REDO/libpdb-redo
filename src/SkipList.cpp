@@ -109,7 +109,7 @@ void writeSkipList(std::ostream &os, const SkipList &list, SkipListFormat format
 
 void writeSkipList(const fs::path &file, const SkipList &list, SkipListFormat format)
 {
-	std::ofstream os(file);
+	std::ofstream os(file, std::ios::binary);
 	writeSkipList(os, list, format);
 }
 
