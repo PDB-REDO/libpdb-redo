@@ -115,7 +115,7 @@ find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
 check_include_file( "newuoa.h" HAVE_NEWUOA )
 
-include_directories(${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR})
+include_directories(${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS})
 link_libraries(${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CCP4_LIBRARIES} cifpp::cifpp zeep::zeep ${NEWUOA_LIBRARY})
 
 # Create a revision file, containing the current git version info
