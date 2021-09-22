@@ -102,7 +102,7 @@ find_package(Threads)
 find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4 clipper-mmdb
                            clipper-contrib clipper-minimol)
 
-set (Boost_DETAILED_FAILURE_MSG ON)
+set(Boost_DETAILED_FAILURE_MSG ON)
 find_package(Boost 1.70.0 REQUIRED COMPONENTS system iostreams regex date_time program_options)
 
 find_package(ZLIB)
@@ -133,7 +133,7 @@ else()
     SET(BUILD_VERSION_STRING ${PROJECT_VERSION})
 endif()
 
-# generate version.h
+# generate revision.hpp
 include_directories(${CMAKE_BINARY_DIR} PRIVATE)
 string(TIMESTAMP BUILD_DATE_TIME "%Y-%m-%dT%H:%M:%SZ" UTC)
 configure_file("${CMAKE_SOURCE_DIR}/src/revision.hpp.in" "${CMAKE_BINARY_DIR}/revision.hpp" @ONLY)

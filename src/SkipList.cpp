@@ -182,7 +182,7 @@ SkipList readCIFSkipList(std::istream &is)
 	auto &cat = db["skip_list"];
 
 	for (const auto &[auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id] :
-		cat.rows<std::string, std::string, std::string, std::string, std::string, std::string, int>({"auth_asym_id", "auth_comp_id", "auth_seq_id", "pdbx_PDB_ins_code", "label_asym_id", "label_comp_id", "label_seq_id"}))
+		cat.rows<std::string, std::string, std::string, std::string, std::string, std::string, int>("auth_asym_id", "auth_comp_id", "auth_seq_id", "pdbx_PDB_ins_code", "label_asym_id", "label_comp_id", "label_seq_id"))
 	{
 		result.emplace_back(auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id);
 	}
