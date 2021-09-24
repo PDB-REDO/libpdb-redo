@@ -10,7 +10,7 @@ enable_testing()
 include(GNUInstallDirs)
 include(CheckFunctionExists)
 include(CheckIncludeFile)
-include(CheckIncludeFileCXX)
+include(FindFilesystem)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(Dart)
@@ -20,11 +20,7 @@ set(CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-check_include_file_cxx("filesystem" _CXX_FILESYSTEM_HAVE_HEADER)
-mark_as_advanced(_CXX_FILESYSTEM_HAVE_HEADER)
-if(NOT _CXX_FILESYSTEM_HAVE_HEADER)
-	message(FATAL_ERROR "The standard c++ header file <filesystem> could not be found, please use a more recent compiler")
-endif()
+find_package(Filesystem REQUIRED)
 
 if(CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
@@ -123,7 +119,6 @@ find_path(NEWUOA_INCLUDE_DIR newuoa.h)
 check_include_file( "newuoa.h" HAVE_NEWUOA )
 
 include_directories(${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS})
-link_libraries(${Boost_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT} ${CCP4_LIBRARIES} cifpp::cifpp zeep::zeep ${NEWUOA_LIBRARY})
 
 # Create a revision file, containing the current git version info
 
@@ -291,15 +286,7 @@ if(PDB_REDO_BUILD_TESTS)
 			${CMAKE_CURRENT_BINARY_DIR}  # for config.h
 		)
 
-		target_link_libraries(${PDB_REDO_TEST} pdb-redo)
-
-		if(${ZLIB_FOUND})
-			target_link_libraries(${PDB_REDO_TEST} ZLIB::ZLIB)
-		endif()
-
-		if(${BZip2_FOUND})
-			target_link_libraries(${PDB_REDO_TEST} BZip2::BZip2)
-		endif()
+		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo  cifpp::cifpp zeep::zeep ${Boost_LIBRARIES} Threads::Threads ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY})
 	
 		if(MSVC)
 			# Specify unwind semantics so that MSVC knowns how to handle exceptions
