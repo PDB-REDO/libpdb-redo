@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(pdb-redo VERSION 1.1.0 LANGUAGES CXX C)
+project(pdb-redo VERSION 2.0.0 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -10,6 +10,7 @@ enable_testing()
 include(GNUInstallDirs)
 include(CheckFunctionExists)
 include(CheckIncludeFile)
+include(CheckIncludeFileCXX)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(Dart)
@@ -18,6 +19,12 @@ include(GenerateExportHeader)
 set(CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
+check_include_file_cxx("filesystem" _CXX_FILESYSTEM_HAVE_HEADER)
+mark_as_advanced(_CXX_FILESYSTEM_HAVE_HEADER)
+if(NOT _CXX_FILESYSTEM_HAVE_HEADER)
+	message(FATAL_ERROR "The standard c++ header file <filesystem> could not be found, please use a more recent compiler")
+endif()
 
 if(CMAKE_COMPILER_IS_GNUCC)
     set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
@@ -109,7 +116,7 @@ find_package(ZLIB)
 find_package(BZip2)
 # find_package(GSL)		# Will be required once we revive the minimizer code
 find_package(zeep REQUIRED)
-find_package(cifpp 1.1 REQUIRED)
+find_package(cifpp 2.0 REQUIRED)
 
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
@@ -229,11 +236,11 @@ install(FILES
 	COMPONENT Devel
 )
 
-set(pdb-redo_MAJOR_VERSION 1)
+set(pdb-redo_MAJOR_VERSION ${CMAKE_PROJECT_VERSION_MAJOR})
 set_target_properties(pdb-redo PROPERTIES
 	VERSION ${PROJECT_VERSION}
-	SOVERSION 1
-	INTERFACE_pdb-redo_MAJOR_VERSION 1)
+	SOVERSION ${pdb-redo_MAJOR_VERSION}
+	INTERFACE_pdb-redo_MAJOR_VERSION ${pdb-redo_MAJOR_VERSION})
 
 set_property(TARGET pdb-redo APPEND PROPERTY
   COMPATIBLE_INTERFACE_STRING pdb-redo_MAJOR_VERSION
