@@ -30,7 +30,7 @@ if(MSVC)
 endif()
 
 # Build shared libraries by default (not my cup of tea, but hey)
-option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" ON)
+option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" OFF)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # set(CMAKE_DEBUG_POSTFIX d)
@@ -106,6 +106,7 @@ find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4 clipper-mmdb
                            clipper-contrib clipper-minimol)
 
 set(Boost_DETAILED_FAILURE_MSG ON)
+set(Boost_USE_STATIC_LIBS ON)
 find_package(Boost 1.70.0 REQUIRED COMPONENTS system iostreams regex date_time program_options)
 
 find_package(ZLIB)
@@ -118,7 +119,7 @@ find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
 check_include_file( "newuoa.h" HAVE_NEWUOA )
 
-include_directories(${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS})
+# include_directories(${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS})
 
 # Create a revision file, containing the current git version info
 
@@ -136,7 +137,6 @@ else()
 endif()
 
 # generate revision.hpp
-include_directories(${CMAKE_BINARY_DIR} PRIVATE)
 string(TIMESTAMP BUILD_DATE_TIME "%Y-%m-%dT%H:%M:%SZ" UTC)
 configure_file("${CMAKE_SOURCE_DIR}/src/revision.hpp.in" "${CMAKE_BINARY_DIR}/revision.hpp" @ONLY)
 
@@ -168,6 +168,9 @@ ${PROJECT_SOURCE_DIR}/include/pdb-redo/Symmetry-2.hpp
 
 add_library(pdb-redo ${project_sources} ${project_headers})
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+target_include_directories(pdb-redo PUBLIC ${CIFPP_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${Boost_LIBRARIES} Threads::Threads ${ZLIB_LIBRARIES} ${BZIP2_LIBRARY} ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY})
 
 target_include_directories(pdb-redo
 	PUBLIC
@@ -286,7 +289,7 @@ if(PDB_REDO_BUILD_TESTS)
 			${CMAKE_CURRENT_BINARY_DIR}  # for config.h
 		)
 
-		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo  cifpp::cifpp zeep::zeep ${Boost_LIBRARIES} Threads::Threads ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY})
+	target_link_libraries(${PDB_REDO_TEST} PUBLIC pdb-redo std::filesystem)
 	
 		if(MSVC)
 			# Specify unwind semantics so that MSVC knowns how to handle exceptions
