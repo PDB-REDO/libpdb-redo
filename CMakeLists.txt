@@ -30,7 +30,7 @@ if(MSVC)
 endif()
 
 # Build shared libraries by default (not my cup of tea, but hey)
-option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" ON)
+option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" OFF)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # set(CMAKE_DEBUG_POSTFIX d)
@@ -159,6 +159,9 @@ set(project_headers
 
 add_library(pdb-redo ${project_sources} ${project_headers})
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
+
+target_include_directories(pdb-redo PUBLIC ${CIFPP_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${Boost_LIBRARIES} Threads::Threads ${ZLIB_LIBRARIES} ${BZIP2_LIBRARY} ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY})
 
 target_include_directories(pdb-redo
 	PUBLIC
