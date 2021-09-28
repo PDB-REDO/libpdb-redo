@@ -98,6 +98,11 @@ endif()
 
 # Libraries
 
+set(Boost_DETAILED_FAILURE_MSG ON)
+if(NOT BUILD_SHARED_LIBS)
+	set(Boost_USE_STATIC_LIBS ON)
+endif()
+
 set(CMAKE_THREAD_PREFER_PTHREAD)
 set(THREADS_PREFER_PTHREAD_FLAG)
 find_package(Threads)
