@@ -44,6 +44,17 @@ namespace tt = boost::test_tools;
 namespace utf = boost::unit_test;
 namespace ba = boost::algorithm;
 
+// --------------------------------------------------------------------
+
+fs::path gTestDir = fs::current_path();
+
+BOOST_AUTO_TEST_CASE(init)
+{
+	// not a test, just initialize test dir
+
+	if (boost::unit_test::framework::master_test_suite().argc == 2)
+		gTestDir = boost::unit_test::framework::master_test_suite().argv[1];
+}
 
 // --------------------------------------------------------------------
 // skip list test
@@ -52,7 +63,7 @@ BOOST_AUTO_TEST_CASE(skip_1)
 {
 	namespace c = mmcif;
 
-	const fs::path example("../examples/1cbs.cif.gz");
+	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	mmcif::File file(example.string());
 
 	c::Structure structure(file);
@@ -155,7 +166,7 @@ struct TestRadius {
 
 BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 {
-	const fs::path example("../examples/1cbs.cif.gz");
+	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 
 	mmcif::File file(example.string());
 	mmcif::Structure structure(file);
@@ -209,7 +220,7 @@ BOOST_AUTO_TEST_CASE(map_maker_1)
 	
 	float samplingRate = 0.75;
 
-	mm.loadMTZ("../examples/1cbs_map.mtz", samplingRate);
+	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
 	BOOST_TEST(mm.resHigh() == 1.8, tt::tolerance(0.01));
 	BOOST_TEST(mm.resLow() == 8.0, tt::tolerance(0.01));
@@ -219,7 +230,7 @@ BOOST_AUTO_TEST_CASE(map_maker_2)
 {
 	namespace c = mmcif;
 
-	const fs::path example("../examples/1cbs.cif.gz");
+	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 
 	mmcif::File file(example.string());
 	mmcif::Structure structure(file);
@@ -237,7 +248,7 @@ BOOST_AUTO_TEST_CASE(map_maker_2)
 	// 			aniso = c::MapMaker<float>::as_Calculated;
 	// 	}
 		
-	mm.calculate("../examples/1cbs_map.mtz", structure, false, aniso, samplingRate, false);
+	mm.calculate(gTestDir / ".." / "examples" / "1cbs_map.mtz", structure, false, aniso, samplingRate, false);
 
 	BOOST_TEST(mm.resHigh() == 1.8, tt::tolerance(0.01));
 	BOOST_TEST(mm.resLow() == 8.0, tt::tolerance(0.01));
@@ -264,7 +275,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	// read test data first (output from previous stats version)
 
 	std::vector<TestResidue> test;
-	std::ifstream testFile("1cbs-test.eds");
+	std::ifstream testFile(gTestDir / "1cbs-test.eds");
 
 	BOOST_ASSERT(testFile.is_open());
 
@@ -296,13 +307,13 @@ BOOST_AUTO_TEST_CASE(stats_1)
 		});
 	}
 
-	const fs::path example("../examples/1cbs.cif.gz");
+	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	mmcif::File file(example.string());
 	mmcif::Structure structure(file);
 
 	c::MapMaker<float> mm;
 	float samplingRate = 1.5;
-	mm.loadMTZ("../examples/1cbs_map.mtz", samplingRate);
+	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
 	mmcif::BondMap bm(structure);
 
@@ -355,7 +366,7 @@ BOOST_AUTO_TEST_CASE(stats_2)
 {
 	namespace c = mmcif;
 
-	const fs::path example("../examples/1cbs.cif.gz");
+	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	mmcif::File file(example.string());
 
 	BOOST_CHECK(file.file().isValid());
@@ -374,7 +385,7 @@ BOOST_AUTO_TEST_CASE(stats_2)
 
 	c::MapMaker<float> mm;
 	float samplingRate = 0.75;
-	mm.loadMTZ("../examples/1cbs_map.mtz", samplingRate);
+	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
 	mmcif::BondMap bm(structure);
 

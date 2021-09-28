@@ -105,20 +105,12 @@ find_package(Threads)
 find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4 clipper-mmdb
                            clipper-contrib clipper-minimol)
 
-set(Boost_DETAILED_FAILURE_MSG ON)
-find_package(Boost 1.70.0 REQUIRED COMPONENTS system iostreams regex date_time program_options)
-
-find_package(ZLIB)
-find_package(BZip2)
-# find_package(GSL)		# Will be required once we revive the minimizer code
-find_package(zeep REQUIRED)
-find_package(cifpp 2.0 REQUIRED)
-
+find_package(cifpp 2.0.0 REQUIRED)
+find_package(zeep 5.1.3 REQUIRED)
+						   
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
 check_include_file( "newuoa.h" HAVE_NEWUOA )
-
-include_directories(${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS})
 
 # Create a revision file, containing the current git version info
 
@@ -136,34 +128,33 @@ else()
 endif()
 
 # generate revision.hpp
-include_directories(${CMAKE_BINARY_DIR} PRIVATE)
 string(TIMESTAMP BUILD_DATE_TIME "%Y-%m-%dT%H:%M:%SZ" UTC)
 configure_file("${CMAKE_SOURCE_DIR}/src/revision.hpp.in" "${CMAKE_BINARY_DIR}/revision.hpp" @ONLY)
 
 # Sources
 
 set(project_sources 
-${PROJECT_SOURCE_DIR}/src/AtomShape.cpp
-${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
-${PROJECT_SOURCE_DIR}/src/DistanceMap.cpp
-${PROJECT_SOURCE_DIR}/src/MapMaker.cpp
-${PROJECT_SOURCE_DIR}/src/Ramachandran.cpp
-${PROJECT_SOURCE_DIR}/src/ResolutionCalculator.cpp
-${PROJECT_SOURCE_DIR}/src/SkipList.cpp
-${PROJECT_SOURCE_DIR}/src/Statistics.cpp
-${PROJECT_SOURCE_DIR}/src/Symmetry-2.cpp
+	${PROJECT_SOURCE_DIR}/src/AtomShape.cpp
+	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
+	${PROJECT_SOURCE_DIR}/src/DistanceMap.cpp
+	${PROJECT_SOURCE_DIR}/src/MapMaker.cpp
+	${PROJECT_SOURCE_DIR}/src/Ramachandran.cpp
+	${PROJECT_SOURCE_DIR}/src/ResolutionCalculator.cpp
+	${PROJECT_SOURCE_DIR}/src/SkipList.cpp
+	${PROJECT_SOURCE_DIR}/src/Statistics.cpp
+	${PROJECT_SOURCE_DIR}/src/Symmetry-2.cpp
 )
 
 set(project_headers 
-${PROJECT_SOURCE_DIR}/include/pdb-redo/AtomShape.hpp
-${PROJECT_SOURCE_DIR}/include/pdb-redo/ClipperWrapper.hpp
-${PROJECT_SOURCE_DIR}/include/pdb-redo/DistanceMap.hpp
-${PROJECT_SOURCE_DIR}/include/pdb-redo/MapMaker.hpp
-${PROJECT_SOURCE_DIR}/include/pdb-redo/Ramachandran.hpp
-${PROJECT_SOURCE_DIR}/include/pdb-redo/ResolutionCalculator.hpp
-${PROJECT_SOURCE_DIR}/include/pdb-redo/SkipList.hpp
-${PROJECT_SOURCE_DIR}/include/pdb-redo/Statistics.hpp
-${PROJECT_SOURCE_DIR}/include/pdb-redo/Symmetry-2.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/AtomShape.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/ClipperWrapper.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/DistanceMap.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/MapMaker.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/Ramachandran.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/ResolutionCalculator.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/SkipList.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/Statistics.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/Symmetry-2.hpp
 )
 
 add_library(pdb-redo ${project_sources} ${project_headers})
@@ -175,6 +166,12 @@ target_include_directories(pdb-redo
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 
+target_include_directories(pdb-redo PUBLIC
+	${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS}
+)
+
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep std::filesystem)
+
 if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
 endif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
@@ -182,11 +179,6 @@ endif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR} )
 set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
 set(SHARE_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/libpdb-redo)
-
-# Fix cache dir
-add_compile_definitions(
-	# CACHE_DIR="${CMAKE_INSTALL_PREFIX}/${SHARE_INSTALL_DIR}"
-	DATA_DIR="${CMAKE_INSTALL_PREFIX}/${SHARE_INSTALL_DIR}" )
 
 generate_export_header(pdb-redo
 	EXPORT_FILE_NAME pdb-redo/pdb-redo_export.hpp)
@@ -286,7 +278,7 @@ if(PDB_REDO_BUILD_TESTS)
 			${CMAKE_CURRENT_BINARY_DIR}  # for config.h
 		)
 
-		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo  cifpp::cifpp zeep::zeep ${Boost_LIBRARIES} Threads::Threads ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY})
+		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo cifpp::cifpp zeep::zeep ${Boost_LIBRARIES} Threads::Threads ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} std::filesystem)
 	
 		if(MSVC)
 			# Specify unwind semantics so that MSVC knowns how to handle exceptions
@@ -297,12 +289,10 @@ if(PDB_REDO_BUILD_TESTS)
 
 		add_custom_command(
 			OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Run${PDB_REDO_TEST}.touch
-			COMMAND $<TARGET_FILE:${PDB_REDO_TEST}>
-			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/test)
+			COMMAND $<TARGET_FILE:${PDB_REDO_TEST}> -- ${CMAKE_SOURCE_DIR}/test)
 
 		add_test(NAME ${PDB_REDO_TEST}
-			COMMAND $<TARGET_FILE:${PDB_REDO_TEST}>
-			WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/test)
+			COMMAND $<TARGET_FILE:${PDB_REDO_TEST}> -- ${CMAKE_SOURCE_DIR}/test)
 
 	endforeach()
 endif()
