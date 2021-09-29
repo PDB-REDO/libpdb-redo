@@ -31,7 +31,6 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
 
@@ -346,7 +345,7 @@ void Map<FTYPE>::read(const std::string& f)
 	if (cif::VERBOSE)
 		std::cout << "Reading map from " << mapFile << std::endl;
 	
-	if (mapFile.extension() == ".gz" or mapFile.extension() == ".bz2")
+	if (mapFile.extension() == ".gz")
 	{
 		// file is compressed
 		
@@ -357,10 +356,7 @@ void Map<FTYPE>::read(const std::string& f)
 		
 		std::ifstream fi(mapFile);
 		
-		if (mapFile.extension() == ".gz")
-			in.push(io::gzip_decompressor());
-		else
-			in.push(io::bzip2_decompressor());
+		in.push(io::gzip_decompressor());
 			
 		in.push(fi);
 
@@ -444,7 +440,7 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 
 	fs::path dataFile = hklin;
 	
-	if (hklin.extension() == ".gz" or hklin.extension() == ".bz2")
+	if (hklin.extension() == ".gz")
 	{
 		// file is compressed
 		
@@ -454,12 +450,9 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 		io::filtering_stream<io::input> in;
 		
 		std::ifstream fi(hklin);
-		
-		if (hklin.extension() == ".gz")
-			in.push(io::gzip_decompressor());
-		else
-			in.push(io::bzip2_decompressor());
-			
+
+		in.push(io::gzip_decompressor());
+
 		in.push(fi);
 
 		char tmpFileName[] = "/tmp/mtz-tmp-XXXXXX";

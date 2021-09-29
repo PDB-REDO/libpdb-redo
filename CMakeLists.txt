@@ -1,3 +1,27 @@
+# SPDX-License-Identifier: BSD-2-Clause
+
+# Copyright (c) 2021 NKI/AVL, Netherlands Cancer Institute
+
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+
+# 1. Redistributions of source code must retain the above copyright notice, this
+#    list of conditions and the following disclaimer
+# 2. Redistributions in binary form must reproduce the above copyright notice,
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
+
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+# ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+# WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+# DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR
+# ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+# (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+# LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND
+# ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+# (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+# SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
@@ -14,6 +38,7 @@ include(FindFilesystem)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(Dart)
+include(FindFilesystem)
 include(GenerateExportHeader)
 
 set(CXX_EXTENSIONS OFF)
@@ -22,18 +47,59 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Filesystem REQUIRED)
 
-if(CMAKE_COMPILER_IS_GNUCC)
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter")
-endif()
-if(MSVC)
-    set(CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} /W4")
+if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
+	# https://stackoverflow.com/questions/63902528/program-crashes-when-filesystempath-is-destroyed
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
+elseif(MSVC)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
 # Build shared libraries by default (not my cup of tea, but hey)
 option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" OFF)
+
+# We do not want to write an export file for all our symbols...
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-# set(CMAKE_DEBUG_POSTFIX d)
+# Optionally build a version to be installed inside CCP4
+option(BUILD_FOR_CCP4 "Build a version to be installed in CCP4" OFF)
+if(BUILD_FOR_CCP4)
+	if("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
+		message(FATAL_ERROR "A CCP4 built was requested but CCP4 was not sourced")
+	else()
+		list(APPEND CMAKE_MODULE_PATH "$ENV{CCP4}")
+		list(APPEND CMAKE_PREFIX_PATH "$ENV{CCP4}")
+		set(CMAKE_INSTALL_PREFIX "$ENV{CCP4}")
+
+		# This is the only option:
+		if(WIN32)
+			set(BUILD_SHARED_LIBS ON)
+		endif()
+	endif("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
+endif()
+
+# Check if CCP4 is available
+if(EXISTS "$ENV{CCP4}")
+	set(CCP4 $ENV{CCP4})
+	set(CLIBD ${CCP4}/lib/data)
+endif()
+if(CCP4 AND NOT CLIBD)
+	set(CLIBD ${CCP4}/lib/data)
+endif()
+
+# When CCP4 is sourced in the environment, we can recreate the symmetry operations table
+if(EXISTS "${CCP4}")
+	if(RECREATE_SYMOP_DATA AND NOT EXISTS "${CLIBD}/syminfo.lib")
+		message(WARNING "Symop data table recreation requested, but file syminfo.lib was not found in ${CLIBD}")
+		set(RECREATE_SYMOP_DATA OFF)
+	else()
+		option(RECREATE_SYMOP_DATA "Recreate SymOp data table in case it is out of date" ON)
+	endif()
+else()
+	set(RECREATE_SYMOP_DATA OFF)
+	message("Not trying to recreate SymOpTable_data.hpp since CCP4 is not defined")
+endif()
+
+set(CMAKE_DEBUG_POSTFIX d)
 
 if(MSVC)
     # make msvc standards compliant...
@@ -53,8 +119,8 @@ if(MSVC)
 	add_definitions(-D_WIN32_WINNT=${ver})
 
 	# On Windows, do not install in the system location
-	if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-		message(WARNING "The library and auxiliary files will be installed in $ENV{LOCALAPPDATA}/${PROJECT_NAME}")
+	if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND NOT BUILD_FOR_CCP4)
+		message(STATUS "The library and auxiliary files will be installed in $ENV{LOCALAPPDATA}/${PROJECT_NAME}")
 		set(CMAKE_INSTALL_PREFIX "$ENV{LOCALAPPDATA}/${PROJECT_NAME}" CACHE PATH "..." FORCE)
 	endif()
 
@@ -70,30 +136,36 @@ if(MSVC)
 	endif()	
 
 	set(COFF_SPEC "--coff=${COFF_TYPE}")
+
+	# for mrc, just in case
+	list(APPEND CMAKE_PREFIX_PATH "$ENV{LOCALAPPDATA}/mrc")
 endif()
 
-if(UNIX AND NOT APPLE)
+if(UNIX AND NOT APPLE AND NOT BUILD_FOR_CCP4 AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
 	# On Linux, install in the $HOME/.local folder by default
-	if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-		message(WARNING "The library and auxiliary files will be installed in $ENV{HOME}/.local")
-		set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local" CACHE PATH "..." FORCE)
-	endif()
+	message(STATUS "The library and auxiliary files will be installed in $ENV{HOME}/.local")
+	set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local" CACHE PATH "..." FORCE)
 endif()
 
 # Optionally use mrc to create resources
-find_program(MRC mrc HINTS "$ENV{LOCALAPPDATA}/mrc" "$ENV{LOCALAPPDATA}/mrc/bin" "$ENV{HOME}/.local/bin" "${CMAKE_INSTALL_PREFIX}/../mrc" "/usr/local/bin")
 
-if(MRC)
-	option(USE_RSRC "Use mrc to create resources" ON)
+if(WIN32 AND BUILD_SHARED_LIBS)
+	message("Not using resources when building shared libraries for Windows")
 else()
-	message(WARNING "Not using resources since mrc was not found")
-endif()
+	find_program(MRC mrc)
 
-if(USE_RSRC STREQUAL "ON")
-	set(USE_RSRC 1)
+	if(MRC)
+		option(USE_RSRC "Use mrc to create resources" ON)
+	else()
+		message("Using resources not possible since mrc was not found")
+	endif()
 
-	message("Using resources compiled with ${MRC}")
-	add_compile_definitions(USE_RSRC)
+	if(USE_RSRC STREQUAL "ON")
+		set(USE_RSRC 1)
+
+		message("Using resources compiled with ${MRC}")
+		add_compile_definitions(USE_RSRC)
+	endif()
 endif()
 
 # Libraries
@@ -103,15 +175,11 @@ if(NOT BUILD_SHARED_LIBS)
 	set(Boost_USE_STATIC_LIBS ON)
 endif()
 
-set(CMAKE_THREAD_PREFER_PTHREAD)
-set(THREADS_PREFER_PTHREAD_FLAG)
-find_package(Threads)
-
 find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4 clipper-mmdb
                            clipper-contrib clipper-minimol)
 
 find_package(cifpp 2.0.0 REQUIRED)
-find_package(zeep 5.1.3 REQUIRED)
+find_package(zeep 5.1.4 REQUIRED)
 						   
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
@@ -132,9 +200,33 @@ else()
     SET(BUILD_VERSION_STRING ${PROJECT_VERSION})
 endif()
 
-# generate revision.hpp
+# generate version.h
 string(TIMESTAMP BUILD_DATE_TIME "%Y-%m-%dT%H:%M:%SZ" UTC)
 configure_file("${CMAKE_SOURCE_DIR}/src/revision.hpp.in" "${CMAKE_BINARY_DIR}/revision.hpp" @ONLY)
+
+# SymOp data table
+if(RECREATE_SYMOP_DATA)
+	# The tool to create the table
+
+	add_executable(symop-map-generator "${CMAKE_SOURCE_DIR}/tools/symop-map-generator.cpp")
+
+	target_link_libraries(symop-map-generator Threads::Threads ${Boost_LIBRARIES} std::filesystem ${ZLIB_LIBRARIES} ${BZip2_LIBRARIES})
+	if(Boost_INCLUDE_DIR)
+		target_include_directories(symop-map-generator PUBLIC ${Boost_INCLUDE_DIR})
+	endif()
+
+	set($ENV{CLIBD} ${CLIBD})
+	
+	add_custom_command(
+		OUTPUT ${CMAKE_SOURCE_DIR}/src/SymOpTable_data.hpp
+		COMMAND $<TARGET_FILE:symop-map-generator> ${CLIBD}/syminfo.lib ${CMAKE_SOURCE_DIR}/src/SymOpTable_data.hpp
+		)
+	
+	add_custom_target(
+		OUTPUT ${CMAKE_SOURCE_DIR}/src/SymOpTable_data.hpp
+		DEPENDS symop-map-generator "$ENV{CLIBD}/syminfo.lib"
+	)
+endif()
 
 # Sources
 
@@ -166,7 +258,7 @@ add_library(pdb-redo ${project_sources} ${project_headers})
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(pdb-redo PUBLIC ${CIFPP_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${Boost_LIBRARIES} Threads::Threads ${ZLIB_LIBRARIES} ${BZIP2_LIBRARY} ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} std::filesystem)
 
 target_include_directories(pdb-redo
 	PUBLIC
@@ -186,7 +278,6 @@ endif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 
 set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR} )
 set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
-set(SHARE_INSTALL_DIR ${CMAKE_INSTALL_DATADIR}/libpdb-redo)
 
 generate_export_header(pdb-redo
 	EXPORT_FILE_NAME pdb-redo/pdb-redo_export.hpp)
@@ -221,7 +312,7 @@ install(
 configure_package_config_file(Config.cmake.in
 	${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfig.cmake
 	INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pdb-redo
-	PATH_VARS INCLUDE_INSTALL_DIR LIBRARY_INSTALL_DIR SHARE_INSTALL_DIR
+	PATH_VARS INCLUDE_INSTALL_DIR LIBRARY_INSTALL_DIR
 )
 
 install(FILES
@@ -286,7 +377,7 @@ if(PDB_REDO_BUILD_TESTS)
 			${CMAKE_CURRENT_BINARY_DIR}  # for config.h
 		)
 
-		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo cifpp::cifpp zeep::zeep ${Boost_LIBRARIES} Threads::Threads ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} std::filesystem)
+		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} std::filesystem)
 	
 		if(MSVC)
 			# Specify unwind semantics so that MSVC knowns how to handle exceptions
