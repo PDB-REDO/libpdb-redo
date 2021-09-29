@@ -1,3 +1,7 @@
+Version 2.0.0
+- Updated build configuration
+- removed bzip2 support
+
 Version 1.1.0
 - Now with cmake instead of GNU configure
 
