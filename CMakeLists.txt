@@ -173,8 +173,7 @@ if(NOT BUILD_SHARED_LIBS)
 	set(Boost_USE_STATIC_LIBS ON)
 endif()
 
-find_package(CCP4 REQUIRED mmdb2 ccp4c clipper-core clipper-ccp4 clipper-mmdb
-                           clipper-contrib clipper-minimol)
+find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 
 find_package(cifpp 2.0.0 REQUIRED)
 find_package(zeep 5.1.4 REQUIRED)
