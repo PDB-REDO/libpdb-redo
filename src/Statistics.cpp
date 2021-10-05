@@ -24,8 +24,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.hpp"
-
 #include <fstream>
 #include <numeric>
 
@@ -199,12 +197,12 @@ class PointWeightFunction
 		
 		float result = 0;
 
-		for (auto& p: m_P)
+		for (auto& pi: m_P)
 		{
-			if (d > p.x)
+			if (d > pi.x)
 				continue;
 			
-			result = p.m * (d - p.c) * (d - p.c) + p.b;
+			result = pi.m * (d - pi.c) * (d - pi.c) + pi.b;
 			
 //			assert(result != 0);
 			if (result == 0)
@@ -456,8 +454,8 @@ StatsCollector::StatsCollector(const MapMaker<float>& mm, Structure& structure, 
 	mSpacegroup = mm.spacegroup();
 	mCell = mm.cell();
 	mGrid = mm.gridSampling();
-	mResHigh = mm.resHigh();
-	mResLow = mm.resLow();
+	mResHigh = static_cast<float>(mm.resHigh());
+	mResLow = static_cast<float>(mm.resLow());
 	
 	initialize();
 }
@@ -540,8 +538,6 @@ void StatsCollector::initialize()
 		// collect array of z-scores
 		std::vector<double>& zdca0 = zsc.second;
 
-//		double qa, qb;
-//		std::tie(qa, qb) = interpolateCumulativeProbabilities(zdca0, mVF);
 		auto& z = zdca0;
 		auto vf = mVF;
 
@@ -585,8 +581,8 @@ void StatsCollector::initialize()
 			}
 			
 			double dd = 1.0 / (sw * swxs - swx * swx);
-			double qa = dd * (swxs * swy - swx * swxy);
-			double qb = dd * (sw * swxy - swx * swy);
+			qa = dd * (swxs * swy - swx * swxy);
+			qb = dd * (sw * swxy - swx * swy);
 			
 			if (cif::VERBOSE > 1)
 			{
@@ -882,7 +878,6 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 				d.edia,											// ediam
 				(d.edia > 0.8 ? 100. : 0.),						// opia
 				static_cast<int>(round(mVF * d.sums.ngrid))});	// ngrid
-	
 		}
 	}
 	
@@ -1167,7 +1162,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData>& atomData) const
 		PointWeightFunction w(atom.location(), radius);
 		
 		std::vector<Atom> atomsNearBy = mDistanceMap.near(atom, 3.5f);
-	
+
 		std::vector<PointWeightFunction> wn;
 		for (auto a: atomsNearBy)
 			wn.emplace_back(a.location(), mRadii.at(a.type()));
@@ -1179,12 +1174,14 @@ void EDIAStatsCollector::calculate(std::vector<AtomData>& atomData) const
 			Point p = toPoint(iw.coord_orth());
 			
 			// EDIA calculations
-			float z = (Fb[iw] - mMeanDensityFb) / mRMSDensityFb;
+			auto fb = Fb[iw];
+
+			float z = 0;
+			if (fb >= mMeanDensityFb + mRMSDensityFb)
+				z = static_cast<float>((fb - mMeanDensityFb) / mRMSDensityFb);
 			
-			if (z < 0)
-				z = 0;
 			if (z > 1.2)
-				z = 1.2;
+				z = 1.2f;
 			
 			float wp = w(p);
 			
@@ -1205,13 +1202,13 @@ void EDIAStatsCollector::calculate(std::vector<AtomData>& atomData) const
 			
 			for (size_t i = 0; i < atomsNearBy.size(); ++i)
 			{
-				float w = wn[i](p);
-				if (w == 0)
+				float wpi = wn[i](p);
+				if (wpi == 0)
 					continue;
 				
-				if (w < 0)
+				if (wpi < 0)
 					D.insert(atomsNearBy[i]);
-				else if (w > 0)
+				else if (wpi > 0)
 				{
 					S.insert(atomsNearBy[i]);
 					
@@ -1258,11 +1255,12 @@ void EDIAStatsCollector::calculate(std::vector<AtomData>& atomData) const
 			ediaSum[0] += z * wp * o;
 			if (wp > 0)
 				ediaSum[1] += wp;
-
 		});
 
 		data.edia = ediaSum[0] / ediaSum[1];
-		
+		if (data.edia < 0)
+			data.edia = 0;
+
 		progress.consumed(1);
 	}
 }

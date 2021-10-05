@@ -24,8 +24,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.hpp"
-
 #include "cif++/Symmetry.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 

@@ -2,11 +2,10 @@ prefix=@prefix@
 exec_prefix=@exec_prefix@
 libdir=@libdir@
 includedir=@includedir@
-datalibdir=@datarootdir@/libpdb-redo
 
-Name: @PACKAGE_NAME@
+Name: @PROJECT_NAME@
 Description: Library containing shared code for the various programs in the PDB-REDO project
-Version: @PACKAGE_VERSION@
+Version: @PROJECT_VERSION@
 
 Libs: -L${libdir} -lpdb-redo
 Cflags: -I${includedir}

@@ -24,8 +24,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.hpp"
-
 #include <atomic>
 #include <mutex>
 
@@ -39,15 +37,6 @@
 
 namespace mmcif
 {
-
-// --------------------------------------------------------------------
-
-inline std::ostream& operator<<(std::ostream& os, const Atom& a)
-{
-	os << a.labelAsymID() << ':' << a.labelSeqID() << '/' << a.labelAtomID() << a.labelAltID();
-	
-	return os;
-}
 
 // --------------------------------------------------------------------
 
@@ -104,21 +93,21 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 		
 		locations[ix] = toClipper(atom.location());
 		
-		auto p = atom.location();
+		auto pt = atom.location();
 
-		if (pMin.mX > p.mX)
-			pMin.mX = p.mX;
-		if (pMin.mY > p.mY)
-			pMin.mY = p.mY;
-		if (pMin.mZ > p.mZ)
-			pMin.mZ = p.mZ;
+		if (pMin.mX > pt.mX)
+			pMin.mX = pt.mX;
+		if (pMin.mY > pt.mY)
+			pMin.mY = pt.mY;
+		if (pMin.mZ > pt.mZ)
+			pMin.mZ = pt.mZ;
 
-		if (pMax.mX < p.mX)
-			pMax.mX = p.mX;
-		if (pMax.mY < p.mY)
-			pMax.mY = p.mY;
-		if (pMax.mZ < p.mZ)
-			pMax.mZ = p.mZ;
+		if (pMax.mX < pt.mX)
+			pMax.mX = pt.mX;
+		if (pMax.mY < pt.mY)
+			pMax.mY = pt.mY;
+		if (pMax.mZ < pt.mZ)
+			pMax.mZ = pt.mZ;
 	};
 	
 	// correct locations so that the median of x, y and z are inside the cell
@@ -130,15 +119,15 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 			: (c[dim / 2 - 1] + c[dim / 2]) / 2;
 	};
 	
-	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[0]; });
+	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[0]); });
 	sort(c.begin(), c.end());
 	float mx = median();
 	
-	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[1]; });
+	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[1]); });
 	sort(c.begin(), c.end());
 	float my = median();
 	
-	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[2]; });
+	transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[2]); });
 	sort(c.begin(), c.end());
 	float mz = median();
 
@@ -155,9 +144,9 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 		return d;
 	};
 
-	mD.mX = calculateD(mx, cell.a());
-	mD.mY = calculateD(my, cell.b());
-	mD.mZ = calculateD(mz, cell.c());
+	mD.mX = calculateD(mx, static_cast<float>(cell.a()));
+	mD.mY = calculateD(my, static_cast<float>(cell.b()));
+	mD.mZ = calculateD(mz, static_cast<float>(cell.c()));
 	
 	clipper::Coord_orth D = toClipper(mD);
 	
@@ -247,11 +236,11 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 				auto& rt = mRtOrth[k];
 				
 				auto pJ = (cJ + D).transform(rt) - D;
-				double r2 = sqrt((cI - pJ).lengthsq()) - radiusI - radiusJ;
+				double r2 = std::sqrt((cI - pJ).lengthsq()) - radiusI - radiusJ;
 
 				if (minR2 > r2)
 				{
-					minR2 = r2;
+					minR2 = static_cast<float>(r2);
 					kbest = k;
 				}
 			}
@@ -273,18 +262,18 @@ DistanceMap::DistanceMap(const Structure& p, const clipper::Spacegroup& spacegro
 	
 	for (auto& di: dist)
 	{
-		size_t c, r;
-		std::tie(r, c) = di.first;
+		size_t col, row;
+		std::tie(row, col) = di.first;
 
-		if (r != lastR)	// new row
+		if (row != lastR)	// new row
 		{
-			for (size_t ri = lastR; ri < r; ++ri)
+			for (size_t ri = lastR; ri < row; ++ri)
 				mIA.push_back(mA.size());
-			lastR = r;
+			lastR = row;
 		}
 
 		mA.push_back(di.second);
-		mJA.push_back(c);
+		mJA.push_back(col);
 	}
 
 	for (size_t ri = lastR; ri < dim; ++ri)
@@ -310,11 +299,11 @@ void DistanceMap::AddDistancesForAtoms(const Residue& a, const Residue& b, DistM
 			if (rtix)
 				pb = pb.transform(mRtOrth[rtix]);
 			
-			auto d = (pa - pb).lengthsq();
+			auto d = static_cast<float>((pa - pb).lengthsq());
 			if (d > mMaxDistanceSQ)
 				continue;
 
-			d = sqrt(d);
+			d = std::sqrt(d);
 
 			size_t ixb = index[bb.id()];
 

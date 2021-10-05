@@ -24,8 +24,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.hpp"
-
 #include <iomanip>
 #include <fstream>
 #include <filesystem>
@@ -33,7 +31,6 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
 #include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/bzip2.hpp>
 #include <boost/iostreams/filter/gzip.hpp>
 #include <boost/iostreams/copy.hpp>
 
@@ -150,11 +147,11 @@ struct CCP4MapFileHeader
 };
 
 template<typename FTYPE>
-std::tuple<float,float,float,float> CalculateMapStatistics(const clipper::Xmap<FTYPE>& xmap, clipper::Grid_range r)
+std::tuple<FTYPE,FTYPE,FTYPE,FTYPE> CalculateMapStatistics(const clipper::Xmap<FTYPE>& xmap, clipper::Grid_range r)
 {
-	float
-		amin = std::numeric_limits<float>::max(),
-		amax = std::numeric_limits<float>::min();
+	FTYPE
+		amin = std::numeric_limits<FTYPE>::max(),
+		amax = std::numeric_limits<FTYPE>::min();
 	long double asum = 0, asum2 = 0;
 	size_t n = 0;
 
@@ -164,7 +161,7 @@ std::tuple<float,float,float,float> CalculateMapStatistics(const clipper::Xmap<F
 			for (int g2 = r.min()[2]; g2 <= r.max()[2]; ++g2)
 			{
 				c.set_coord({ g0, g1, g2});
-				float v = xmap[c];
+				FTYPE v = xmap[c];
 
 				asum += v;
 				asum2 += v * v;
@@ -176,8 +173,8 @@ std::tuple<float,float,float,float> CalculateMapStatistics(const clipper::Xmap<F
 				++n;
 			}
 
-	float mean = static_cast<float>(asum / n);
-	float rmsd = static_cast<float>(sqrt((asum2 / n) - (mean * mean)));
+	FTYPE mean = static_cast<FTYPE>(asum / n);
+	FTYPE rmsd = static_cast<FTYPE>(std::sqrt((asum2 / n) - (mean * mean)));
 
 	return std::make_tuple(amin, amax, mean, rmsd);
 }
@@ -203,11 +200,11 @@ void writeCCP4MapFile(std::ostream& os, clipper::Xmap<FTYPE>& xmap, clipper::Gri
 	}
 
 	int orderXYZ[3];
-	for (size_t i = 0; i < 3; ++i)
+	for (int i = 0; i < 3; ++i)
 		orderXYZ[orderFMS[i] - 1] = i;
 
 	int grid[3], gridFMSMin[3], gridFMSMax[3], dim[3];
-	for (size_t i = 0; i < 3; ++i)
+	for (int i = 0; i < 3; ++i)
 	{
 		grid[i] = xmap.grid_sampling()[i];
 
@@ -272,7 +269,7 @@ void writeCCP4MapFile(std::ostream& os, clipper::Xmap<FTYPE>& xmap, clipper::Gri
 			for (g[0] = gridFMSMin[0]; g[0] <= gridFMSMax[0]; ++g[0])
 			{
 				c.set_coord({ g[orderXYZ[0]], g[orderXYZ[1]], g[orderXYZ[2]] });
-				*si++ = xmap[c];
+				*si++ = static_cast<float>(xmap[c]);
 			}
 		
 		assert(si == section.end());
@@ -348,7 +345,7 @@ void Map<FTYPE>::read(const std::string& f)
 	if (cif::VERBOSE)
 		std::cout << "Reading map from " << mapFile << std::endl;
 	
-	if (mapFile.extension() == ".gz" or mapFile.extension() == ".bz2")
+	if (mapFile.extension() == ".gz")
 	{
 		// file is compressed
 		
@@ -359,10 +356,7 @@ void Map<FTYPE>::read(const std::string& f)
 		
 		std::ifstream fi(mapFile);
 		
-		if (mapFile.extension() == ".gz")
-			in.push(io::gzip_decompressor());
-		else
-			in.push(io::bzip2_decompressor());
+		in.push(io::gzip_decompressor());
 			
 		in.push(fi);
 
@@ -446,7 +440,7 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 
 	fs::path dataFile = hklin;
 	
-	if (hklin.extension() == ".gz" or hklin.extension() == ".bz2")
+	if (hklin.extension() == ".gz")
 	{
 		// file is compressed
 		
@@ -456,12 +450,9 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 		io::filtering_stream<io::input> in;
 		
 		std::ifstream fi(hklin);
-		
-		if (hklin.extension() == ".gz")
-			in.push(io::gzip_decompressor());
-		else
-			in.push(io::bzip2_decompressor());
-			
+
+		in.push(io::gzip_decompressor());
+
 		in.push(fi);
 
 		char tmpFileName[] = "/tmp/mtz-tmp-XXXXXX";
@@ -540,7 +531,7 @@ void MapMaker<FTYPE>::loadMTZ(const std::string& f, float samplingRate,
 	
 	for (auto hi = mFoData.first_data(); not hi.last(); hi = mFoData.next_data(hi))
 	{
-		float res = rc(hi.hkl().h(), hi.hkl().k(), hi.hkl().l());
+		auto res = rc(hi.hkl().h(), hi.hkl().k(), hi.hkl().l());
 		
 		if (mResHigh > res)
 			mResHigh = res;
@@ -857,7 +848,7 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 	
 	for (auto hi = mFoData.first_data(); not hi.last(); hi = mFoData.next_data(hi))
 	{
-		float res = rc(hi.hkl().h(), hi.hkl().k(), hi.hkl().l());
+		auto res = rc(hi.hkl().h(), hi.hkl().k(), hi.hkl().l());
 		
 		if (mResHigh > res)
 			mResHigh = res;

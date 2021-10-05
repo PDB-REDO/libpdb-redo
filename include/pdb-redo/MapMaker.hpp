@@ -30,6 +30,11 @@
 
 #include "cif++/Structure.hpp"
 
+// My apologies, but this code is emitting way too many warnings...
+#if defined(_MSC_VER)
+#	pragma warning (disable : 4244)	// possible loss of data (in conversion to smaller type)
+#endif
+
 namespace mmcif
 {
 

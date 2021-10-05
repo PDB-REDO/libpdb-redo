@@ -24,8 +24,6 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include "config.hpp"
-
 #include <atomic>
 #include <mutex>
 
@@ -54,22 +52,22 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure& p, const clipper:
 	
 	for (auto& atom: atoms)
 	{
-		auto p = atom.location();
-		locations.push_back(toClipper(p));
+		auto pt = atom.location();
+		locations.push_back(toClipper(pt));
 
-		if (pMin.mX > p.mX)
-			pMin.mX = p.mX;
-		if (pMin.mY > p.mY)
-			pMin.mY = p.mY;
-		if (pMin.mZ > p.mZ)
-			pMin.mZ = p.mZ;
+		if (pMin.mX > pt.mX)
+			pMin.mX = pt.mX;
+		if (pMin.mY > pt.mY)
+			pMin.mY = pt.mY;
+		if (pMin.mZ > pt.mZ)
+			pMin.mZ = pt.mZ;
 
-		if (pMax.mX < p.mX)
-			pMax.mX = p.mX;
-		if (pMax.mY < p.mY)
-			pMax.mY = p.mY;
-		if (pMax.mZ < p.mZ)
-			pMax.mZ = p.mZ;
+		if (pMax.mX < pt.mX)
+			pMax.mX = pt.mX;
+		if (pMax.mY < pt.mY)
+			pMax.mY = pt.mY;
+		if (pMax.mZ < pt.mZ)
+			pMax.mZ = pt.mZ;
 	};
 	
 	// correct locations so that the median of x, y and z are inside the cell
@@ -81,15 +79,15 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure& p, const clipper:
 			: (c[dim / 2 - 1] + c[dim / 2]) / 2;
 	};
 	
-	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[0]; });
+	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[0]); });
 	std::sort(c.begin(), c.end());
 	float mx = median();
 	
-	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[1]; });
+	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[1]); });
 	std::sort(c.begin(), c.end());
 	float my = median();
 	
-	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return l[2]; });
+	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[2]); });
 	std::sort(c.begin(), c.end());
 	float mz = median();
 
@@ -115,9 +113,9 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure& p, const clipper:
 
 	m::Point D;
 
-	D.mX = calculateD(mx, cell.a());
-	D.mY = calculateD(my, cell.b());
-	D.mZ = calculateD(mz, cell.c());
+	D.mX = calculateD(mx, static_cast<float>(cell.a()));
+	D.mY = calculateD(my, static_cast<float>(cell.b()));
+	D.mZ = calculateD(mz, static_cast<float>(cell.c()));
 	
 	if (D.mX != 0 or D.mY != 0 or D.mZ != 0)
 	{
@@ -186,11 +184,11 @@ int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac& rt)
 		if (n == 0 or abs(n) == 24)
 			continue;		// is 0, 0 in our table
 
-		for (int i = 5; i > 1; --i)
-			if (n % i == 0 and d % i == 0)
+		for (int j = 5; j > 1; --j)
+			if (n % j == 0 and d % j == 0)
 			{
-				n /= i;
-				d /= i;
+				n /= j;
+				d /= j;
 			}
 		
 		n = (n + d) % d;
@@ -265,6 +263,8 @@ clipper::Spgr_descr GetCCP4SpacegroupDescr(int nr)
 
 std::string describeRToperation(const clipper::Spacegroup& spacegroup, const clipper::Cell& cell, const clipper::RTop_orth& rt)
 {
+	auto spacegroup_nr = mmcif::GetSpacegroupNumber(spacegroup.symbol_hm());
+
 	if (not (rt.is_null() or rt.equals(clipper::RTop_orth::identity(), 0.0001f)))
 	{
 		for (int i = 0; i < spacegroup.num_symops(); ++i)
@@ -288,7 +288,7 @@ std::string describeRToperation(const clipper::Spacegroup& spacegroup, const cli
 
 							auto rtop_f = rtop.rtop_frac(cell);
 
-							int rnr = GetRotationalIndexNumber(spacegroup.spacegroup_number(), rtop_f);
+							int rnr = GetRotationalIndexNumber(spacegroup_nr, rtop_f);
 
 							uint32_t t[3] = {
 								static_cast<uint32_t>(5 + static_cast<int>(rint(rtop_f.trn()[0]))),
