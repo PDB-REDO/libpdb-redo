@@ -121,7 +121,7 @@ double sineIntegration(double x)
 				{ -1.36517137670871689e12,	 0								 }
 			};
 		
-		double xs = pow(x, -2);
+		double xs = std::pow(x, -2);
 		double xi = 1;
 		
 		double sn = 0, sd = 0;
@@ -146,7 +146,7 @@ double sineIntegration(double x)
 		
 		double gx = (sn / sd) / (x * x);
 		
-		result = mmcif::kPI / 2 - fx * cos(x) - gx * sin(x);
+		result = mmcif::kPI / 2 - fx * std::cos(x) - gx * std::sin(x);
 	}
 	
 	return result;
@@ -207,7 +207,7 @@ DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh
 	mA = 0.5f / resolutionLow;
 	mB = 0.5f / resolutionHigh;
 	
-	mM = static_cast<int>(12.0 * sqrt(1.2 * mB) + 1);
+	mM = static_cast<int>(12.0 * std::sqrt(1.2 * mB) + 1);
 	if (mM < 3)
 		mM = 3;
 	
@@ -225,7 +225,7 @@ DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh
 	{
 		double z, zo, dp;
 		
-		z = cos(mmcif::kPI * (i - 0.25) / (N + 0.5));
+		z = std::cos(mmcif::kPI * (i - 0.25) / (N + 0.5));
 
 		do
 		{
@@ -243,7 +243,7 @@ DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh
 			zo = z;
 			z = z - p1 / dp;
 		}
-		while (abs(z - zo) > 3e-14);
+		while (std::abs(z - zo) > 3e-14);
 			
 		mWA[i - 1] = xr / ((1 - z * z) * dp * dp);
 		mWA[j - 1] = mWA[i - 1];
@@ -357,7 +357,7 @@ double DensityIntegration::integrateRadius(float perc, float occupancy, double y
 			double x = 0.5 * (x1 + x2);
 			double y = integrateDensity(x, 1, fst);
 			
-			if (abs(y - yt) < kRE * abs(yt))
+			if (std::abs(y - yt) < kRE * std::abs(yt))
 			{
 				result = x;
 				break;
@@ -459,9 +459,9 @@ struct AtomShapeImpl
 		float rsq = r * r;
 		return mOccupancy *
 			(
-				mAW[0] * exp(mBW[0] * rsq) + mAW[1] * exp(mBW[1] * rsq) +
-				mAW[2] * exp(mBW[2] * rsq) + mAW[3] * exp(mBW[3] * rsq) +
-				mAW[4] * exp(mBW[4] * rsq) + mAW[5] * exp(mBW[5] * rsq)
+				mAW[0] * std::exp(mBW[0] * rsq) + mAW[1] * std::exp(mBW[1] * rsq) +
+				mAW[2] * std::exp(mBW[2] * rsq) + mAW[3] * std::exp(mBW[3] * rsq) +
+				mAW[4] * std::exp(mBW[4] * rsq) + mAW[5] * std::exp(mBW[5] * rsq)
 			);
 	}
 
