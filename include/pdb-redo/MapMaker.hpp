@@ -166,7 +166,6 @@ class MapMaker
 	
 	MapType				mFb, mFd, mFa;
 	Grid_sampling		mGrid;
-	float				mSamplingRate;
 	double				mResLow, mResHigh;
 	int					mNumRefln = 1000, mNumParam = 20;
 	

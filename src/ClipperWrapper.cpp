@@ -49,7 +49,7 @@ clipper::Atom toClipper(const mmcif::Atom& atom)
 	if (not row["pdbx_formal_charge"].empty())
 	{
 		int charge = row["pdbx_formal_charge"].as<int>();
-		if (abs(charge) > 1)
+		if (std::abs(charge) > 1)
 			element += std::to_string(charge);
 		if (charge < 0)
 			element += '-';

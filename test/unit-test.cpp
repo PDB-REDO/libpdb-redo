@@ -272,6 +272,8 @@ BOOST_AUTO_TEST_CASE(stats_1)
 {
 	namespace c = mmcif;
 
+	cif::VERBOSE = 3;
+
 	// read test data first (output from previous stats version)
 
 	std::vector<TestResidue> test;

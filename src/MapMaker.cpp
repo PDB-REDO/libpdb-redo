@@ -333,7 +333,7 @@ void Map<FTYPE>::calculateStats()
 	}
 	
 	mMeanDensity = sum / count;
-	mRMSDensity = sqrt((sum2 / count) - (mMeanDensity * mMeanDensity));
+	mRMSDensity = std::sqrt((sum2 / count) - (mMeanDensity * mMeanDensity));
 }
 
 template<typename FTYPE>
@@ -930,21 +930,21 @@ void MapMaker<FTYPE>::fixMTZ()
 
 		auto WFO = W * FO;
 
-		if (abs(fmod(abs(PM - PC) + 180, 360) - 180) > 90)
+		if (std::abs(std::fmod(std::abs(PM - PC) + 180, 360) - 180) > 90)
 			FM = -FM;
 
-		if (abs(fmod(abs(PD - PC) + 180, 360) - 180) > 90)
+		if (std::abs(std::fmod(std::abs(PD - PC) + 180, 360) - 180) > 90)
 			FD = -FD; 
 			
 		if (mFoData[ih].missing() or W == 0)
 		{
-			if (tests[T10] and abs(FM - FC) > 0.05)
+			if (tests[T10] and std::abs(FM - FC) > 0.05)
 			{
 				tests[T10] = false;
 				if (cif::VERBOSE) std::cerr << "Test 10 failed at " << ih.hkl() << std::endl;
 			}
 			
-			if (tests[T11] and abs(FD) > 0.05)
+			if (tests[T11] and std::abs(FD) > 0.05)
 			{
 				tests[T11] = false;
 				if (cif::VERBOSE) std::cerr << "Test 11 failed at " << ih.hkl() << std::endl;
@@ -952,25 +952,25 @@ void MapMaker<FTYPE>::fixMTZ()
 		}
 		else if (cls.centric())
 		{
-			if (tests[C5] and abs(FC + FM - 2 * WFO) > 0.05)
+			if (tests[C5] and std::abs(FC + FM - 2 * WFO) > 0.05)
 			{
 				tests[C5] = false;
 				if (cif::VERBOSE) std::cerr << "Test C5 failed at " << ih.hkl() << std::endl;
 			}
 			
-			if (tests[C6] and abs(FM - WFO) > 0.05)
+			if (tests[C6] and std::abs(FM - WFO) > 0.05)
 			{
 				tests[C6] = false;
 				if (cif::VERBOSE) std::cerr << "Test C6 failed at " << ih.hkl() << std::endl;
 			}
 			
-			if (tests[C7] and abs(FC + FD - WFO) > 0.05)
+			if (tests[C7] and std::abs(FC + FD - WFO) > 0.05)
 			{
 				tests[C7] = false;
 				if (cif::VERBOSE) std::cerr << "Test C7 failed at " << ih.hkl() << std::endl;
 			}
 			
-			if (tests[C8] and abs(FC + 0.5 * FD - WFO) > 0.05)
+			if (tests[C8] and std::abs(FC + 0.5 * FD - WFO) > 0.05)
 			{
 				tests[C8] = false;
 				if (cif::VERBOSE) std::cerr << "Test C8 failed at " << ih.hkl() << std::endl;
@@ -985,7 +985,7 @@ void MapMaker<FTYPE>::fixMTZ()
 		}
 		else
 		{
-			if (tests[A1] and abs(FC + FM - 2 * WFO) > 0.05)
+			if (tests[A1] and std::abs(FC + FM - 2 * WFO) > 0.05)
 			{
 				tests[A1] = false;
 				if (cif::VERBOSE) std::cerr << "Test A1 failed at " << ih.hkl() << std::endl;
@@ -997,13 +997,13 @@ void MapMaker<FTYPE>::fixMTZ()
 				if (cif::VERBOSE) std::cerr << "Test A2 failed at " << ih.hkl() << std::endl;
 			}
 			
-			if (tests[A3] and abs(FM - FD - WFO) > 0.05)
+			if (tests[A3] and std::abs(FM - FD - WFO) > 0.05)
 			{
 				tests[A3] = false;
 				if (cif::VERBOSE) std::cerr << "Test A3 failed at " << ih.hkl() << std::endl;
 			}
 			
-			if (tests[A4] and abs(FM - 0.5 * FD - WFO) > 0.05)
+			if (tests[A4] and std::abs(FM - 0.5 * FD - WFO) > 0.05)
 			{
 				tests[A4] = false;
 				if (cif::VERBOSE) std::cerr << "Test A4 failed at " << ih.hkl() << std::endl;
@@ -1026,13 +1026,13 @@ void MapMaker<FTYPE>::fixMTZ()
 		auto PD = mFdData[ih].phi() * 180 / kPI;
 		auto PC = mFcData[ih].phi() * 180 / kPI;
 
-		if (abs(fmod(abs(PM - PC) + 180, 360) - 180) > 90)
+		if (std::abs(std::fmod(std::abs(PM - PC) + 180, 360) - 180) > 90)
 		{
 			mFbData[ih].f() = -mFbData[ih].f();
 			mFbData[ih].phi() = mFcData[ih].phi();
 		}
 
-		if (abs(fmod(abs(PD - PC) + 180, 360) - 180) > 90)
+		if (std::abs(std::fmod(std::abs(PD - PC) + 180, 360) - 180) > 90)
 		{
 			mFdData[ih].f() = -mFdData[ih].f();
 			mFdData[ih].phi() = mFcData[ih].phi();
@@ -1094,7 +1094,7 @@ void MapMaker<FTYPE>::printStats()
 //			throw std::runtime_error("missing Fc");
 		
 		double Fo = mFoData[ih].f();
-		double Fc = sqrt(rfn.f(ih)) * mFcData[ih].f();
+		double Fc = std::sqrt(rfn.f(ih)) * mFcData[ih].f();
 
 		if (mFreeData[ih].flag() == freeflag)
 		{

@@ -409,7 +409,7 @@ struct AtomShapeImpl
 		for (int i = 0; i < 6; ++i)
 		{
 			double bi = D.b[i] + bIso;
-			mYi += D.a[i] * (exp(-bi * as) - exp(-bi * bs)) / bi;
+			mYi += D.a[i] * (std::exp(-bi * as) - std::exp(-bi * bs)) / bi;
 		}
 		
 		for (size_t i = 0; i < st.size(); ++i)
@@ -418,7 +418,7 @@ struct AtomShapeImpl
 			for (int j = 0; j < 6; ++j)
 			{
 				double bj = D.b[j] + bIso;
-				t += D.a[j] * exp(-bj * sts[i]);
+				t += D.a[j] * std::exp(-bj * sts[i]);
 			}
 	
 			mFst[i] = occupancy * wa[i] * t * st[i];

@@ -45,20 +45,20 @@ ResolutionCalculator::ResolutionCalculator(double a, double b, double c,
 {
 	double deg2rad = atan(1.0) / 45.0;
 	
-	double ca = cos(deg2rad * alpha);
-	double sa = sin(deg2rad * alpha);
-	double cb = cos(deg2rad * beta);
-	double sb = sin(deg2rad * beta);
-	double cg = cos(deg2rad * gamma);
-	double sg = sin(deg2rad * gamma);
+	double ca = std::cos(deg2rad * alpha);
+	double sa = std::sin(deg2rad * alpha);
+	double cb = std::cos(deg2rad * beta);
+	double sb = std::sin(deg2rad * beta);
+	double cg = std::cos(deg2rad * gamma);
+	double sg = std::sin(deg2rad * gamma);
 	
 	double cast = (cb * cg - ca) / (sb * sg);
 	double cbst = (cg * ca - cb) / (sg * sa);
 	double cgst = (ca * cb - cg) / (sa * sb);
 	
-	double sast = sqrt(1 - cast * cast);
-	double sbst = sqrt(1 - cbst * cbst);
-	double sgst = sqrt(1 - cgst * cgst);
+	double sast = std::sqrt(1 - cast * cast);
+	double sbst = std::sqrt(1 - cbst * cbst);
+	double sgst = std::sqrt(1 - cgst * cgst);
 
 	double ast = 1 / (a * sb * sgst);
 	double bst = 1 / (b * sg * sast);

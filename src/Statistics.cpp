@@ -65,7 +65,7 @@ std::ostream& operator<<(std::ostream& os, const ResidueStatistics& st)
 
 double anorm(double x)
 {
-	return 0.5 * erfc(-x * sqrt(0.5));
+	return 0.5 * erfc(-x * std::sqrt(0.5));
 }
 
 double phinvs(double p)
@@ -109,7 +109,7 @@ double phinvs(double p)
 	double q = p - 0.5;
 	double result;
 	
-	if (abs(q) < 0.425)
+	if (std::abs(q) < 0.425)
 	{
         double r = 0.180625e0 - q * q;
         result =
@@ -125,7 +125,7 @@ double phinvs(double p)
 		else
 			r = 1 - p;
         
-        r = sqrt(-log(r));
+        r = std::sqrt(-std::log(r));
 
         if (r <= 5)
         {
@@ -149,24 +149,24 @@ double phinvs(double p)
 
 double errsol(double a)
 {
-	auto c = sqrt(2.0 / kPI);
-	auto b = abs(a);
+	auto c = std::sqrt(2.0 / kPI);
+	auto b = std::abs(a);
 	
 	double result = 0;
 	if (b > 3 / c)
 	{
-		auto x = abs(pow(b, 1/3.0) - 2 * pow(kPI / b, 2));
+		auto x = std::abs(std::pow(b, 1/3.0) - 2 * std::pow(kPI / b, 2));
 		if (a < 0)
 			x = -x;
 		
 		for (;;)
 		{
 			auto xx = x * x;
-			auto y = c * exp(-0.5 * xx);
+			auto y = c * std::exp(-0.5 * xx);
 			auto d = (b * (2 * anorm(x) - 1 - x * y) / xx - x) / (b * y - 3);
 			x -= d;
 			
-			if (abs(d) <= 1e-4)
+			if (std::abs(d) <= 1e-4)
 				break;
 		}
 		
@@ -236,9 +236,9 @@ void iterateGrid(const Coord_orth& p, float r, const Xmap<float>& m, F&& func)
 	Coord_frac fp = p.coord_frac(m.cell());
 
 	Coord_frac o = Coord_orth(r, r, r).coord_frac(m.cell());
-	o[0] = abs(o[0]);
-	o[1] = abs(o[1]);
-	o[2] = abs(o[2]);
+	o[0] = std::abs(o[0]);
+	o[1] = std::abs(o[1]);
+	o[2] = std::abs(o[2]);
 
 	Coord_frac fMin = fp - o, fMax = fp + o;
 	Coord_map mMin = fMin.coord_map(m.grid_sampling()), mMax = fMax.coord_map(m.grid_sampling());
@@ -304,14 +304,14 @@ struct AtomDataSums
 	double cc() const
 	{
 		double s = (ccSums[1] - (edSums[0] * edSums[0]) / ngrid) * (ccSums[2] - (edSums[1] * edSums[1]) / ngrid);
-		return (ccSums[0] - edSums[0] * edSums[1] / ngrid) / sqrt(s);
+		return (ccSums[0] - edSums[0] * edSums[1] / ngrid) / std::sqrt(s);
 	}
 
 	double srg() const
 	{
-		double rg = sqrt(rgSums[0] / rgSums[1]);
+		double rg = std::sqrt(rgSums[0] / rgSums[1]);
 		
-		return sqrt(swSums[0] - rg * rg * swSums[1] + 0.5 * rg * rg * rg * rg * swSums[2]) / (rg * rgSums[1]);
+		return std::sqrt(swSums[0] - rg * rg * swSums[1] + 0.5 * rg * rg * rg * rg * swSums[2]) / (rg * rgSums[1]);
 	}
 };
 
@@ -357,7 +357,7 @@ std::tuple<float,float> CalculateMapStatistics(const Xmap<float>& f)
 	}
 	
 	float meanDensity = static_cast<float>(sum / count);
-	float rmsDensity = static_cast<float>(sqrt((sum2 / count) - (meanDensity * meanDensity)));
+	float rmsDensity = static_cast<float>(std::sqrt((sum2 / count) - (meanDensity * meanDensity)));
 	
 	return std::make_tuple(meanDensity, rmsDensity);
 }
@@ -478,11 +478,11 @@ void StatsCollector::initialize()
 		mVF *= omcd(i, i) / mGrid[i];
 	}	
 
-	mVF *= pow(2 / mResHigh, 3);
+	mVF *= std::pow(2 / mResHigh, 3);
 
 	mSZ = 0;
 //	double so = 0;
-//	const double C = sqrt(2.0 / kPI);
+//	const double C = std::sqrt(2.0 / kPI);
 	
 	for (auto& a: mStructure.atoms())
 	{
@@ -500,8 +500,8 @@ void StatsCollector::initialize()
 //		float bIso = Util::u2b(a.uIso());
 //		if (bIso < 4)
 //			bIso = 4;
-//		float x = sqrt(bIso) / mResHigh;
-//		x = w * (2 * anorm(x) - 1 - C * x * exp(-0.5 * pow(x, 2))) / pow(x, 3);
+//		float x = std::sqrt(bIso) / mResHigh;
+//		x = w * (2 * anorm(x) - 1 - C * x * std::exp(-0.5 * std::pow(x, 2))) / std::pow(x, 3);
 //		
 //		so += x;
 	}
@@ -509,7 +509,7 @@ void StatsCollector::initialize()
 //	auto bo = mSZ;
 
 	mSZ = mSZ * mSpacegroup.num_symops() / mVC;
-//	mMeanBIso = pow(mResHigh * errsol(bo / so), 2);
+//	mMeanBIso = std::pow(mResHigh * errsol(bo / so), 2);
 
 	// Calculate overall rms data
 	std::vector<AtomData> atomData;
@@ -571,7 +571,7 @@ void StatsCollector::initialize()
 		
 				auto qyd = (1.0 - x) * z[j - 1] + x * z[j] - qx;
 				
-				auto wx = exp(-0.5 * qx * qx);
+				auto wx = std::exp(-0.5 * qx * qx);
 				sw += wx;
 				swx += wx * qx;
 				swxs += wx * qx * qx;
@@ -588,7 +588,7 @@ void StatsCollector::initialize()
 			{
 				swys = dd * (swys - (qa * swy + qb * swxy)) / (ns - 2);
 				std::cerr << std::endl
-					 << "Intercept & gradient before LS: " << qa << " (" << sqrt(swys * swxs) << ") " << qb << " (" << sqrt(swys * sw) << ')' << std::endl;
+					 << "Intercept & gradient before LS: " << qa << " (" << std::sqrt(swys * swxs) << ") " << qb << " (" << std::sqrt(swys * sw) << ')' << std::endl;
 			}
 
 			qb += 1.0;
@@ -804,7 +804,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 				for (const auto& d: resAtomData)
 				{
 					occSum += d->occupancy;
-					ediaSum += pow(d->edia + 0.1, -2);
+					ediaSum += std::pow(d->edia + 0.1, -2);
 					++n;
 					if (d->edia >= 0.8)
 						++m;
@@ -823,7 +823,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 							continue;
 
 						occSum += d->occupancy;
-						ediaSum += pow(d->edia + 0.1, -2);
+						ediaSum += std::pow(d->edia + 0.1, -2);
 						
 						++n;
 						if (d->edia >= 0.8)
@@ -836,7 +836,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 				continue;
 			
 			OCC += occSum;
-			EDIAm += occSum * (1 / sqrt(ediaSum / n) - 0.1);
+			EDIAm += occSum * (1 / std::sqrt(ediaSum / n) - 0.1);
 			OPIA += occSum * (100. * m / n);
 		}
 
@@ -940,7 +940,7 @@ ResidueStatistics StatsCollector::collect(const std::vector<Atom>& atoms) const
 			continue;
 
 		sums += ci->sums;
-		ediaSum += pow(ci->edia + 0.1, -2);
+		ediaSum += std::pow(ci->edia + 0.1, -2);
 		
 		if (ci->edia >= 0.8)
 			++m;
@@ -950,7 +950,7 @@ ResidueStatistics StatsCollector::collect(const std::vector<Atom>& atoms) const
 			(sums.rfSums[0] / sums.rfSums[1]),				// rsr
 			sums.srg(),										// srsr
 			sums.cc(),										// rsccs
-			1 / sqrt(ediaSum / n) - 0.1,					// ediam
+			1 / std::sqrt(ediaSum / n) - 0.1,					// ediam
 			100. * m / n,									// opia
 			static_cast<int>(round(mVF * sums.ngrid))		// ngrid		
 	};
@@ -1037,8 +1037,8 @@ void StatsCollector::collectSums(std::vector<AtomData>& atomData, GridPtDataMap&
 			double ed2 = e * (fd - rmsScaledF.first) / rmsScaledF.second;
 			double ed3 = ed1 - ed2;
 
-			d.sums.rfSums[0] += abs(ed2);
-			d.sums.rfSums[1] += abs(ed1 + ed3);
+			d.sums.rfSums[0] += std::abs(ed2);
+			d.sums.rfSums[1] += std::abs(ed1 + ed3);
 			
 			double w = gp.density / d.averageDensity;
 			if (w < 0)
