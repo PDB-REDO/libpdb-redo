@@ -86,19 +86,6 @@ if(CCP4 AND NOT CLIBD)
 	set(CLIBD ${CCP4}/lib/data)
 endif()
 
-# When CCP4 is sourced in the environment, we can recreate the symmetry operations table
-if(EXISTS "${CCP4}")
-	if(RECREATE_SYMOP_DATA AND NOT EXISTS "${CLIBD}/syminfo.lib")
-		message(WARNING "Symop data table recreation requested, but file syminfo.lib was not found in ${CLIBD}")
-		set(RECREATE_SYMOP_DATA OFF)
-	else()
-		option(RECREATE_SYMOP_DATA "Recreate SymOp data table in case it is out of date" ON)
-	endif()
-else()
-	set(RECREATE_SYMOP_DATA OFF)
-	message("Not trying to recreate SymOpTable_data.hpp since CCP4 is not defined")
-endif()
-
 if(MSVC)
     # make msvc standards compliant...
     add_compile_options(/permissive-)
@@ -175,7 +162,7 @@ endif()
 
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 
-find_package(cifpp 2.0.0 REQUIRED)
+find_package(cifpp 2.0.1 REQUIRED)
 find_package(zeep 5.1.4 REQUIRED)
 						   
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
@@ -200,30 +187,6 @@ endif()
 # generate version.h
 string(TIMESTAMP BUILD_DATE_TIME "%Y-%m-%dT%H:%M:%SZ" UTC)
 configure_file("${CMAKE_SOURCE_DIR}/src/revision.hpp.in" "${CMAKE_BINARY_DIR}/revision.hpp" @ONLY)
-
-# SymOp data table
-if(RECREATE_SYMOP_DATA)
-	# The tool to create the table
-
-	add_executable(symop-map-generator "${CMAKE_SOURCE_DIR}/tools/symop-map-generator.cpp")
-
-	target_link_libraries(symop-map-generator Threads::Threads ${Boost_LIBRARIES} std::filesystem ${ZLIB_LIBRARIES} ${BZip2_LIBRARIES})
-	if(Boost_INCLUDE_DIR)
-		target_include_directories(symop-map-generator PUBLIC ${Boost_INCLUDE_DIR})
-	endif()
-
-	set($ENV{CLIBD} ${CLIBD})
-	
-	add_custom_command(
-		OUTPUT ${CMAKE_SOURCE_DIR}/src/SymOpTable_data.hpp
-		COMMAND $<TARGET_FILE:symop-map-generator> ${CLIBD}/syminfo.lib ${CMAKE_SOURCE_DIR}/src/SymOpTable_data.hpp
-		)
-	
-	add_custom_target(
-		OUTPUT ${CMAKE_SOURCE_DIR}/src/SymOpTable_data.hpp
-		DEPENDS symop-map-generator "$ENV{CLIBD}/syminfo.lib"
-	)
-endif()
 
 # Sources
 
