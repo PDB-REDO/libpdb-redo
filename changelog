@@ -1,3 +1,8 @@
+Version 2.0.1
+- Fix math problem, on some system combinations abs(x) would
+  first truncate x to an integer. Replacing with std::abs(x)
+  restores normal behaviour.
+
 Version 2.0.0
 - Updated build configuration
 - removed bzip2 support
