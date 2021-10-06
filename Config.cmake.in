@@ -1,7 +1,7 @@
 @PACKAGE_INIT@
 
 include(CMakeFindDependencyMacro)
-find_dependency(cifpp 2.0.0 REQUIRED)
+find_dependency(cifpp 2.0.1 REQUIRED)
 find_dependency(zeep 5.1.3 REQUIRED)
 find_dependency(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 
