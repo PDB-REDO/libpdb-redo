@@ -59,11 +59,11 @@ class Map
 	const Xmap& get() const								{ return mMap; }
 	
 	// These routines work with CCP4 map files
-	void read(const std::string& f);
-	void write(const std::string& f);
+	void read(const std::filesystem::path& f);
+	void write(const std::filesystem::path& f);
 
 	void write_masked(std::ostream& os, clipper::Grid_range range);
-	void write_masked(const std::string& f, 
+	void write_masked(const std::filesystem::path& f, 
 		clipper::Grid_range range);
 	
 	clipper::Spacegroup spacegroup() const				{ return mMap.spacegroup(); }
@@ -110,7 +110,7 @@ class MapMaker
 	MapMaker(const MapMaker&) = delete;
 	MapMaker& operator=(const MapMaker&) = delete;
 	
-	void loadMTZ(const std::string& mtzFile,
+	void loadMTZ(const std::filesystem::path& mtzFile,
 		float samplingRate,
 		std::initializer_list<std::string> fbLabels = { "FWT", "PHWT" },
 		std::initializer_list<std::string> fdLabels = { "DELFWT", "PHDELWT" },
@@ -119,12 +119,12 @@ class MapMaker
 		std::initializer_list<std::string> faLabels = { "FAN", "PHAN" });
 
 	void loadMaps(
-		const std::string& fbMapFile,
-		const std::string& fdMapFile,
+		const std::filesystem::path& fbMapFile,
+		const std::filesystem::path& fdMapFile,
 		float reshi, float reslo);
 
 	// following works on both mtz files and structure factor files in CIF format
-	void calculate(const std::string& hklin,
+	void calculate(const std::filesystem::path& hklin,
 		const Structure& structure,
 		bool noBulk, AnisoScalingFlag anisoScaling,
 		float samplingRate, bool electronScattering = false,
@@ -137,7 +137,7 @@ class MapMaker
 
 	void printStats();
 
-	void writeMTZ(const std::string& file,
+	void writeMTZ(const std::filesystem::path& file,
 		const std::string& project, const std::string& crystal);
 
 	MapType& fb()								{ return mFb; }
@@ -157,8 +157,8 @@ class MapMaker
 
   private:
 
-	void loadFoFreeFromReflectionsFile(const std::string& hklin);
-	void loadFoFreeFromMTZFile(const std::string& hklin,
+	void loadFoFreeFromReflectionsFile(const std::filesystem::path& hklin);
+	void loadFoFreeFromMTZFile(const std::filesystem::path& hklin,
 		std::initializer_list<std::string> foLabels,
 		std::initializer_list<std::string> freeLabels);
 	
