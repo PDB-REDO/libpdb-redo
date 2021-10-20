@@ -162,7 +162,7 @@ endif()
 
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 
-find_package(cifpp 2.0.1 REQUIRED)
+find_package(cifpp 3.0.0 REQUIRED)
 find_package(zeep 5.1.4 REQUIRED)
 						   
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
