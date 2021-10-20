@@ -263,7 +263,7 @@ clipper::Spgr_descr GetCCP4SpacegroupDescr(int nr)
 
 std::string describeRToperation(const clipper::Spacegroup& spacegroup, const clipper::Cell& cell, const clipper::RTop_orth& rt)
 {
-	auto spacegroup_nr = mmcif::GetSpacegroupNumber(spacegroup.symbol_hm());
+	auto spacegroup_nr = mmcif::GetSpacegroupNumber(spacegroup.symbol_xhm(), mmcif::SpacegroupName::xHM);
 
 	if (not (rt.is_null() or rt.equals(clipper::RTop_orth::identity(), 0.0001f)))
 	{
