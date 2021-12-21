@@ -71,7 +71,6 @@ class CompoundFactory
   private:
 	CompoundFactory();
 
-	static CompoundFactory *sInstance;
 	class CompoundFactoryImpl *mImpl;
 };
 
@@ -1074,9 +1073,8 @@ CompoundFactory::~CompoundFactory()
 
 CompoundFactory &CompoundFactory::instance()
 {
-	if (sInstance == nullptr)
-		sInstance = new CompoundFactory();
-	return *sInstance;
+	static CompoundFactory sInstance;
+	return sInstance;
 }
 
 void CompoundFactory::pushDictionary(const fs::path &inDictFile)

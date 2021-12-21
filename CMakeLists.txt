@@ -229,7 +229,7 @@ add_library(pdb-redo ${project_sources} ${project_headers})
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(pdb-redo PUBLIC ${CIFPP_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} std::filesystem)
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} std::filesystem ${GSL_LIBRARIES})
 
 target_include_directories(pdb-redo
 	PUBLIC
