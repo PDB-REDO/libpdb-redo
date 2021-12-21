@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(pdb-redo VERSION 2.0.2 LANGUAGES CXX C)
+project(pdb-redo VERSION 3.0.0 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -39,6 +39,7 @@ include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(Dart)
 include(FindFilesystem)
+include(FindPkgConfig)
 include(GenerateExportHeader)
 
 set(CXX_EXTENSIONS OFF)
@@ -120,8 +121,6 @@ if(MSVC)
 		message(FATAL_ERROR "Unsupported or unknown processor type ${CMAKE_SYSTEM_PROCESSOR}")
 	endif()	
 
-	set(COFF_SPEC "--coff=${COFF_TYPE}")
-
 	# for mrc, just in case
 	list(APPEND CMAKE_PREFIX_PATH "$ENV{LOCALAPPDATA}/mrc")
 endif()
@@ -130,6 +129,9 @@ if(UNIX AND NOT APPLE AND NOT BUILD_FOR_CCP4 AND CMAKE_INSTALL_PREFIX_INITIALIZE
 	# On Linux, install in the $HOME/.local folder by default
 	message(STATUS "The library and auxiliary files will be installed in $ENV{HOME}/.local")
 	set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local" CACHE PATH "..." FORCE)
+
+	# libcifpp will be there as well, likely
+	list(PREPEND CMAKE_PREFIX_PATH "$ENV{HOME}/.local")
 endif()
 
 # Optionally use mrc to create resources
@@ -154,16 +156,11 @@ else()
 endif()
 
 # Libraries
-
-set(Boost_DETAILED_FAILURE_MSG ON)
-if(NOT BUILD_SHARED_LIBS)
-	set(Boost_USE_STATIC_LIBS ON)
-endif()
-
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
-
 find_package(cifpp 3.0.0 REQUIRED)
 find_package(zeep 5.1.4 REQUIRED)
+
+pkg_check_modules(GSL gsl)
 						   
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
@@ -171,16 +168,14 @@ check_include_file( "newuoa.h" HAVE_NEWUOA )
 
 # Create a revision file, containing the current git version info
 
-find_package(Git)
-if(GIT_FOUND AND EXISTS "${CMAKE_SOURCE_DIR}/.git")
-	include(GetGitRevisionDescription)
+include(GetGitRevisionDescription)
+option(GENERATE_CUSTOM_VERSION "Generate a custom version string" OFF)
+if(GIT-NOTFOUND OR HEAD-HASH-NOTFOUND OR NOT GENERATE_CUSTOM_VERSION)
     get_git_head_revision(REFSPEC COMMITHASH)
 
 	# Generate our own version string
 	git_describe_working_tree(BUILD_VERSION_STRING --match=build --dirty)
 else()
-    message(WARNING "Git not found, cannot set version info")
-
     SET(BUILD_VERSION_STRING ${PROJECT_VERSION})
 endif()
 
@@ -213,6 +208,22 @@ set(project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Statistics.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Symmetry-2.hpp
 )
+
+if (GSL_FOUND)
+
+	set(project_sources
+		${project_sources}
+		${PROJECT_SOURCE_DIR}/src/Compound.cpp
+		${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
+		${PROJECT_SOURCE_DIR}/src/Restraints.cpp)
+
+	set(project_headers
+		${project_headers}
+		${PROJECT_SOURCE_DIR}/include/pdb-redo/Compound.hpp
+		${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
+		${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp)
+
+endif()
 
 add_library(pdb-redo ${project_sources} ${project_headers})
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)

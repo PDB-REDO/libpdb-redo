@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -28,34 +28,35 @@
 
 #include "cif++/Point.hpp"
 
-
-namespace mmcif
+namespace pdb_redo
 {
 
-ResolutionCalculator::ResolutionCalculator(const clipper::Cell& cell)
+using mmcif::kPI;
+
+ResolutionCalculator::ResolutionCalculator(const clipper::Cell &cell)
 	: ResolutionCalculator(cell.a(), cell.b(), cell.c(),
-		180 * cell.alpha() / kPI,
-		180 * cell.beta() / kPI,
-		180 * cell.gamma() / kPI)
+		  180 * cell.alpha() / kPI,
+		  180 * cell.beta() / kPI,
+		  180 * cell.gamma() / kPI)
 {
 }
 
 ResolutionCalculator::ResolutionCalculator(double a, double b, double c,
-		double alpha, double beta, double gamma)
+	double alpha, double beta, double gamma)
 {
 	double deg2rad = atan(1.0) / 45.0;
-	
+
 	double ca = std::cos(deg2rad * alpha);
 	double sa = std::sin(deg2rad * alpha);
 	double cb = std::cos(deg2rad * beta);
 	double sb = std::sin(deg2rad * beta);
 	double cg = std::cos(deg2rad * gamma);
 	double sg = std::sin(deg2rad * gamma);
-	
+
 	double cast = (cb * cg - ca) / (sb * sg);
 	double cbst = (cg * ca - cb) / (sg * sa);
 	double cgst = (ca * cb - cg) / (sa * sb);
-	
+
 	double sast = std::sqrt(1 - cast * cast);
 	double sbst = std::sqrt(1 - cbst * cbst);
 	double sgst = std::sqrt(1 - cgst * cgst);
@@ -63,7 +64,7 @@ ResolutionCalculator::ResolutionCalculator(double a, double b, double c,
 	double ast = 1 / (a * sb * sgst);
 	double bst = 1 / (b * sg * sast);
 	double cst = 1 / (c * sa * sbst);
-	
+
 	mCoefs[0] = ast * ast;
 	mCoefs[1] = 2 * ast * bst * cgst;
 	mCoefs[2] = 2 * ast * cst * cbst;
@@ -72,4 +73,4 @@ ResolutionCalculator::ResolutionCalculator(double a, double b, double c,
 	mCoefs[5] = cst * cst;
 }
 
-}
+} // namespace pdb_redo

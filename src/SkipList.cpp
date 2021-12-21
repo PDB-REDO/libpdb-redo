@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* 
+/*
    Created by: Maarten L. Hekkelman
    Date: maandag 07 januari, 2019
 */
@@ -44,7 +44,8 @@
 namespace fs = std::filesystem;
 namespace zx = zeep::xml;
 
-// --------------------------------------------------------------------
+namespace pdb_redo
+{
 
 // --------------------------------------------------------------------
 
@@ -70,16 +71,14 @@ void writeCIFSkipList(std::ostream &os, const SkipList &list)
 
 	auto &&[cat, ignore] = db->emplace("skip_list");
 
-	for (auto& res: list)
-		cat->emplace({
-			{ "auth_asym_id", res.auth_asym_id },
-			{ "auth_comp_id", res.auth_comp_id },
-			{ "auth_seq_id", res.auth_seq_id },
-			{ "pdbx_PDB_ins_code", std::string{ res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : '?' } },
-			{ "label_asym_id", res.label_asym_id },
-			{ "label_comp_id", res.label_comp_id },
-			{ "label_seq_id", res.label_seq_id }
-		});
+	for (auto &res : list)
+		cat->emplace({{"auth_asym_id", res.auth_asym_id},
+			{"auth_comp_id", res.auth_comp_id},
+			{"auth_seq_id", res.auth_seq_id},
+			{"pdbx_PDB_ins_code", std::string{res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : '?'}},
+			{"label_asym_id", res.label_asym_id},
+			{"label_comp_id", res.label_comp_id},
+			{"label_seq_id", res.label_seq_id}});
 
 	file.save(os);
 }
@@ -182,8 +181,7 @@ SkipList readCIFSkipList(std::istream &is)
 	auto &cat = db["skip_list"];
 
 	for (const auto &[auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id] :
-		cat.rows<std::string, std::string, std::string, std::string, std::string, std::string, int>
-			("auth_asym_id", "auth_comp_id", "auth_seq_id", "pdbx_PDB_ins_code", "label_asym_id", "label_comp_id", "label_seq_id"))
+		cat.rows<std::string, std::string, std::string, std::string, std::string, std::string, int>("auth_asym_id", "auth_comp_id", "auth_seq_id", "pdbx_PDB_ins_code", "label_asym_id", "label_comp_id", "label_seq_id"))
 	{
 		result.emplace_back(auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id);
 	}
@@ -223,3 +221,5 @@ SkipList readSkipList(std::filesystem::path &file)
 	std::ifstream is(file);
 	return readSkipList(is);
 }
+
+} // namespace pdb_redo

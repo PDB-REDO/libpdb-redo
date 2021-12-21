@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -24,11 +24,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* 
-	Created by: Maarten L. Hekkelman
-	Date: maandag 07 januari, 2019
+/*
+    Created by: Maarten L. Hekkelman
+    Date: maandag 07 januari, 2019
 
-	Skip list for e.g. pepflip
+    Skip list for e.g. pepflip
 */
 
 #pragma once
@@ -47,6 +47,9 @@ using std::experimental::optional;
 using std::optional;
 #endif
 
+namespace pdb_redo
+{
+
 struct ResidueSpec
 {
 	std::string auth_asym_id;
@@ -60,13 +63,13 @@ struct ResidueSpec
 	template <typename Archive>
 	void serialize(Archive &ar, unsigned long version)
 	{
-		ar & ZEEP_SERIALIZATION_NVP(auth_asym_id)
-		   & ZEEP_SERIALIZATION_NVP(auth_comp_id)
-		   & ZEEP_SERIALIZATION_NVP(auth_seq_id)
-		   & ZEEP_SERIALIZATION_NVP(pdbx_PDB_ins_code)
-		   & ZEEP_SERIALIZATION_NVP(label_asym_id)
-		   & ZEEP_SERIALIZATION_NVP(label_comp_id)
-		   & ZEEP_SERIALIZATION_NVP(label_seq_id);
+		ar	& ZEEP_SERIALIZATION_NVP(auth_asym_id)
+		  	& ZEEP_SERIALIZATION_NVP(auth_comp_id)
+		   	& ZEEP_SERIALIZATION_NVP(auth_seq_id)
+		   	& ZEEP_SERIALIZATION_NVP(pdbx_PDB_ins_code)
+		   	& ZEEP_SERIALIZATION_NVP(label_asym_id)
+		   	& ZEEP_SERIALIZATION_NVP(label_comp_id)
+		   	& ZEEP_SERIALIZATION_NVP(label_seq_id);
 	}
 
 	ResidueSpec() {}
@@ -122,14 +125,13 @@ struct ResidueSpec
 
 	bool operator==(const ResidueSpec &rhs) const
 	{
-		return 
-			auth_asym_id == rhs.auth_asym_id and
-			auth_comp_id == rhs.auth_comp_id and
-			auth_seq_id == rhs.auth_seq_id and
-			pdbx_PDB_ins_code == rhs.pdbx_PDB_ins_code and
-			label_asym_id == rhs.label_asym_id and
-			label_comp_id == rhs.label_comp_id and
-			label_seq_id == rhs.label_seq_id;
+		return auth_asym_id == rhs.auth_asym_id and
+		       auth_comp_id == rhs.auth_comp_id and
+		       auth_seq_id == rhs.auth_seq_id and
+		       pdbx_PDB_ins_code == rhs.pdbx_PDB_ins_code and
+		       label_asym_id == rhs.label_asym_id and
+		       label_comp_id == rhs.label_comp_id and
+		       label_seq_id == rhs.label_seq_id;
 	}
 };
 
@@ -137,7 +139,9 @@ using SkipList = std::vector<ResidueSpec>;
 
 enum class SkipListFormat
 {
-	OLD, JSON, CIF
+	OLD,
+	JSON,
+	CIF
 };
 
 // --------------------------------------------------------------------
@@ -148,3 +152,5 @@ SkipList readSkipList(std::istream &is);
 void writeSkipList(std::ostream &os, const SkipList &list, SkipListFormat format);
 
 void writeSkipList(const std::filesystem::path &file, const SkipList &list, SkipListFormat format);
+
+} // namespace pdb_redo

@@ -30,7 +30,7 @@
 
 #include <cmath>
 
-namespace mmcif
+namespace pdb_redo
 {
 
 // --------------------------------------------------------------------

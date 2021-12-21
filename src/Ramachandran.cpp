@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -24,13 +24,13 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/* 
+/*
    Created by: Maarten L. Hekkelman
    Date: dinsdag 19 juni, 2018
 */
 
-#include <cmath>
 #include <cassert>
+#include <cmath>
 
 #include <map>
 #include <mutex>
@@ -41,62 +41,68 @@
 
 #include "pdb-redo/Ramachandran.hpp"
 
+namespace pdb_redo
+{
+
 // --------------------------------------------------------------------
 
 class RamachandranTables
 {
   public:
-	static RamachandranTables& instance()
+	static RamachandranTables &instance()
 	{
 		std::lock_guard lock(sMutex);
-		
+
 		static RamachandranTables sInstance;
 		return sInstance;
 	}
-	
-	clipper::Ramachandran& table(const std::string& aa, bool prePro)
+
+	clipper::Ramachandran &table(const std::string &aa, bool prePro)
 	{
 		std::lock_guard lock(sMutex);
-		
+
 		auto i = mTables.find(std::make_tuple(aa, prePro));
 		if (i == mTables.end())
 		{
 			clipper::Ramachandran::TYPE type;
-			
-				 if (aa == "GLY")	type = clipper::Ramachandran::Gly2;
-			else if (aa == "PRO")	type = clipper::Ramachandran::Pro2;
+
+			if (aa == "GLY")
+				type = clipper::Ramachandran::Gly2;
+			else if (aa == "PRO")
+				type = clipper::Ramachandran::Pro2;
 			else if (aa == "ILE" or aa == "VAL")
-									type = clipper::Ramachandran::IleVal2;
+				type = clipper::Ramachandran::IleVal2;
 			else if (prePro)
-									type = clipper::Ramachandran::PrePro2;
-			else					type = clipper::Ramachandran::NoGPIVpreP2;
-			
+				type = clipper::Ramachandran::PrePro2;
+			else
+				type = clipper::Ramachandran::NoGPIVpreP2;
+
 			i = mTables.emplace(make_pair(std::make_tuple(aa, prePro), clipper::Ramachandran(type))).first;
 		}
-		
+
 		return i->second;
 	}
-	
+
   private:
-	std::map<std::tuple<std::string,int>,clipper::Ramachandran> mTables;
+	std::map<std::tuple<std::string, int>, clipper::Ramachandran> mTables;
 	static std::mutex sMutex;
 };
 
 std::mutex RamachandranTables::sMutex;
 
-float calculateRamachandranZScore(const std::string& aa, bool prePro, float phi, float psi)
+float calculateRamachandranZScore(const std::string &aa, bool prePro, float phi, float psi)
 {
-	auto& table = RamachandranTables::instance().table(aa, prePro);
+	auto &table = RamachandranTables::instance().table(aa, prePro);
 	return static_cast<float>(table.probability(phi * mmcif::kPI / 180, psi * mmcif::kPI / 180));
 }
 
-RamachandranScore calculateRamachandranScore(const std::string& aa, bool prePro, float phi, float psi)
+RamachandranScore calculateRamachandranScore(const std::string &aa, bool prePro, float phi, float psi)
 {
-	auto& table = RamachandranTables::instance().table(aa, prePro);
+	auto &table = RamachandranTables::instance().table(aa, prePro);
 
 	phi *= static_cast<float>(mmcif::kPI / 180);
 	psi *= static_cast<float>(mmcif::kPI / 180);
-	
+
 	RamachandranScore result;
 
 	if (table.favored(phi, psi))
@@ -105,6 +111,8 @@ RamachandranScore calculateRamachandranScore(const std::string& aa, bool prePro,
 		result = rsAllowed;
 	else
 		result = rsNotAllowed;
-	
+
 	return result;
 }
+
+} // namespace pdb_redo
