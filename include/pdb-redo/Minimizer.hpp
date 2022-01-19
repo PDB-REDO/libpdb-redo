@@ -95,9 +95,21 @@ class Minimizer
 	virtual ~Minimizer() {}
 
 	// factory method:
-	static Minimizer *create(const std::string &algorithm,
-		const mmcif::Polymer &poly, int first, int last, const mmcif::BondMap &bm,
-		const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11);
+	static Minimizer *create(const mmcif::Polymer &poly, int first, int last,
+		const mmcif::BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11);
+
+	static Minimizer *create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
+		const mmcif::BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11)
+	{
+		return create(structure, atoms, bm, plane5AtomsESD, &xMap, mapWeight);
+	}
+
+	// factory method for minimizer without density:
+	static Minimizer *create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
+		const mmcif::BondMap &bm, float plane5AtomsESD = 0.11)
+	{
+		return create(structure, atoms, bm, plane5AtomsESD, nullptr, 0);
+	}
 
 	void printStats();
 
@@ -107,9 +119,15 @@ class Minimizer
 	virtual void storeAtomLocations() = 0;
 
   protected:
-	Minimizer(const mmcif::Polymer &poly, int first, int last,
-		const mmcif::BondMap &bm, const XMap &xMap, float mapWeight,
-		float plane5AtomsESD);
+	Minimizer(const mmcif::Structure &structure, const mmcif::BondMap &bm, float plane5AtomsESD);
+
+	static Minimizer *create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
+		const mmcif::BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight);
+
+	virtual void addPolySection(const mmcif::Polymer &poly, int first, int last);
+	virtual void addResidue(const mmcif::Residue &res);
+	virtual void addDensityMap(const XMap &xMap, float mapWeight);
+	virtual void Finish();
 
 	double score(const AtomLocationProvider &loc);
 
@@ -140,6 +158,10 @@ class Minimizer
 	AtomRef ref(const mmcif::Atom &atom);
 
 	bool mElectronScattering = false; // TODO: use!
+
+	const mmcif::Structure &mStructure;
+	const mmcif::BondMap &mBonds;
+	float mPlane5ESD;
 
 	std::vector<mmcif::Atom> mAtoms, mReferencedAtoms;
 	std::vector<size_t> mRef2AtomIndex;

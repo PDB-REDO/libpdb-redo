@@ -81,8 +81,173 @@ std::string AtomLocationProvider::atom(AtomRef atomID) const
 
 // --------------------------------------------------------------------
 
-Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
-	const mmcif::BondMap &bonds, const XMap &xMap, float mapWeight, float plane5AtomsESD)
+Minimizer::Minimizer(const mmcif::Structure &structure, const mmcif::BondMap &bonds, float plane5AtomsESD)
+	: mStructure(structure)
+	, mBonds(bonds)
+	, mPlane5ESD(plane5AtomsESD)
+{
+}
+
+void Minimizer::addResidue(const mmcif::Residue &res)
+{
+	auto compound = Compound::create(res.compoundID()); // r.compound();
+	if (not compound)
+		throw std::runtime_error("Missing compound information for " + res.compoundID());
+
+	for (auto a : res.atoms())
+	{
+		(void)ref(a);
+		mAtoms.push_back(a);
+	}
+
+	for (auto &b : compound->bonds())
+	{
+		try
+		{
+			if (compound->getAtomByID(b.atomID[0]).typeSymbol == H or
+				compound->getAtomByID(b.atomID[1]).typeSymbol == H)
+			{
+				continue;
+			}
+
+			Atom a1 = res.atomByID(b.atomID[0]);
+			Atom a2 = res.atomByID(b.atomID[1]);
+
+			if (not (a1 and a2))
+				continue;
+
+			mBondRestraints.emplace_back(ref(a1), ref(a2), b.distance, b.esd);
+		}
+		catch (const std::exception &ex)
+		{
+			if (cif::VERBOSE > 1)
+				std::cerr << "While processing bond restraints: " << ex.what() << std::endl;
+			continue;
+		}
+	}
+
+	for (auto &a : compound->angles())
+	{
+		try
+		{
+			if (compound->getAtomByID(a.atomID[0]).typeSymbol == H or
+				compound->getAtomByID(a.atomID[1]).typeSymbol == H or
+				compound->getAtomByID(a.atomID[2]).typeSymbol == H)
+			{
+				continue;
+			}
+
+			Atom a1 = res.atomByID(a.atomID[0]);
+			Atom a2 = res.atomByID(a.atomID[1]);
+			Atom a3 = res.atomByID(a.atomID[2]);
+
+			if (not (a1 and a2 and a3))
+				continue;
+
+			mAngleRestraints.emplace_back(
+				ref(a1), ref(a2), ref(a3), a.angle, a.esd);
+		}
+		catch (const std::exception &ex)
+		{
+			if (cif::VERBOSE > 1)
+				std::cerr << "While processing angle restraints: " << ex.what() << std::endl;
+			continue;
+		}
+	}
+
+	//		for (auto& a: compound->torsions())
+	//		{
+	//			if (a.esd == 0)
+	//				continue;
+	//
+	//			try
+	//			{
+	//				if (compound->getAtomByID(a.atomID[0]).typeSymbol == H or
+	//					compound->getAtomByID(a.atomID[1]).typeSymbol == H or
+	//					compound->getAtomByID(a.atomID[2]).typeSymbol == H or
+	//					compound->getAtomByID(a.atomID[3]).typeSymbol == H)
+	//				{
+	//					continue;
+	//				}
+	//
+	//				Atom a1 = r.atomByID(a.atomID[0]);
+	//				Atom a2 = r.atomByID(a.atomID[1]);
+	//				Atom a3 = r.atomByID(a.atomID[2]);
+	//				Atom a4 = r.atomByID(a.atomID[3]);
+	//
+	//				mTorsionRestraints.emplace_back(a1, a2, a3, a4, a.angle, a.esd, a.period);
+	//			}
+	//			catch (const exception& ex)
+	//			{
+	//				if (cif::VERBOSE > 1)
+	//					std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
+	//				continue;
+	//			}
+	//		}
+
+	for (auto &cv : compound->chiralCentres())
+	{
+		try
+		{
+			if (compound->getAtomByID(cv.atomID[0]).typeSymbol == H or
+				compound->getAtomByID(cv.atomID[1]).typeSymbol == H or
+				compound->getAtomByID(cv.atomID[2]).typeSymbol == H)
+			{
+				continue;
+			}
+
+			Atom cc = res.atomByID(cv.atomIDCentre);
+			Atom a1 = res.atomByID(cv.atomID[0]);
+			Atom a2 = res.atomByID(cv.atomID[1]);
+			Atom a3 = res.atomByID(cv.atomID[2]);
+
+			if (not (cc and a1 and a2 and a3))
+				continue;
+
+			auto volume = compound->chiralVolume(cv.id);
+
+			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1),
+				ref(a2), ref(a3), volume * 6);
+		}
+		catch (const std::exception &ex)
+		{
+			if (cif::VERBOSE > 1)
+				std::cerr << "While processing chiral volume restraints: " << ex.what() << std::endl;
+			continue;
+		}
+	}
+
+	for (auto &p : compound->planes())
+	{
+		try
+		{
+			std::vector<AtomRef> atoms;
+
+			for (auto a : p.atomID)
+			{
+				if (compound->getAtomByID(a).typeSymbol == H)
+					continue;
+
+				auto a1 = res.atomByID(a);
+				if (not a1)
+					continue;
+
+				atoms.push_back(ref(a1));
+			}
+
+			if (atoms.size() > 3)
+				mPlanarityRestraints.emplace_back(move(atoms), p.esd);
+		}
+		catch (const std::exception &ex)
+		{
+			if (cif::VERBOSE > 1)
+				std::cerr << "While processing planarity restraints: " << ex.what() << std::endl;
+			continue;
+		}
+	}
+}
+
+void Minimizer::addPolySection(const mmcif::Polymer &poly, int first, int last)
 {
 	const Monomer *prev = nullptr; // used to link residues
 
@@ -95,20 +260,14 @@ Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
 		}
 
 		if (r.seqID() <= last)
-		{
-			for (auto a : r.atoms())
-			{
-				(void)ref(a);
-				mAtoms.push_back(a);
-			}
-		}
+			addResidue(r);
 
 		if (prev != nullptr)
 			try
 			{
 				Atom c = prev->atomByID("C"), n = r.atomByID("N");
 
-				if (DistanceSquared(c, n) < kMaxPeptideBondLengthSq)
+				if (c and n and DistanceSquared(c, n) < kMaxPeptideBondLengthSq)
 				{
 					bool trans = not Monomer::isCis(*prev, r);
 
@@ -137,7 +296,7 @@ Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
 						ref(n),
 						ref(r.atomByID("CA"))};
 
-					mPlanarityRestraints.emplace_back(PlanarityRestraint{move(atoms), plane5AtomsESD});
+					mPlanarityRestraints.emplace_back(PlanarityRestraint{move(atoms), mPlane5ESD});
 				}
 			}
 			catch (const std::exception &ex)
@@ -151,141 +310,6 @@ Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
 			break;
 
 		prev = &r;
-
-		auto &compound = *Compound::create(r.compoundID()); // r.compound();
-
-		for (auto &b : compound.bonds())
-		{
-			try
-			{
-				if (compound.getAtomByID(b.atomID[0]).typeSymbol == H or
-					compound.getAtomByID(b.atomID[1]).typeSymbol == H)
-				{
-					continue;
-				}
-
-				Atom a1 = r.atomByID(b.atomID[0]);
-				Atom a2 = r.atomByID(b.atomID[1]);
-
-				mBondRestraints.emplace_back(ref(a1), ref(a2), b.distance, b.esd);
-			}
-			catch (const std::exception &ex)
-			{
-				if (cif::VERBOSE > 1)
-					std::cerr << "While processing bond restraints: " << ex.what() << std::endl;
-				continue;
-			}
-		}
-
-		for (auto &a : compound.angles())
-		{
-			try
-			{
-				if (compound.getAtomByID(a.atomID[0]).typeSymbol == H or
-					compound.getAtomByID(a.atomID[1]).typeSymbol == H or
-					compound.getAtomByID(a.atomID[2]).typeSymbol == H)
-				{
-					continue;
-				}
-
-				Atom a1 = r.atomByID(a.atomID[0]);
-				Atom a2 = r.atomByID(a.atomID[1]);
-				Atom a3 = r.atomByID(a.atomID[2]);
-
-				mAngleRestraints.emplace_back(
-					ref(a1), ref(a2), ref(a3), a.angle, a.esd);
-			}
-			catch (const std::exception &ex)
-			{
-				if (cif::VERBOSE > 1)
-					std::cerr << "While processing angle restraints: " << ex.what() << std::endl;
-				continue;
-			}
-		}
-
-		//		for (auto& a: compound.torsions())
-		//		{
-		//			if (a.esd == 0)
-		//				continue;
-		//
-		//			try
-		//			{
-		//				if (compound.getAtomByID(a.atomID[0]).typeSymbol == H or
-		//					compound.getAtomByID(a.atomID[1]).typeSymbol == H or
-		//					compound.getAtomByID(a.atomID[2]).typeSymbol == H or
-		//					compound.getAtomByID(a.atomID[3]).typeSymbol == H)
-		//				{
-		//					continue;
-		//				}
-		//
-		//				Atom a1 = r.atomByID(a.atomID[0]);
-		//				Atom a2 = r.atomByID(a.atomID[1]);
-		//				Atom a3 = r.atomByID(a.atomID[2]);
-		//				Atom a4 = r.atomByID(a.atomID[3]);
-		//
-		//				mTorsionRestraints.emplace_back(a1, a2, a3, a4, a.angle, a.esd, a.period);
-		//			}
-		//			catch (const exception& ex)
-		//			{
-		//				if (cif::VERBOSE > 1)
-		//					std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
-		//				continue;
-		//			}
-		//		}
-
-		for (auto &cv : compound.chiralCentres())
-		{
-			try
-			{
-				if (compound.getAtomByID(cv.atomID[0]).typeSymbol == H or
-					compound.getAtomByID(cv.atomID[1]).typeSymbol == H or
-					compound.getAtomByID(cv.atomID[2]).typeSymbol == H)
-				{
-					continue;
-				}
-
-				Atom cc = r.atomByID(cv.atomIDCentre);
-				Atom a1 = r.atomByID(cv.atomID[0]);
-				Atom a2 = r.atomByID(cv.atomID[1]);
-				Atom a3 = r.atomByID(cv.atomID[2]);
-
-				auto volume = compound.chiralVolume(cv.id);
-
-				mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1),
-					ref(a2), ref(a3), volume * 6);
-			}
-			catch (const std::exception &ex)
-			{
-				if (cif::VERBOSE > 1)
-					std::cerr << "While processing chiral volume restraints: " << ex.what() << std::endl;
-				continue;
-			}
-		}
-
-		for (auto &p : compound.planes())
-		{
-			try
-			{
-				std::vector<AtomRef> atoms;
-
-				for (auto a : p.atomID)
-				{
-					if (compound.getAtomByID(a).typeSymbol == H)
-						continue;
-
-					atoms.push_back(ref(r.atomByID(a)));
-				}
-
-				if (atoms.size() > 3)
-					mPlanarityRestraints.emplace_back(move(atoms), p.esd);
-			}
-			catch (const std::exception &ex)
-			{
-				if (cif::VERBOSE > 1)
-					std::cerr << "While processing planarity restraints: " << ex.what() << std::endl;
-				continue;
-			}
-		}
 	}
 
 	// Add link BondRestraints
@@ -294,6 +318,33 @@ Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
 	//		// TODO: implement based on struct_conn information and radii from ener_lib?
 	//	}
 
+}
+
+void Minimizer::addDensityMap(const XMap &xMap, float mapWeight)
+{
+	std::vector<std::pair<AtomRef, double>> densityAtoms;
+	densityAtoms.reserve(mAtoms.size());
+
+	transform(mAtoms.begin(), mAtoms.end(), back_inserter(densityAtoms),
+		[this](const Atom &a)
+		{
+			double z = static_cast<int>(a.type());
+			double weight = 1;
+			double occupancy = a.occupancy();
+
+			if (occupancy > 1)
+				occupancy = 1;
+
+			// TODO: cryo_em support
+
+			return std::make_pair(ref(a), z * weight * occupancy);
+		});
+
+	mDensityRestraint.reset(new DensityRestraint(move(densityAtoms), xMap, mapWeight));
+}
+
+void Minimizer::Finish()
+{
 	if (mAtoms.empty())
 		throw std::runtime_error("No atoms to refine");
 
@@ -313,12 +364,12 @@ Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
 	{
 		AtomRef ra1 = ref(a1);
 
-		for (auto &a2 : poly.structure()->atoms())
+		for (auto &a2 : mStructure.atoms())
 		{
 			if (a1 == a2)
 				continue;
 
-			if (bonds(a1, a2))
+			if (mBonds(a1, a2))
 				continue;
 
 			if (DistanceSquared(a1, a2) > kNonBondedContactDistanceSq)
@@ -362,7 +413,7 @@ Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
 
 			double minDist = 2.8;
 
-			if (bonds.is1_4(a1, a2))
+			if (mBonds.is1_4(a1, a2))
 			{
 				if (cif::VERBOSE > 1)
 					std::cerr << "1_4 for " << a1 << " and " << a2 << std::endl;
@@ -428,7 +479,7 @@ Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
 
 					if (find(mAtoms.begin(), mAtoms.end(), a2) == mAtoms.end())
 					{
-						switch (abs(a1.labelSeqID() - a2.labelSeqID()))
+						switch (std::abs(a1.labelSeqID() - a2.labelSeqID()))
 						{
 							case 1:
 								if ((a1.labelAtomID() == "O" and a2.labelAtomID() == "CA") or
@@ -474,26 +525,6 @@ Minimizer::Minimizer(const mmcif::Polymer &poly, int first, int last,
 		assert(ar < mRef2AtomIndex.size());
 		mRef2AtomIndex[ar] = i;
 	}
-
-	std::vector<std::pair<AtomRef, double>> densityAtoms;
-	densityAtoms.reserve(mAtoms.size());
-
-	transform(mAtoms.begin(), mAtoms.end(), back_inserter(densityAtoms),
-		[this](const Atom &a)
-		{
-			double z = static_cast<int>(a.type());
-			double weight = 1;
-			double occupancy = a.occupancy();
-
-			if (occupancy > 1)
-				occupancy = 1;
-
-			// TODO: cryo_em support
-
-			return std::make_pair(ref(a), z * weight * occupancy);
-		});
-
-	mDensityRestraint.reset(new DensityRestraint(move(densityAtoms), xMap, mapWeight));
 
 	// collect the restraints
 
@@ -901,10 +932,15 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 class GSLMinimizer : public Minimizer
 {
   public:
-	GSLMinimizer(const Polymer &poly, int first, int last, const BondMap &bonds,
-		const XMap &xMap, float mapWeight, float plane5AtomsESD)
-		: Minimizer(poly, first, last, bonds, xMap, mapWeight, plane5AtomsESD)
+	GSLMinimizer(const mmcif::Structure &structure, const mmcif::BondMap &bm, float plane5AtomsESD)
+		: Minimizer(structure, bm, plane5AtomsESD)
 	{
+	}
+
+	virtual void Finish()
+	{
+		Minimizer::Finish();
+
 		for (auto &a : mReferencedAtoms)
 			mFixedLocations.push_back(a.location());
 	}
@@ -1083,24 +1119,69 @@ void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 	*f = score(loc);
 
 	GSLDFCollector c(mReferencedAtoms, mRef2AtomIndex, df);
+
 	for (auto r : mRestraints)
 		r->df(loc, c);
 }
 
 // --------------------------------------------------------------------
 
-Minimizer *Minimizer::create(const std::string &algorithm,
-	const Polymer &poly, int first, int last, const BondMap &bonds,
+Minimizer *Minimizer::create(const Polymer &poly, int first, int last, const BondMap &bonds,
 	const XMap &xMap, float mapWeight, float plane5AtomsESD)
 {
-	Minimizer *result = nullptr;
+	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.structure(), bonds, plane5AtomsESD));
+	result->addPolySection(poly, first, last);
+	result->addDensityMap(xMap, mapWeight);
+	result->Finish();
+	return result.release();
+}
 
-	if (algorithm == "gsl")
-		result = new GSLMinimizer(poly, first, last, bonds, xMap, mapWeight, plane5AtomsESD);
-	else
-		throw std::runtime_error("Unknown algorithm: " + algorithm);
+Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
+	const mmcif::BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight)
+{
+	std::unique_ptr<Minimizer> result(new GSLMinimizer(structure, bm, plane5AtomsESD));
 
-	return result;
+	std::vector<mmcif::Residue*> residues;
+
+	for (auto atom : atoms)
+	{
+		auto &res = structure.getResidue(atom);
+
+		auto ri = std::find_if(residues.begin(), residues.end(), [rp=&res](const Residue *r) { return r == rp; });
+		if (ri != residues.end())
+			continue;
+
+		residues.emplace_back(&res);
+	}
+
+	// sort by asym, seq_id
+
+	sort(residues.begin(), residues.end(), [](const mmcif::Residue *a, const mmcif::Residue *b)
+	{
+		int d = a->asymID().compare(b->asymID());
+		if (d == 0)
+			d = a->seqID() - b->seqID();
+		return d < 0;
+	});
+
+	for (auto ri = residues.begin(); ri != residues.end(); ++ri)
+	{
+		auto res = *ri;
+		auto monomer = dynamic_cast<mmcif::Monomer*>(res);
+
+		if (monomer == nullptr)
+		{
+			result->addResidue(*res);
+			continue;
+		}
+	}
+
+	if (xMap != nullptr and mapWeight != 0)
+		result->addDensityMap(*xMap, mapWeight);
+
+	result->Finish();
+
+	return result.release();
 }
 
 } // namespace pdb_redo

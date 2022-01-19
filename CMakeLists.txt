@@ -335,7 +335,7 @@ if(PDB_REDO_BUILD_TESTS)
 		set(PDB_REDO_TEST_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj)
 	endif()
 
-	list(APPEND PDB_REDO_tests unit)
+	list(APPEND PDB_REDO_tests unit rsr)
 
 	foreach(PDB_REDO_TEST IN LISTS PDB_REDO_tests)
 		set(PDB_REDO_TEST "${PDB_REDO_TEST}-test")
