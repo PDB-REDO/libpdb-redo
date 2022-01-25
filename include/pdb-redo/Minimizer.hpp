@@ -124,8 +124,8 @@ class Minimizer
 	static Minimizer *create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
 		const mmcif::BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight);
 
-	virtual void addPolySection(const mmcif::Polymer &poly, int first, int last);
 	virtual void addResidue(const mmcif::Residue &res);
+	virtual void addPolySection(const mmcif::Polymer &poly, int first, int last);
 	virtual void addDensityMap(const XMap &xMap, float mapWeight);
 	virtual void Finish();
 

@@ -741,7 +741,7 @@ void Minimizer::printStats()
 	double planarityScore = rmsz(loc, mPlanarityRestraints);
 	double transpeptideScore = rmsz(loc, mTransPeptideRestraints);
 	double nbcScore = rmsz(loc, mNonBondedContactRestraints);
-	double densityScore = mDensityRestraint->f(loc);
+	double densityScore = mDensityRestraint ? mDensityRestraint->f(loc) : 0;
 
 	std::cerr << "  Bonds:              " << bondScore << std::endl
 			  << "  Angles:             " << angleScore << std::endl
@@ -1164,6 +1164,8 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 		return d < 0;
 	});
 
+	auto &polymers = structure.polymers();
+
 	for (auto ri = residues.begin(); ri != residues.end(); ++ri)
 	{
 		auto res = *ri;
@@ -1174,6 +1176,24 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 			result->addResidue(*res);
 			continue;
 		}
+
+		int startSeqID = monomer->seqID();
+		int endSeqID = startSeqID;
+
+		auto ni = std::next(ri);
+		while (ni != residues.end())
+		{
+			if ((*ni)->seqID() != endSeqID + 1 or (*ni)->asymID() != monomer->asymID())
+				break;
+			++endSeqID;
+			++ni;
+		}
+
+		auto pi = find_if(polymers.begin(), polymers.end(), [id=monomer->asymID()](mmcif::Polymer &poly) { return poly.asymID() == id; });
+		if (pi == polymers.end())
+			throw std::runtime_error("Polymer not found for asym ID " + monomer->asymID());
+
+		result->addPolySection(*pi, startSeqID, endSeqID);
 	}
 
 	if (xMap != nullptr and mapWeight != 0)

@@ -167,21 +167,8 @@ find_path(NEWUOA_INCLUDE_DIR newuoa.h)
 check_include_file( "newuoa.h" HAVE_NEWUOA )
 
 # Create a revision file, containing the current git version info
-
-include(GetGitRevisionDescription)
-option(GENERATE_CUSTOM_VERSION "Generate a custom version string" OFF)
-if(GIT-NOTFOUND OR HEAD-HASH-NOTFOUND OR NOT GENERATE_CUSTOM_VERSION)
-    get_git_head_revision(REFSPEC COMMITHASH)
-
-	# Generate our own version string
-	git_describe_working_tree(BUILD_VERSION_STRING --match=build --dirty)
-else()
-    SET(BUILD_VERSION_STRING ${PROJECT_VERSION})
-endif()
-
-# generate version.h
-string(TIMESTAMP BUILD_DATE_TIME "%Y-%m-%dT%H:%M:%SZ" UTC)
-configure_file("${CMAKE_SOURCE_DIR}/src/revision.hpp.in" "${CMAKE_BINARY_DIR}/revision.hpp" @ONLY)
+include(VersionString)
+write_version_header("LibPDBREDO")
 
 # Sources
 
