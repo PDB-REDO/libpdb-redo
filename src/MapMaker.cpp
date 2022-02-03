@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -24,24 +24,24 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <iomanip>
-#include <fstream>
 #include <filesystem>
+#include <fstream>
+#include <iomanip>
 
-#include <boost/format.hpp>
 #include <boost/algorithm/string.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/format.hpp>
 #include <boost/iostreams/copy.hpp>
+#include <boost/iostreams/filter/gzip.hpp>
+#include <boost/iostreams/filtering_stream.hpp>
 
-#include <clipper/clipper-contrib.h>
 #include <clipper/clipper-ccp4.h>
+#include <clipper/clipper-contrib.h>
 
 #include "cif++/Cif++.hpp"
 
 #include "pdb-redo/ClipperWrapper.hpp"
-#include "pdb-redo/ResolutionCalculator.hpp"
 #include "pdb-redo/MapMaker.hpp"
+#include "pdb-redo/ResolutionCalculator.hpp"
 
 #ifdef _MSC_VER
 #include <io.h>
@@ -52,12 +52,11 @@ namespace io = boost::iostreams;
 namespace ba = boost::algorithm;
 namespace fs = std::filesystem;
 
-namespace mmcif
+namespace pdb_redo
 {
 
 // --------------------------------------------------------------------
 // a private ccp4 map file implementation
-
 
 //  1      NC              # of Columns    (fastest changing in map)
 //  2      NR              # of Rows
@@ -69,12 +68,12 @@ namespace mmcif
 //                           2 = Image     stored as Reals
 //                           3 = Transform stored as Complex Integer*2
 //                           4 = Transform stored as Complex Reals
-//                           5 == 0	
- 
+//                           5 == 0
+
 //                           Note: Mode 2 is the normal mode used in
 //                                 the CCP4 programs. Other modes than 2 and 0
 //                                 may NOT WORK
- 
+
 //  5      NCSTART         Number of first COLUMN  in map
 //  6      NRSTART         Number of first ROW     in map
 //  7      NSSTART         Number of first SECTION in map
@@ -102,9 +101,9 @@ namespace mmcif
 //                         Skew transformation is from standard orthogonal
 //                         coordinate frame (as used for atoms) to orthogonal
 //                         map frame, as
- 
+
 //                                 Xo(map) = S * (Xo(atoms) - t)
- 
+
 // 38      future use       (some of these are used by the MSUBSX routines
 //  .          "              in MAPBRICK, MAPCONT and FRODO)
 //  .          "   (all set to zero by default)
@@ -120,38 +119,38 @@ namespace mmcif
 
 enum CCP4MapFileMode : uint32_t
 {
-	AS_REALS = 2		// do not support anything else for now...
+	AS_REALS = 2 // do not support anything else for now...
 };
 
 struct CCP4MapFileHeader
 {
-	uint32_t			NC, NR, NS;
-	CCP4MapFileMode		MODE;
-	int32_t				NCSTART, NRSTART, NSSTART;
-	uint32_t			NX, NY, NZ;
-	float				cellLengths[3];
-	float				cellAngles[3];
-	uint32_t			MAPC, MAPR, MAPS;
-	float				AMIN, AMAX, AMEAN;
-	uint32_t			ISPG;
-	uint32_t			NSYMBT;
-	uint32_t			LSKFLG;
-	float				SKWMAT[9];
-	float				SKWTRN[3];
-	uint32_t			UNUSED[15];
-	char				MAP[4] = { 'M', 'A', 'P', ' ' };
-	uint32_t			MACHST = 0x00004144;
-	float				ARMS;
-	uint32_t			NLABL = 1;
-	char				LABEL[200 * 4];
+	uint32_t NC, NR, NS;
+	CCP4MapFileMode MODE;
+	int32_t NCSTART, NRSTART, NSSTART;
+	uint32_t NX, NY, NZ;
+	float cellLengths[3];
+	float cellAngles[3];
+	uint32_t MAPC, MAPR, MAPS;
+	float AMIN, AMAX, AMEAN;
+	uint32_t ISPG;
+	uint32_t NSYMBT;
+	uint32_t LSKFLG;
+	float SKWMAT[9];
+	float SKWTRN[3];
+	uint32_t UNUSED[15];
+	char MAP[4] = {'M', 'A', 'P', ' '};
+	uint32_t MACHST = 0x00004144;
+	float ARMS;
+	uint32_t NLABL = 1;
+	char LABEL[200 * 4];
 };
 
-template<typename FTYPE>
-std::tuple<FTYPE,FTYPE,FTYPE,FTYPE> CalculateMapStatistics(const clipper::Xmap<FTYPE>& xmap, clipper::Grid_range r)
+template <typename FTYPE>
+std::tuple<FTYPE, FTYPE, FTYPE, FTYPE> CalculateMapStatistics(const clipper::Xmap<FTYPE> &xmap, clipper::Grid_range r)
 {
 	FTYPE
-		amin = std::numeric_limits<FTYPE>::max(),
-		amax = std::numeric_limits<FTYPE>::min();
+	amin = std::numeric_limits<FTYPE>::max(),
+	amax = std::numeric_limits<FTYPE>::min();
 	long double asum = 0, asum2 = 0;
 	size_t n = 0;
 
@@ -160,7 +159,7 @@ std::tuple<FTYPE,FTYPE,FTYPE,FTYPE> CalculateMapStatistics(const clipper::Xmap<F
 		for (int g1 = r.min()[1]; g1 <= r.max()[1]; ++g1)
 			for (int g2 = r.min()[2]; g2 <= r.max()[2]; ++g2)
 			{
-				c.set_coord({ g0, g1, g2});
+				c.set_coord({g0, g1, g2});
 				FTYPE v = xmap[c];
 
 				asum += v;
@@ -179,21 +178,29 @@ std::tuple<FTYPE,FTYPE,FTYPE,FTYPE> CalculateMapStatistics(const clipper::Xmap<F
 	return std::make_tuple(amin, amax, mean, rmsd);
 }
 
-template<typename FTYPE>
-void writeCCP4MapFile(std::ostream& os, clipper::Xmap<FTYPE>& xmap, clipper::Grid_range range)
+template <typename FTYPE>
+void writeCCP4MapFile(std::ostream &os, clipper::Xmap<FTYPE> &xmap, clipper::Grid_range range)
 {
 	static_assert(sizeof(CCP4MapFileHeader) == 256 * 4, "Map header is of incorrect size");
 	// static_assert(__BYTE_ORDER == __LITTLE_ENDIAN, "Code for big endian systems is not implemented yet");
 
-	auto& spacegroup = xmap.spacegroup();
+	auto &spacegroup = xmap.spacegroup();
 	int spaceGroupNumber = spacegroup.descr().spacegroup_number();
-	int orderFMS[3] = { 3, 1, 2 };
+	int orderFMS[3] = {3, 1, 2};
 
 	switch (spaceGroupNumber)
 	{
-		case 1:  case 2:  case 3:  case 4:
-		case 10: case 16: case 17: case 18:
-		case 20: case 21: case 23:
+		case 1:
+		case 2:
+		case 3:
+		case 4:
+		case 10:
+		case 16:
+		case 17:
+		case 18:
+		case 20:
+		case 21:
+		case 23:
 			orderFMS[0] = 2;
 			orderFMS[2] = 3;
 			break;
@@ -247,7 +254,7 @@ void writeCCP4MapFile(std::ostream& os, clipper::Xmap<FTYPE>& xmap, clipper::Gri
 
 	std::tie(h.AMIN, h.AMAX, h.AMEAN, h.ARMS) = CalculateMapStatistics(xmap, range);
 
-	os.write(reinterpret_cast<char*>(&h), sizeof(h));
+	os.write(reinterpret_cast<char *>(&h), sizeof(h));
 
 	const std::string kSpaces(80, ' ');
 	for (int si = 0; si < spacegroup.num_symops(); ++si)
@@ -268,21 +275,21 @@ void writeCCP4MapFile(std::ostream& os, clipper::Xmap<FTYPE>& xmap, clipper::Gri
 		for (g[1] = gridFMSMin[1]; g[1] <= gridFMSMax[1]; ++g[1])
 			for (g[0] = gridFMSMin[0]; g[0] <= gridFMSMax[0]; ++g[0])
 			{
-				c.set_coord({ g[orderXYZ[0]], g[orderXYZ[1]], g[orderXYZ[2]] });
+				c.set_coord({g[orderXYZ[0]], g[orderXYZ[1]], g[orderXYZ[2]]});
 				*si++ = static_cast<float>(xmap[c]);
 			}
-		
+
 		assert(si == section.end());
-		os.write(reinterpret_cast<char*>(section.data()), kSectionLength * sizeof(float));
+		os.write(reinterpret_cast<char *>(section.data()), kSectionLength * sizeof(float));
 	}
 }
 
 // --------------------------------------------------------------------
 
-bool IsMTZFile(const fs::path& p)
+bool IsMTZFile(const fs::path &p)
 {
 	bool result = false;
-	
+
 	std::ifstream f(p);
 	if (f.is_open())
 	{
@@ -296,17 +303,17 @@ bool IsMTZFile(const fs::path& p)
 
 // --------------------------------------------------------------------
 
-template<typename FTYPE>
+template <typename FTYPE>
 Map<FTYPE>::Map()
 {
 }
 
-template<typename FTYPE>
+template <typename FTYPE>
 Map<FTYPE>::~Map()
 {
 }
 
-template<typename FTYPE>
+template <typename FTYPE>
 void Map<FTYPE>::calculateStats()
 {
 	double sum = 0, sum2 = 0;
@@ -318,10 +325,10 @@ void Map<FTYPE>::calculateStats()
 	for (auto ix = mMap.first(); not ix.last(); ix.next())
 	{
 		auto v = mMap[ix];
-		
+
 		if (std::isnan(v))
 			throw std::runtime_error("map contains NaN values");
-		
+
 		if (mMinDensity > v)
 			mMinDensity = v;
 		if (mMaxDensity < v)
@@ -331,79 +338,79 @@ void Map<FTYPE>::calculateStats()
 		sum += v;
 		sum2 += v * v;
 	}
-	
+
 	mMeanDensity = sum / count;
 	mRMSDensity = std::sqrt((sum2 / count) - (mMeanDensity * mMeanDensity));
 }
 
-template<typename FTYPE>
-void Map<FTYPE>::read(const std::filesystem::path& f)
+template <typename FTYPE>
+void Map<FTYPE>::read(const std::filesystem::path &f)
 {
 	fs::path mapFile(f);
 	fs::path dataFile = mapFile;
 
 	if (cif::VERBOSE)
 		std::cout << "Reading map from " << mapFile << std::endl;
-	
+
 	if (mapFile.extension() == ".gz")
 	{
 		// file is compressed
-		
+
 		fs::path p = mapFile.parent_path();
 		std::string s = mapFile.filename().string();
-		
+
 		io::filtering_stream<io::input> in;
-		
+
 		std::ifstream fi(mapFile);
-		
+
 		in.push(io::gzip_decompressor());
-			
+
 		in.push(fi);
 
 		char tmpFileName[] = "/tmp/map-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
 			throw std::runtime_error(std::string("Could not create temp file for map: ") + strerror(errno));
-		
+
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
 		io::copy(in, out);
 	}
-	
+
 	if (not fs::exists(dataFile))
 		throw std::runtime_error("Could not open map file " + mapFile.string());
-	
+
 	using namespace clipper;
 
 	CCP4MAPfile mapin;
 	mapin.open_read(dataFile.string());
 	mapin.import_xmap(mMap);
 	mapin.close_read();
-	
+
 	if (dataFile != mapFile)
 		fs::remove(dataFile);
 
 	calculateStats();
 }
 
-template<typename FTYPE>
-void Map<FTYPE>::write(const std::filesystem::path& f)
+template <typename FTYPE>
+void Map<FTYPE>::write(const std::filesystem::path &f)
 {
 	write_masked(f, mMap.grid_asu());
 }
 
-template<typename FTYPE>
-void Map<FTYPE>::write_masked(std::ostream& os, clipper::Grid_range r)
+template <typename FTYPE>
+void Map<FTYPE>::write_masked(std::ostream &os, clipper::Grid_range r)
 {
 	writeCCP4MapFile(os, mMap, r);
 }
 
-template<typename FTYPE>
-void Map<FTYPE>::write_masked(const std::filesystem::path& f, clipper::Grid_range r)
+template <typename FTYPE>
+void Map<FTYPE>::write_masked(const std::filesystem::path &f, clipper::Grid_range r)
 {
 	std::ofstream file(f, std::ios_base::binary);
 	if (not file.is_open())
 		throw std::runtime_error("Could not open map file for writing: " + f.string());
-	
+
 	write_masked(file, r);
 }
 
@@ -412,18 +419,18 @@ template class Map<double>;
 
 // --------------------------------------------------------------------
 
-template<typename FTYPE>
+template <typename FTYPE>
 MapMaker<FTYPE>::MapMaker()
 {
 }
 
-template<typename FTYPE>
+template <typename FTYPE>
 MapMaker<FTYPE>::~MapMaker()
 {
 }
 
-template<typename FTYPE>
-void MapMaker<FTYPE>::loadMTZ(const fs::path& f, float samplingRate,
+template <typename FTYPE>
+void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	std::initializer_list<std::string> fbLabels, std::initializer_list<std::string> fdLabels,
 	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> fcLabels,
 	std::initializer_list<std::string> faLabels)
@@ -432,23 +439,23 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path& f, float samplingRate,
 
 	if (cif::VERBOSE)
 		std::cerr << "Reading map from " << hklin << std::endl
-			 << "  with labels: FB: " << ba::join(fbLabels, ",") << std::endl
-			 << "  with labels: FD: " << ba::join(fdLabels, ",") << std::endl
-			 << "  with labels: FA: " << ba::join(faLabels, ",") << std::endl
-			 << "  with labels: FO: " << ba::join(foLabels, ",") << std::endl
-			 << "  with labels: FC: " << ba::join(fcLabels, ",") << std::endl;
+				  << "  with labels: FB: " << ba::join(fbLabels, ",") << std::endl
+				  << "  with labels: FD: " << ba::join(fdLabels, ",") << std::endl
+				  << "  with labels: FA: " << ba::join(faLabels, ",") << std::endl
+				  << "  with labels: FO: " << ba::join(foLabels, ",") << std::endl
+				  << "  with labels: FC: " << ba::join(fcLabels, ",") << std::endl;
 
 	fs::path dataFile = hklin;
-	
+
 	if (hklin.extension() == ".gz")
 	{
 		// file is compressed
-		
+
 		fs::path p = hklin.parent_path();
 		std::string s = hklin.filename().string();
-		
+
 		io::filtering_stream<io::input> in;
-		
+
 		std::ifstream fi(hklin);
 
 		in.push(io::gzip_decompressor());
@@ -458,28 +465,28 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path& f, float samplingRate,
 		char tmpFileName[] = "/tmp/mtz-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
 			throw std::runtime_error(std::string("Could not create temp file for mtz: ") + strerror(errno));
-		
+
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
 		io::copy(in, out);
 	}
-	
+
 	if (not fs::exists(dataFile))
 		throw std::runtime_error("Could not open mtz file " + hklin.string());
-	
+
 	const std::string kBasePath("/%1%/%2%/[%3%]");
 
 	using clipper::CCP4MTZfile;
 
 	CCP4MTZfile mtzin;
 	mtzin.open_read(dataFile.string());
-	
+
 	mtzin.import_hkl_info(mHKLInfo);
-	
+
 	bool hasFAN = false, hasFREE = false;
 	const std::regex rx(R"(^/[^/]+/[^/]+/(.+) \S$)");
-	
-	for (auto& label: mtzin.column_labels())
+
+	for (auto &label : mtzin.column_labels())
 	{
 		std::smatch m;
 		if (not std::regex_match(label, m, rx))
@@ -497,7 +504,7 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path& f, float samplingRate,
 			continue;
 		}
 	}
-		
+
 	mtzin.import_hkl_data(mFbData,
 		(boost::format(kBasePath) % "*" % "*" % ba::join(fbLabels, ",")).str());
 	mtzin.import_hkl_data(mFdData,
@@ -521,18 +528,18 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path& f, float samplingRate,
 
 	if (dataFile != hklin)
 		fs::remove(dataFile);
-	
+
 	Cell cell = mHKLInfo.cell();
 	Spacegroup spacegroup = mHKLInfo.spacegroup();
 
 	ResolutionCalculator rc(cell);
 	mResHigh = 99;
 	mResLow = 0;
-	
+
 	for (auto hi = mFoData.first_data(); not hi.last(); hi = mFoData.next_data(hi))
 	{
 		auto res = rc(hi.hkl().h(), hi.hkl().k(), hi.hkl().l());
-		
+
 		if (mResHigh > res)
 			mResHigh = res;
 
@@ -540,21 +547,21 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path& f, float samplingRate,
 			mResLow = res;
 	}
 
-//	fixMTZ();
+	//	fixMTZ();
 
 	mGrid.init(spacegroup, cell,
-		mHKLInfo.resolution(), samplingRate);	// define grid
-	
-	clipper::Xmap<FTYPE>& fbMap = mFb;
-	clipper::Xmap<FTYPE>& fdMap = mFd;
-	clipper::Xmap<FTYPE>& faMap = mFa;
-	
-	fbMap.init(spacegroup, cell, mGrid);	// define map
-	fbMap.fft_from(mFbData);				// generate map
-	
-	fdMap.init(spacegroup, cell, mGrid);	// define map
-	fdMap.fft_from(mFdData);				// generate map
-	
+		mHKLInfo.resolution(), samplingRate); // define grid
+
+	clipper::Xmap<FTYPE> &fbMap = mFb;
+	clipper::Xmap<FTYPE> &fdMap = mFd;
+	clipper::Xmap<FTYPE> &faMap = mFa;
+
+	fbMap.init(spacegroup, cell, mGrid); // define map
+	fbMap.fft_from(mFbData);             // generate map
+
+	fdMap.init(spacegroup, cell, mGrid); // define map
+	fdMap.fft_from(mFdData);             // generate map
+
 	if (not mFaData.is_null())
 	{
 		faMap.init(spacegroup, cell, mGrid);
@@ -564,11 +571,11 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path& f, float samplingRate,
 	if (cif::VERBOSE)
 	{
 		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << std::endl
-		     << "  stored resolution: " << mHKLInfo.resolution().limit() << std::endl
-			 << "  calculated reshi = " << mResHigh << " reslo = " << mResLow << std::endl
-		     << "  spacegroup: " << spacegroup.symbol_hm() << std::endl
-		     << "  cell: " << cell.format() << std::endl
-		     << "  grid: " << mGrid.format() << std::endl;
+				  << "  stored resolution: " << mHKLInfo.resolution().limit() << std::endl
+				  << "  calculated reshi = " << mResHigh << " reslo = " << mResLow << std::endl
+				  << "  spacegroup: " << spacegroup.symbol_hm() << std::endl
+				  << "  cell: " << cell.format() << std::endl
+				  << "  grid: " << mGrid.format() << std::endl;
 
 		printStats();
 	}
@@ -579,35 +586,35 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path& f, float samplingRate,
 
 // --------------------------------------------------------------------
 
-template<typename FTYPE>
-void MapMaker<FTYPE>::loadMaps(const fs::path& fbMapFile, const fs::path& fdMapFile, float reshi, float reslo)
+template <typename FTYPE>
+void MapMaker<FTYPE>::loadMaps(const fs::path &fbMapFile, const fs::path &fdMapFile, float reshi, float reslo)
 {
 	mResHigh = reshi;
 	mResLow = reslo;
-	
+
 	mFb.read(fbMapFile);
 	mFd.read(fdMapFile);
-	
+
 	if (not mFb.cell().equals(mFd.cell()))
 		throw std::runtime_error("Fb and Fd map do not contain the same cell");
 }
 
 // --------------------------------------------------------------------
 
-std::ostream& operator<<(std::ostream& os, const clipper::HKL& hkl)
+std::ostream &operator<<(std::ostream &os, const clipper::HKL &hkl)
 {
 	os << "h: " << hkl.h() << ", "
 	   << "k: " << hkl.k() << ", "
 	   << "l: " << hkl.l();
-	
+
 	return os;
 };
 
 // --------------------------------------------------------------------
 
-template<typename FTYPE>
-void MapMaker<FTYPE>::calculate(const fs::path& hklin,
-	const Structure& structure, bool noBulk, AnisoScalingFlag anisoScaling,
+template <typename FTYPE>
+void MapMaker<FTYPE>::calculate(const fs::path &hklin,
+	const Structure &structure, bool noBulk, AnisoScalingFlag anisoScaling,
 	float samplingRate, bool electronScattering,
 	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> freeLabels)
 {
@@ -615,68 +622,72 @@ void MapMaker<FTYPE>::calculate(const fs::path& hklin,
 		loadFoFreeFromMTZFile(hklin, foLabels, freeLabels);
 	else
 		loadFoFreeFromReflectionsFile(hklin);
-	
+
 	recalc(structure, noBulk, anisoScaling, samplingRate, electronScattering);
 }
 
 // --------------------------------------------------------------------
-	
-template<typename FTYPE>
-void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path& hklin)
+
+template <typename FTYPE>
+void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 {
 	using clipper::HKL;
-	
+
 	cif::File reflnsFile(hklin);
-	auto& reflns = reflnsFile.firstDatablock();
-	
-//	m_xname = reflns["exptl_crystal"].front()["id"].as<std::string>();
-//	m_pname = reflns["entry"].front()["id"].as<std::string>();
+	auto &reflns = reflnsFile.firstDatablock();
+
+	//	m_xname = reflns["exptl_crystal"].front()["id"].as<std::string>();
+	//	m_pname = reflns["entry"].front()["id"].as<std::string>();
 
 	float a, b, c, alpha, beta, gamma;
 	cif::tie(a, b, c, alpha, beta, gamma) = reflns["cell"].front().get(
 		"length_a", "length_b", "length_c", "angle_alpha", "angle_beta", "angle_gamma");
-	
+
 	using clipper::Cell_descr;
 	Cell cell = Cell(Cell_descr{a, b, c, alpha, beta, gamma});
 
-//	if (not cell2.equals(m_cell))
-//		throw std::runtime_error("Reflections file and coordinates file do not agree upon the cell parameters");
+	//	if (not cell2.equals(m_cell))
+	//		throw std::runtime_error("Reflections file and coordinates file do not agree upon the cell parameters");
 
 	// --------------------------------------------------------------------
 
 	// Read reflections file to calculate resolution low and high
 	ResolutionCalculator rc(a, b, c, alpha, beta, gamma);
 	double hires = 99;
-	
-	for (auto r: reflns["refln"])
+
+	for (auto r : reflns["refln"])
 	{
 		int h, k, l;
-		
+
 		cif::tie(h, k, l) = r.get("index_h", "index_k", "index_l");
-		
+
 		double res = rc(h, k, l);
-		
+
 		if (hires > res)
 			hires = res;
 	}
-	
+
 	std::string spacegroupDescr = reflns["symmetry"].front()["space_group_name_H-M"].as<std::string>();
 	auto spacegroup = Spacegroup(clipper::Spgr_descr{spacegroupDescr});
 	mHKLInfo = HKL_info(spacegroup, cell, clipper::Resolution{hires}, true);
-	
-//	m_crystal = MTZcrystal(m_xname, m_pname, m_cell);
+
+	//	m_crystal = MTZcrystal(m_xname, m_pname, m_cell);
 
 	mFoData.init(mHKLInfo, mHKLInfo.cell());
 	mFreeData.init(mHKLInfo, mHKLInfo.cell());
 
 	for (auto ih = mFreeData.first(); not ih.last(); ih.next())
 		mFreeData[ih].set_null();
-	
+
 	// --------------------------------------------------------------------
 
-	enum FreeRConvention { frXPLO, frCCP4 } freeRConvention = frXPLO;
+	enum FreeRConvention
+	{
+		frXPLO,
+		frCCP4
+	} freeRConvention = frXPLO;
 	int freeRefl = 1, workRefl = 0;
-	
+
 	if (false /*m_statusXPLO*/)
 	{
 		freeRConvention = frCCP4;
@@ -685,32 +696,32 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path& hklin)
 	}
 
 	bool first = false;
-	for (auto r: reflns["refln"])
+	for (auto r : reflns["refln"])
 	{
 		int h, k, l;
 		char flag;
 		float F, sigF;
-		
+
 		cif::tie(h, k, l, flag, F, sigF) = r.get("index_h", "index_k", "index_l", "status", "F_meas_au", "F_meas_sigma_au");
 
 		int ix = mHKLInfo.index_of(HKL{h, k, l});
-		
+
 		if (ix < 0)
 		{
 			if (cif::VERBOSE)
 				std::cerr << "Ignoring hkl(" << h << ", " << k << ", " << l << ")" << std::endl;
 			continue;
 		}
-		
+
 		if (first and (flag == freeRefl or flag == workRefl))
 		{
 			std::cerr << "Non-standard _refln.status column detected" << std::endl
-				 << "Assuming " << (freeRConvention == frXPLO ? "XPLOR" : "CCP4") << " convention for free R flag" << std::endl;
+					  << "Assuming " << (freeRConvention == frXPLO ? "XPLOR" : "CCP4") << " convention for free R flag" << std::endl;
 			first = false;
 		}
-		
+
 		mFoData[ix] = F_sigF(F, sigF);
-		
+
 		switch (flag)
 		{
 			case 'o':
@@ -718,11 +729,11 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path& hklin)
 			case 'l':
 				mFreeData[ix] = Flag(1);
 				break;
-			
+
 			case 'f':
 				mFreeData[ix] = Flag(0);
 				break;
-			
+
 			case '0':
 			case '1':
 				mFreeData[ix] = Flag(workRefl == flag ? 1 : 0);
@@ -738,20 +749,20 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path& hklin)
 
 // --------------------------------------------------------------------
 
-template<typename FTYPE>
-void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path& hklin,
+template <typename FTYPE>
+void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> freeLabels)
 {
 	if (cif::VERBOSE)
 		std::cerr << "Recalculating maps from " << hklin << std::endl;
-	
+
 	const std::string kBasePath("/%1%/%2%/[%3%]");
 
 	using clipper::CCP4MTZfile;
 
 	CCP4MTZfile mtzin;
 	mtzin.open_read(hklin.string());
-	
+
 	mtzin.import_hkl_info(mHKLInfo);
 	mtzin.import_hkl_data(mFoData,
 		(boost::format(kBasePath) % "*" % "*" % ba::join(foLabels, ",")).str());
@@ -763,10 +774,10 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path& hklin,
 
 // --------------------------------------------------------------------
 
-template<typename FTYPE>
-void MapMaker<FTYPE>::recalc(const Structure& structure,
-		bool noBulk, AnisoScalingFlag anisoScaling,
-		float samplingRate, bool electronScattering)
+template <typename FTYPE>
+void MapMaker<FTYPE>::recalc(const Structure &structure,
+	bool noBulk, AnisoScalingFlag anisoScaling,
+	float samplingRate, bool electronScattering)
 {
 	Cell cell = mHKLInfo.cell();
 	Spacegroup spacegroup = mHKLInfo.spacegroup();
@@ -774,20 +785,20 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 	// The calculation work
 	std::vector<clipper::Atom> atoms;
 
-	for (auto a: structure.atoms())
+	for (auto a : structure.atoms())
 		atoms.push_back(toClipper(a));
 
 	mFcData.init(mHKLInfo, cell);
 
 	if (not electronScattering)
 	{
-		auto& exptl = structure.getFile().data()["exptl"];
+		auto &exptl = structure.getFile().data()["exptl"];
 		electronScattering = not exptl.empty() and exptl.front()["method"] == "ELECTRON CRYSTALLOGRAPHY";
 	}
 
 	clipper::ScatteringFactors::selectScattteringFactorsType(
 		electronScattering ? clipper::SF_ELECTRON : clipper::SF_WAASMAIER_KIRFEL);
-		
+
 	if (noBulk)
 	{
 		clipper::SFcalc_aniso_fft<float> sfc;
@@ -797,31 +808,31 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 	{
 		clipper::SFcalc_obs_bulk<float> sfcb;
 		sfcb(mFcData, mFoData, atoms);
-		
+
 		if (cif::VERBOSE)
 			std::cerr << "Bulk correction volume: " << sfcb.bulk_frac() << std::endl
-				 << "Bulk correction factor: " << sfcb.bulk_scale() << std::endl;
+					  << "Bulk correction factor: " << sfcb.bulk_scale() << std::endl;
 	}
-	
+
 	if (anisoScaling != as_None)
 	{
 		clipper::SFscale_aniso<float>::TYPE F = clipper::SFscale_aniso<float>::F;
 		clipper::SFscale_aniso<float> sfscl;
 		if (anisoScaling == as_Observed)
-			sfscl(mFoData, mFcData);  // scale Fobs
+			sfscl(mFoData, mFcData); // scale Fobs
 		else
-			sfscl(mFcData, mFoData);  // scale Fcal
-			
+			sfscl(mFcData, mFoData); // scale Fcal
+
 		if (cif::VERBOSE)
 			std::cerr << "Anisotropic scaling:" << std::endl
-				 << sfscl.u_aniso_orth(F).format() << std::endl;
+					  << sfscl.u_aniso_orth(F).format() << std::endl;
 	}
 
 	// now do sigmaa calc
 	mFbData.init(mHKLInfo, cell);
 	mFdData.init(mHKLInfo, cell);
 	mPhiFomData.init(mHKLInfo, cell);
-	
+
 	HKL_data<Flag> flag(mHKLInfo, cell);
 
 	const int freeflag = 0;
@@ -832,7 +843,7 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 		else
 			flag[ih].flag() = clipper::SFweight_spline<float>::NONE;
 	}
-	
+
 	// do sigmaa calc
 	clipper::SFweight_spline<float> sfw(mNumRefln, mNumParam);
 	sfw(mFbData, mFdData, mPhiFomData, mFoData, mFcData, flag);
@@ -843,12 +854,13 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 	fixMTZ();
 
 	ResolutionCalculator rc(cell);
-	mResHigh = 99; mResLow = 0;
-	
+	mResHigh = 99;
+	mResLow = 0;
+
 	for (auto hi = mFoData.first_data(); not hi.last(); hi = mFoData.next_data(hi))
 	{
 		auto res = rc(hi.hkl().h(), hi.hkl().k(), hi.hkl().l());
-		
+
 		if (mResHigh > res)
 			mResHigh = res;
 
@@ -860,24 +872,24 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 		std::cerr << "calculated reshi = " << mResHigh << " reslo = " << mResLow << std::endl;
 
 	samplingRate /= 2;
-	
-	mGrid.init(spacegroup, cell,
-		mHKLInfo.resolution(), samplingRate);		// define grid
-	
-	clipper::Xmap<FTYPE>& fbMap = mFb;
-	clipper::Xmap<FTYPE>& fdMap = mFd;
 
-	fbMap.init(spacegroup, cell, mGrid);			// define map
-	fbMap.fft_from(mFbData);						// generate map
-	
-	fdMap.init(spacegroup, cell, mGrid);			// define map
-	fdMap.fft_from(mFdData);						// generate map
+	mGrid.init(spacegroup, cell,
+		mHKLInfo.resolution(), samplingRate); // define grid
+
+	clipper::Xmap<FTYPE> &fbMap = mFb;
+	clipper::Xmap<FTYPE> &fdMap = mFd;
+
+	fbMap.init(spacegroup, cell, mGrid); // define map
+	fbMap.fft_from(mFbData);             // generate map
+
+	fdMap.init(spacegroup, cell, mGrid); // define map
+	fdMap.fft_from(mFdData);             // generate map
 
 	if (cif::VERBOSE)
 	{
 		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << std::endl
-			 << "  resolution: " << mResHigh
-			 << std::endl;
+				  << "  resolution: " << mResHigh
+				  << std::endl;
 
 		printStats();
 	}
@@ -886,33 +898,34 @@ void MapMaker<FTYPE>::recalc(const Structure& structure,
 	mFd.calculateStats();
 }
 
-template<typename FTYPE>
+template <typename FTYPE>
 void MapMaker<FTYPE>::fixMTZ()
 {
 	Spacegroup spacegroup = mHKLInfo.spacegroup();
 
-	enum {
-		A1,  // A1:  FC = 2mFo - FM              
-		A2,  // A2:  FC >= 2mFo - FM             
-		A3,  // A3:  FD = FM - mFo               
-		A4,  // A4:  FD = 2(FM - mFo)            
-		C5,  // C5:  FC = 2mFo - FM              
-		C6,  // C6:  FM = mFo                    
-		C7,  // C7:  FD = mFo - FC               
-		C8,  // C8:  FD = 2(mFo - FC)            
-		C9,  // C9:  FD <= mFo - FC              
-		T10, // 10:  FM = FC (unobserved only)   
-		T11, // 11:  FD = 0 (unobserved only)    
+	enum
+	{
+		A1,  // A1:  FC = 2mFo - FM
+		A2,  // A2:  FC >= 2mFo - FM
+		A3,  // A3:  FD = FM - mFo
+		A4,  // A4:  FD = 2(FM - mFo)
+		C5,  // C5:  FC = 2mFo - FM
+		C6,  // C6:  FM = mFo
+		C7,  // C7:  FD = mFo - FC
+		C8,  // C8:  FD = 2(mFo - FC)
+		C9,  // C9:  FD <= mFo - FC
+		T10, // 10:  FM = FC (unobserved only)
+		T11, // 11:  FD = 0 (unobserved only)
 		TestCount
 	};
 
 	std::vector<bool> tests(TestCount, true);
-	
+
 	// first run the tests to see if we need to fix anything
-	
+
 	if (cif::VERBOSE)
 		std::cerr << "Testing MTZ file" << std::endl;
-	
+
 	for (auto ih = mFbData.first(); not ih.last(); ih.next())
 	{
 		clipper::HKL_class cls(spacegroup, ih.hkl());
@@ -933,20 +946,22 @@ void MapMaker<FTYPE>::fixMTZ()
 			FM = -FM;
 
 		if (std::abs(std::fmod(std::abs(PD - PC) + 180, 360) - 180) > 90)
-			FD = -FD; 
-			
+			FD = -FD;
+
 		if (mFoData[ih].missing() or W == 0)
 		{
 			if (tests[T10] and std::abs(FM - FC) > 0.05)
 			{
 				tests[T10] = false;
-				if (cif::VERBOSE) std::cerr << "Test 10 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test 10 failed at " << ih.hkl() << std::endl;
 			}
-			
+
 			if (tests[T11] and std::abs(FD) > 0.05)
 			{
 				tests[T11] = false;
-				if (cif::VERBOSE) std::cerr << "Test 11 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test 11 failed at " << ih.hkl() << std::endl;
 			}
 		}
 		else if (cls.centric())
@@ -954,67 +969,75 @@ void MapMaker<FTYPE>::fixMTZ()
 			if (tests[C5] and std::abs(FC + FM - 2 * WFO) > 0.05)
 			{
 				tests[C5] = false;
-				if (cif::VERBOSE) std::cerr << "Test C5 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test C5 failed at " << ih.hkl() << std::endl;
 			}
-			
+
 			if (tests[C6] and std::abs(FM - WFO) > 0.05)
 			{
 				tests[C6] = false;
-				if (cif::VERBOSE) std::cerr << "Test C6 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test C6 failed at " << ih.hkl() << std::endl;
 			}
-			
+
 			if (tests[C7] and std::abs(FC + FD - WFO) > 0.05)
 			{
 				tests[C7] = false;
-				if (cif::VERBOSE) std::cerr << "Test C7 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test C7 failed at " << ih.hkl() << std::endl;
 			}
-			
+
 			if (tests[C8] and std::abs(FC + 0.5 * FD - WFO) > 0.05)
 			{
 				tests[C8] = false;
-				if (cif::VERBOSE) std::cerr << "Test C8 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test C8 failed at " << ih.hkl() << std::endl;
 			}
-			
+
 			if (tests[C9] and (1.01 * FC + Gd - WFO) < -0.05)
 			{
 				tests[C9] = false;
-				if (cif::VERBOSE) std::cerr << "Test C9 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test C9 failed at " << ih.hkl() << std::endl;
 			}
-			
 		}
 		else
 		{
 			if (tests[A1] and std::abs(FC + FM - 2 * WFO) > 0.05)
 			{
 				tests[A1] = false;
-				if (cif::VERBOSE) std::cerr << "Test A1 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test A1 failed at " << ih.hkl() << std::endl;
 			}
-			
+
 			if (tests[A2] and 1.01 * FC + FM - 2 * WFO < -0.05)
 			{
 				tests[A2] = false;
-				if (cif::VERBOSE) std::cerr << "Test A2 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test A2 failed at " << ih.hkl() << std::endl;
 			}
-			
+
 			if (tests[A3] and std::abs(FM - FD - WFO) > 0.05)
 			{
 				tests[A3] = false;
-				if (cif::VERBOSE) std::cerr << "Test A3 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test A3 failed at " << ih.hkl() << std::endl;
 			}
-			
+
 			if (tests[A4] and std::abs(FM - 0.5 * FD - WFO) > 0.05)
 			{
 				tests[A4] = false;
-				if (cif::VERBOSE) std::cerr << "Test A4 failed at " << ih.hkl() << std::endl;
+				if (cif::VERBOSE)
+					std::cerr << "Test A4 failed at " << ih.hkl() << std::endl;
 			}
 		}
-	}	
+	}
 
 	using clipper::HKL_class;
 	using clipper::data32::F_phi;
 
 	const F_phi fzero(0, 0);
-	
+
 	// mtzfix...
 	for (auto ih = mFbData.first(); not ih.last(); ih.next())
 	{
@@ -1036,7 +1059,7 @@ void MapMaker<FTYPE>::fixMTZ()
 			mFdData[ih].f() = -mFdData[ih].f();
 			mFdData[ih].phi() = mFcData[ih].phi();
 		}
-		
+
 		auto mFo = mFbData[ih] - mFdData[ih];
 
 		HKL_class cls(spacegroup, ih.hkl());
@@ -1066,21 +1089,21 @@ void MapMaker<FTYPE>::fixMTZ()
 					mFbData[ih] = mFcData[ih];
 				}
 			}
-			
+
 			if (not tests[T11])
 				mFdData[ih] = fzero;
 		}
 	}
 }
 
-template<typename FTYPE>
+template <typename FTYPE>
 void MapMaker<FTYPE>::printStats()
 {
 	// calc R and R-free
 	std::vector<double> params(mNumParam, 1.0);
 
 	clipper::BasisFn_spline basisfn(mFoData, mNumParam, 1.0);
-	clipper::TargetFn_scaleF1F2<clipper::data32::F_phi,clipper::data32::F_sigF> targetfn(mFcData, mFoData);
+	clipper::TargetFn_scaleF1F2<clipper::data32::F_phi, clipper::data32::F_sigF> targetfn(mFcData, mFoData);
 	clipper::ResolutionFn rfn(mHKLInfo, basisfn, targetfn, params);
 
 	double r1w = 0, f1w = 0, r1f = 0, f1f = 0;
@@ -1090,8 +1113,8 @@ void MapMaker<FTYPE>::printStats()
 	{
 		if (mFcData[ih].missing())
 			continue;
-//			throw std::runtime_error("missing Fc");
-		
+		//			throw std::runtime_error("missing Fc");
+
 		double Fo = mFoData[ih].f();
 		double Fc = std::sqrt(rfn.f(ih)) * mFcData[ih].f();
 
@@ -1106,45 +1129,51 @@ void MapMaker<FTYPE>::printStats()
 			f1w += Fo;
 		}
 	}
-	
+
 	if (f1f < 0.1)
 		f1f = 0.1;
 	r1f /= f1f;
-	
+
 	if (f1w < 0.1)
 		f1w = 0.1;
 	r1w /= f1w;
 
 	std::cerr << "R-factor      : " << r1w << std::endl
-		 << "Free R-factor : " << r1f << std::endl;
+			  << "Free R-factor : " << r1f << std::endl;
 }
 
-template<typename FTYPE>
-void MapMaker<FTYPE>::writeMTZ(const fs::path& file, const std::string& pname, const std::string& cname)
+template <typename FTYPE>
+void MapMaker<FTYPE>::writeMTZ(const fs::path &file, const std::string &pname, const std::string &cname)
 {
 	if (mHKLInfo.is_null())
 		throw std::runtime_error("HKL info not initialized");
-	
+
 	clipper::CCP4MTZfile mtz;
 	clipper::MTZdataset dataset(pname, 0);
 	clipper::MTZcrystal crystal(cname, pname, mHKLInfo.cell());
 
 	const std::string col = "/" + pname + "/" + cname + "/";
-	
+
 	mtz.open_write(file.string());
 	mtz.export_hkl_info(mHKLInfo);
 	mtz.export_crystal(crystal, col);
 	mtz.export_dataset(dataset, col);
-	if (not mFreeData.is_null())		mtz.export_hkl_data(mFreeData, col + "[FREE]");
-	if (not mFoData.is_null())			mtz.export_hkl_data(mFoData, col + "[FP,SIGFP]");
-	if (not mFcData.is_null())			mtz.export_hkl_data(mFcData, col + "[FC_ALL,PHIC_ALL]");
-	if (not mFbData.is_null())			mtz.export_hkl_data(mFbData, col + "[FWT,PHWT]");
-	if (not mFdData.is_null())			mtz.export_hkl_data(mFdData, col + "[DELFWT,PHDELWT]");
-	if (not mPhiFomData.is_null())		mtz.export_hkl_data(mPhiFomData, col + "[PHI,FOM]");
+	if (not mFreeData.is_null())
+		mtz.export_hkl_data(mFreeData, col + "[FREE]");
+	if (not mFoData.is_null())
+		mtz.export_hkl_data(mFoData, col + "[FP,SIGFP]");
+	if (not mFcData.is_null())
+		mtz.export_hkl_data(mFcData, col + "[FC_ALL,PHIC_ALL]");
+	if (not mFbData.is_null())
+		mtz.export_hkl_data(mFbData, col + "[FWT,PHWT]");
+	if (not mFdData.is_null())
+		mtz.export_hkl_data(mFdData, col + "[DELFWT,PHDELWT]");
+	if (not mPhiFomData.is_null())
+		mtz.export_hkl_data(mPhiFomData, col + "[PHI,FOM]");
 	mtz.close_write();
 }
 
 template class MapMaker<float>;
 template class MapMaker<double>;
 
-}
+} // namespace pdb_redo

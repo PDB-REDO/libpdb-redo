@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -27,8 +27,8 @@
 #include <atomic>
 #include <mutex>
 
-#include "cif++/Symmetry.hpp"
 #include "cif++/CifUtils.hpp"
+#include "cif++/Symmetry.hpp"
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/Symmetry-2.hpp"
@@ -36,21 +36,24 @@
 namespace c = cif;
 namespace m = mmcif;
 
+namespace pdb_redo
+{
+
 // --------------------------------------------------------------------
 
-clipper::Coord_orth CalculateOffsetForCell(const m::Structure& p, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell)
+clipper::Coord_orth CalculateOffsetForCell(const m::Structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
 {
-	auto& atoms = p.atoms();
+	auto &atoms = p.atoms();
 	size_t dim = atoms.size();
-	
+
 	std::vector<clipper::Coord_orth> locations;
 	locations.reserve(dim);
-	
+
 	// bounding box
 	m::Point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
-		  pMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
-	
-	for (auto& atom: atoms)
+		pMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
+
+	for (auto &atom : atoms)
 	{
 		auto pt = atom.location();
 		locations.push_back(toClipper(pt));
@@ -69,31 +72,34 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure& p, const clipper:
 		if (pMax.mZ < pt.mZ)
 			pMax.mZ = pt.mZ;
 	};
-	
+
 	// correct locations so that the median of x, y and z are inside the cell
 	std::vector<float> c(dim);
 	auto median = [&]()
 	{
 		return dim % 1 == 0
-			? c[dim / 2]
-			: (c[dim / 2 - 1] + c[dim / 2]) / 2;
+		           ? c[dim / 2]
+		           : (c[dim / 2 - 1] + c[dim / 2]) / 2;
 	};
-	
-	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[0]); });
+
+	std::transform(locations.begin(), locations.end(), c.begin(), [](auto &l)
+		{ return static_cast<float>(l[0]); });
 	std::sort(c.begin(), c.end());
 	float mx = median();
-	
-	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[1]); });
+
+	std::transform(locations.begin(), locations.end(), c.begin(), [](auto &l)
+		{ return static_cast<float>(l[1]); });
 	std::sort(c.begin(), c.end());
 	float my = median();
-	
-	std::transform(locations.begin(), locations.end(), c.begin(), [](auto& l) { return static_cast<float>(l[2]); });
+
+	std::transform(locations.begin(), locations.end(), c.begin(), [](auto &l)
+		{ return static_cast<float>(l[2]); });
 	std::sort(c.begin(), c.end());
 	float mz = median();
 
 	if (cif::VERBOSE > 1)
 		std::cerr << "median position of atoms: " << m::Point(mx, my, mz) << std::endl;
-	
+
 	auto calculateD = [&](float m, float c)
 	{
 		float d = 0;
@@ -116,7 +122,7 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure& p, const clipper:
 	D.mX = calculateD(mx, static_cast<float>(cell.a()));
 	D.mY = calculateD(my, static_cast<float>(cell.b()));
 	D.mZ = calculateD(mz, static_cast<float>(cell.c()));
-	
+
 	if (D.mX != 0 or D.mY != 0 or D.mZ != 0)
 	{
 		if (cif::VERBOSE)
@@ -128,33 +134,33 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure& p, const clipper:
 
 // --------------------------------------------------------------------
 
-std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup& spacegroup,
-	const clipper::Cell& cell)
+std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup &spacegroup,
+	const clipper::Cell &cell)
 {
 	std::vector<clipper::RTop_orth> result;
-	
+
 	// to make the operation at index 0 equal to identity
 	result.push_back(clipper::RTop_orth::identity());
 
 	for (int i = 0; i < spacegroup.num_symops(); ++i)
 	{
-		const auto& symop = spacegroup.symop(i);
-		
-		for (int u: { -1, 0, 1})
-			for (int v: { -1, 0, 1})
-				for (int w: { -1, 0, 1})
+		const auto &symop = spacegroup.symop(i);
+
+		for (int u : {-1, 0, 1})
+			for (int v : {-1, 0, 1})
+				for (int w : {-1, 0, 1})
 				{
 					if (i == 0 and u == 0 and v == 0 and w == 0)
 						continue;
 
 					auto rtop = clipper::RTop_frac(
-							symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w)
-						).rtop_orth(cell);
+						symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w))
+					                .rtop_orth(cell);
 
 					result.push_back(std::move(rtop));
 				}
 	}
-	
+
 	return result;
 }
 
@@ -163,18 +169,18 @@ std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup& spac
 // for rotation numbers. So we created a table to map those.
 // Perhaps a bit over the top, but hey....
 
-int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac& rt)
+int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac &rt)
 {
-	auto& rot = rt.rot();
-	auto& trn = rt.trn();
+	auto &rot = rt.rot();
+	auto &trn = rt.trn();
 
-	auto rte = [&rot](int i, int j) { return static_cast<int8_t>(lrint(rot(i, j))); };
+	auto rte = [&rot](int i, int j)
+	{ return static_cast<int8_t>(lrint(rot(i, j))); };
 
-	std::array<int,15> krt{
+	std::array<int, 15> krt{
 		rte(0, 0), rte(0, 1), rte(0, 2),
 		rte(1, 0), rte(1, 1), rte(1, 2),
-		rte(2, 0), rte(2, 1), rte(2, 2)
-	};
+		rte(2, 0), rte(2, 1), rte(2, 2)};
 
 	for (int i = 0; i < 3; ++i)
 	{
@@ -182,7 +188,7 @@ int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac& rt)
 		int d = 24;
 
 		if (n == 0 or std::abs(n) == 24)
-			continue;		// is 0, 0 in our table
+			continue; // is 0, 0 in our table
 
 		for (int j = 5; j > 1; --j)
 			if (n % j == 0 and d % j == 0)
@@ -190,14 +196,23 @@ int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac& rt)
 				n /= j;
 				d /= j;
 			}
-		
+
 		n = (n + d) % d;
 
 		switch (i)
 		{
-			case 0: krt[ 9] = n; krt[10] = d; break;
-			case 1: krt[11] = n; krt[12] = d; break;
-			case 2: krt[13] = n; krt[14] = d; break;
+			case 0:
+				krt[9] = n;
+				krt[10] = d;
+				break;
+			case 1:
+				krt[11] = n;
+				krt[12] = d;
+				break;
+			case 2:
+				krt[13] = n;
+				krt[14] = d;
+				break;
 		}
 	}
 
@@ -233,7 +248,7 @@ std::string SpacegroupToHall(std::string spacegroup)
 	std::string result;
 	for (size_t i = 0; i < m::kNrOfSpaceGroups; ++i)
 	{
-		auto& sp = m::kSpaceGroups[i];
+		auto &sp = m::kSpaceGroups[i];
 		if (sp.nr == nr)
 		{
 			result = sp.Hall;
@@ -243,7 +258,7 @@ std::string SpacegroupToHall(std::string spacegroup)
 
 	if (result.empty())
 		throw std::runtime_error("Spacegroup name " + spacegroup + " was not found in table");
-	
+
 	return result;
 }
 
@@ -251,7 +266,7 @@ clipper::Spgr_descr GetCCP4SpacegroupDescr(int nr)
 {
 	for (size_t i = 0; i < m::kNrOfSpaceGroups; ++i)
 	{
-		auto& sg = m::kSpaceGroups[i];
+		auto &sg = m::kSpaceGroups[i];
 		if (sg.nr == nr)
 			return clipper::Spgr_descr(sg.Hall, clipper::Spgr_descr::Hall);
 	}
@@ -261,27 +276,27 @@ clipper::Spgr_descr GetCCP4SpacegroupDescr(int nr)
 
 // --------------------------------------------------------------------
 
-std::string describeRToperation(const clipper::Spacegroup& spacegroup, const clipper::Cell& cell, const clipper::RTop_orth& rt)
+std::string describeRToperation(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
 	auto spacegroup_nr = mmcif::GetSpacegroupNumber(spacegroup.symbol_xhm(), mmcif::SpacegroupName::xHM);
 
-	if (not (rt.is_null() or rt.equals(clipper::RTop_orth::identity(), 0.0001f)))
+	if (not(rt.is_null() or rt.equals(clipper::RTop_orth::identity(), 0.0001f)))
 	{
 		for (int i = 0; i < spacegroup.num_symops(); ++i)
 		{
-			const auto& symop = spacegroup.symop(i);
+			const auto &symop = spacegroup.symop(i);
 
-			for (int u: { -1, 0, 1})
-				for (int v: { -1, 0, 1})
-					for (int w: { -1, 0, 1})
+			for (int u : {-1, 0, 1})
+				for (int v : {-1, 0, 1})
+					for (int w : {-1, 0, 1})
 					{
 						// if (i == 0 and u == 0 and v == 0 and w == 0)
 						// 	continue;
 
 						auto rtop = clipper::RTop_frac(
-								symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w)
-							).rtop_orth(cell);
-						
+							symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w))
+						                .rtop_orth(cell);
+
 						if (rtop.rot().equals(rt.rot(), 0.00001) and rtop.trn().equals(rt.trn(), 0.000001))
 						{
 							// gotcha
@@ -293,16 +308,12 @@ std::string describeRToperation(const clipper::Spacegroup& spacegroup, const cli
 							uint32_t t[3] = {
 								static_cast<uint32_t>(5 + static_cast<int>(rint(rtop_f.trn()[0]))),
 								static_cast<uint32_t>(5 + static_cast<int>(rint(rtop_f.trn()[1]))),
-								static_cast<uint32_t>(5 + static_cast<int>(rint(rtop_f.trn()[2])))
-							};
+								static_cast<uint32_t>(5 + static_cast<int>(rint(rtop_f.trn()[2])))};
 
 							if (t[0] > 9 or t[1] > 9 or t[2] > 9)
 								throw std::runtime_error("Symmetry operation has an out-of-range translation.");
 
-							return std::to_string(rnr) + "_"
-								   + std::to_string(t[0])
-								   + std::to_string(t[1])
-								   + std::to_string(t[2]);
+							return std::to_string(rnr) + "_" + std::to_string(t[0]) + std::to_string(t[1]) + std::to_string(t[2]);
 						}
 					}
 		}
@@ -313,8 +324,8 @@ std::string describeRToperation(const clipper::Spacegroup& spacegroup, const cli
 
 // --------------------------------------------------------------------
 
-mmcif::Atom symmetryCopy(const mmcif::Atom& atom, const mmcif::Point& d,
-	const clipper::Spacegroup& spacegroup, const clipper::Cell& cell, const clipper::RTop_orth& rt)
+mmcif::Atom symmetryCopy(const mmcif::Atom &atom, const mmcif::Point &d,
+	const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
 	auto loc = atom.location();
 	loc += d;
@@ -328,13 +339,12 @@ mmcif::Atom symmetryCopy(const mmcif::Atom& atom, const mmcif::Point& d,
 
 // -----------------------------------------------------------------------
 
-SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const m::Structure& p, int spacegroupNr, const clipper::Cell& cell)
+SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const m::Structure &p, int spacegroupNr, const clipper::Cell &cell)
 	: mSpacegroup(GetCCP4SpacegroupDescr(spacegroupNr))
 	, mD(toPoint(CalculateOffsetForCell(p, mSpacegroup, cell)))
 	, mRtOrth(AlternativeSites(mSpacegroup, cell))
 	, mCell(cell)
 {
-
 }
 
 // string SymmetryAtomIteratorFactory::symop_mmcif(const m::Atom& a) const
@@ -361,7 +371,7 @@ SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const m::Structure& p, 
 // 						auto rtop = clipper::RTop_frac(
 // 								symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w)
 // 							).rtop_orth(mCell);
-						
+
 // 						if (rtop.rot().equals(rtop_o.rot(), 0.00001) and rtop.trn().equals(rtop_o.trn(), 0.000001))
 // 						{
 // 							// gotcha
@@ -392,3 +402,5 @@ SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const m::Structure& p, 
 
 // 	return result;
 // }
+
+} // namespace pdb_redo

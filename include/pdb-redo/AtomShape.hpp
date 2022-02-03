@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -30,8 +30,11 @@
 
 #include "cif++/Structure.hpp"
 
-namespace mmcif
+namespace pdb_redo
 {
+
+using mmcif::Atom;
+using mmcif::Point;
 
 // --------------------------------------------------------------------
 // Class used in calculating radii
@@ -39,22 +42,22 @@ namespace mmcif
 class AtomShape
 {
   public:
-	AtomShape(const Atom& atom, float resHigh, float resLow,
+	AtomShape(const Atom &atom, float resHigh, float resLow,
 		bool electronScattering);
-	AtomShape(const Atom& atom, float resHigh, float resLow,
+	AtomShape(const Atom &atom, float resHigh, float resLow,
 		bool electronScattering, float bFactor);
 
 	~AtomShape();
-	
-	AtomShape(const AtomShape&) = delete;
-	AtomShape& operator=(const AtomShape&) = delete;
+
+	AtomShape(const AtomShape &) = delete;
+	AtomShape &operator=(const AtomShape &) = delete;
 
 	float radius() const;
 	float calculatedDensity(float r) const;
 	float calculatedDensity(Point p) const;
 
   private:
-	struct AtomShapeImpl*	mImpl;
+	struct AtomShapeImpl *mImpl;
 };
-	
-}
+
+} // namespace pdb_redo

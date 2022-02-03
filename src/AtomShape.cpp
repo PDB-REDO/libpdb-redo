@@ -48,8 +48,12 @@
 #error "Should have either newuoa or dlib"
 #endif
 
-namespace mmcif
+namespace pdb_redo
 {
+
+using mmcif::AtomType;
+using mmcif::AtomTypeTraits;
+using mmcif::kPI;
 
 // --------------------------------------------------------------------
 

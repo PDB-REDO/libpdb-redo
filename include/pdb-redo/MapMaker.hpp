@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -32,149 +32,154 @@
 
 // My apologies, but this code is emitting way too many warnings...
 #if defined(_MSC_VER)
-#	pragma warning (disable : 4244)	// possible loss of data (in conversion to smaller type)
+#pragma warning(disable : 4244) // possible loss of data (in conversion to smaller type)
 #endif
 
-namespace mmcif
+namespace pdb_redo
 {
 
-template<typename FTYPE>
+using mmcif::Structure;
+using mmcif::kPI;
+using mmcif::Gd;
+
+template <typename FTYPE>
 class Map
 {
   public:
-	typedef FTYPE										ftype;
-	typedef typename clipper::Xmap<ftype>				Xmap;
-	
+	typedef FTYPE ftype;
+	typedef typename clipper::Xmap<ftype> Xmap;
+
 	Map();
 	~Map();
 
 	void calculateStats();
 
-	double rmsDensity() const							{ return mRMSDensity; }
-	double meanDensity() const							{ return mMeanDensity; }
-	
-	operator Xmap& ()									{ return mMap; }
-	operator const Xmap& () const						{ return mMap; }
-	Xmap& get()											{ return mMap; }
-	const Xmap& get() const								{ return mMap; }
-	
-	// These routines work with CCP4 map files
-	void read(const std::filesystem::path& f);
-	void write(const std::filesystem::path& f);
+	double rmsDensity() const { return mRMSDensity; }
+	double meanDensity() const { return mMeanDensity; }
 
-	void write_masked(std::ostream& os, clipper::Grid_range range);
-	void write_masked(const std::filesystem::path& f, 
+	operator Xmap &() { return mMap; }
+	operator const Xmap &() const { return mMap; }
+	Xmap &get() { return mMap; }
+	const Xmap &get() const { return mMap; }
+
+	// These routines work with CCP4 map files
+	void read(const std::filesystem::path &f);
+	void write(const std::filesystem::path &f);
+
+	void write_masked(std::ostream &os, clipper::Grid_range range);
+	void write_masked(const std::filesystem::path &f,
 		clipper::Grid_range range);
-	
-	clipper::Spacegroup spacegroup() const				{ return mMap.spacegroup(); }
-	clipper::Cell cell() const							{ return mMap.cell(); }
+
+	clipper::Spacegroup spacegroup() const { return mMap.spacegroup(); }
+	clipper::Cell cell() const { return mMap.cell(); }
 
   private:
-
 	Xmap mMap;
 	double mMinDensity, mMaxDensity;
 	double mRMSDensity, mMeanDensity;
 };
 
-using clipper::HKL_info;
 using clipper::HKL_data;
+using clipper::HKL_info;
 using clipper::data32::F_phi;
 using clipper::data32::F_sigF;
-using clipper::data32::Phi_fom;
 using clipper::data32::Flag;
+using clipper::data32::Phi_fom;
 
-using clipper::Spacegroup;
 using clipper::Cell;
 using clipper::Grid_sampling;
+using clipper::Spacegroup;
 
 // --------------------------------------------------------------------
 
-bool IsMTZFile(const std::string& p);
+bool IsMTZFile(const std::string &p);
 
 // --------------------------------------------------------------------
-	
-template<typename FTYPE>
+
+template <typename FTYPE>
 class MapMaker
 {
   public:
 	typedef Map<FTYPE> MapType;
 	typedef typename MapType::Xmap Xmap;
 
-	enum AnisoScalingFlag {
-		as_None, as_Observed, as_Calculated
+	enum AnisoScalingFlag
+	{
+		as_None,
+		as_Observed,
+		as_Calculated
 	};
-	
+
 	MapMaker();
 	~MapMaker();
-	
-	MapMaker(const MapMaker&) = delete;
-	MapMaker& operator=(const MapMaker&) = delete;
-	
-	void loadMTZ(const std::filesystem::path& mtzFile,
+
+	MapMaker(const MapMaker &) = delete;
+	MapMaker &operator=(const MapMaker &) = delete;
+
+	void loadMTZ(const std::filesystem::path &mtzFile,
 		float samplingRate,
-		std::initializer_list<std::string> fbLabels = { "FWT", "PHWT" },
-		std::initializer_list<std::string> fdLabels = { "DELFWT", "PHDELWT" },
-		std::initializer_list<std::string> foLabels = { "FP", "SIGFP" },
-		std::initializer_list<std::string> fcLabels = { "FC_ALL", "PHIC_ALL" },
-		std::initializer_list<std::string> faLabels = { "FAN", "PHAN" });
+		std::initializer_list<std::string> fbLabels = {"FWT", "PHWT"},
+		std::initializer_list<std::string> fdLabels = {"DELFWT", "PHDELWT"},
+		std::initializer_list<std::string> foLabels = {"FP", "SIGFP"},
+		std::initializer_list<std::string> fcLabels = {"FC_ALL", "PHIC_ALL"},
+		std::initializer_list<std::string> faLabels = {"FAN", "PHAN"});
 
 	void loadMaps(
-		const std::filesystem::path& fbMapFile,
-		const std::filesystem::path& fdMapFile,
+		const std::filesystem::path &fbMapFile,
+		const std::filesystem::path &fdMapFile,
 		float reshi, float reslo);
 
 	// following works on both mtz files and structure factor files in CIF format
-	void calculate(const std::filesystem::path& hklin,
-		const Structure& structure,
+	void calculate(const std::filesystem::path &hklin,
+		const Structure &structure,
 		bool noBulk, AnisoScalingFlag anisoScaling,
 		float samplingRate, bool electronScattering = false,
-		std::initializer_list<std::string> foLabels = { "FP", "SIGFP" },
-		std::initializer_list<std::string> freeLabels = { "FREE" });
+		std::initializer_list<std::string> foLabels = {"FP", "SIGFP"},
+		std::initializer_list<std::string> freeLabels = {"FREE"});
 
-	void recalc(const Structure& structure,
+	void recalc(const Structure &structure,
 		bool noBulk, AnisoScalingFlag anisoScaling,
 		float samplingRate, bool electronScattering = false);
 
 	void printStats();
 
-	void writeMTZ(const std::filesystem::path& file,
-		const std::string& project, const std::string& crystal);
+	void writeMTZ(const std::filesystem::path &file,
+		const std::string &project, const std::string &crystal);
 
-	MapType& fb()								{ return mFb; }
-	MapType& fd()								{ return mFd; }
-	MapType& fa()								{ return mFa; }
+	MapType &fb() { return mFb; }
+	MapType &fd() { return mFd; }
+	MapType &fa() { return mFa; }
 
-	const MapType& fb() const					{ return mFb; }
-	const MapType& fd() const					{ return mFd; }
-	const MapType& fa() const					{ return mFa; }
-	
-	double resLow() const						{ return mResLow; }
-	double resHigh() const						{ return mResHigh; }
+	const MapType &fb() const { return mFb; }
+	const MapType &fd() const { return mFd; }
+	const MapType &fa() const { return mFa; }
 
-	const Spacegroup& spacegroup() const		{ return mHKLInfo.spacegroup(); }
-	const Cell& cell() const					{ return mHKLInfo.cell(); }
-	const Grid_sampling& gridSampling() const	{ return mGrid; }
+	double resLow() const { return mResLow; }
+	double resHigh() const { return mResHigh; }
+
+	const Spacegroup &spacegroup() const { return mHKLInfo.spacegroup(); }
+	const Cell &cell() const { return mHKLInfo.cell(); }
+	const Grid_sampling &gridSampling() const { return mGrid; }
 
   private:
-
-	void loadFoFreeFromReflectionsFile(const std::filesystem::path& hklin);
-	void loadFoFreeFromMTZFile(const std::filesystem::path& hklin,
+	void loadFoFreeFromReflectionsFile(const std::filesystem::path &hklin);
+	void loadFoFreeFromMTZFile(const std::filesystem::path &hklin,
 		std::initializer_list<std::string> foLabels,
 		std::initializer_list<std::string> freeLabels);
-	
+
 	void fixMTZ();
-	
-	MapType				mFb, mFd, mFa;
-	Grid_sampling		mGrid;
-	double				mResLow, mResHigh;
-	int					mNumRefln = 1000, mNumParam = 20;
-	
+
+	MapType mFb, mFd, mFa;
+	Grid_sampling mGrid;
+	double mResLow, mResHigh;
+	int mNumRefln = 1000, mNumParam = 20;
+
 	// Cached raw data
-	HKL_info			mHKLInfo;
-	HKL_data<F_sigF>	mFoData;
-	HKL_data<Flag>		mFreeData;
-	HKL_data<F_phi>		mFcData, mFbData, mFdData, mFaData;
-	HKL_data<Phi_fom>	mPhiFomData;
+	HKL_info mHKLInfo;
+	HKL_data<F_sigF> mFoData;
+	HKL_data<Flag> mFreeData;
+	HKL_data<F_phi> mFcData, mFbData, mFdData, mFaData;
+	HKL_data<Phi_fom> mPhiFomData;
 };
 
-}
+} // namespace pdb_redo

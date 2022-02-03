@@ -44,6 +44,8 @@ namespace tt = boost::test_tools;
 namespace utf = boost::unit_test;
 namespace ba = boost::algorithm;
 
+using namespace pdb_redo;
+
 // --------------------------------------------------------------------
 
 fs::path gTestDir = fs::current_path();
@@ -53,7 +55,12 @@ BOOST_AUTO_TEST_CASE(init)
 	// not a test, just initialize test dir
 
 	if (boost::unit_test::framework::master_test_suite().argc == 2)
+	{
 		gTestDir = boost::unit_test::framework::master_test_suite().argv[1];
+
+		if (fs::exists(gTestDir / "minimal-components.cif"))
+			mmcif::CompoundFactory::instance().pushDictionary(gTestDir / "minimal-components.cif");
+	}
 }
 
 // --------------------------------------------------------------------
@@ -181,7 +188,7 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 		if (i >= N)
 			break;
 
-		mmcif::AtomShape shape(atom, kResHi, kResLo, false);
+		AtomShape shape(atom, kResHi, kResLo, false);
 
 		BOOST_CHECK(mmcif::AtomTypeTraits(atom.type()).symbol() == kTestRadii[i].type);
 
@@ -216,7 +223,7 @@ BOOST_AUTO_TEST_CASE(map_maker_1)
 {
 	namespace c = mmcif;
 
-	c::MapMaker<float> mm;
+	MapMaker<float> mm;
 	
 	float samplingRate = 0.75;
 
@@ -235,17 +242,17 @@ BOOST_AUTO_TEST_CASE(map_maker_2)
 	mmcif::File file(example.string());
 	mmcif::Structure structure(file);
 
-	c::MapMaker<float> mm;
+	MapMaker<float> mm;
 	
 	float samplingRate = 0.75;
 
-	auto aniso = c::MapMaker<float>::as_None;
+	auto aniso = MapMaker<float>::as_None;
 	// 	if (vm.count("aniso-scaling"))
 	// 	{
 	// 		if (vm["aniso-scaling"].as<std::string>() == "observed")
-	// 			aniso = c::MapMaker<float>::as_Observed;
+	// 			aniso = MapMaker<float>::as_Observed;
 	// 		else if (vm["aniso-scaling"].as<std::string>() == "calculated")
-	// 			aniso = c::MapMaker<float>::as_Calculated;
+	// 			aniso = MapMaker<float>::as_Calculated;
 	// 	}
 		
 	mm.calculate(gTestDir / ".." / "examples" / "1cbs_map.mtz", structure, false, aniso, samplingRate, false);
@@ -313,13 +320,13 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	mmcif::File file(example.string());
 	mmcif::Structure structure(file);
 
-	c::MapMaker<float> mm;
+	MapMaker<float> mm;
 	float samplingRate = 1.5;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
 	mmcif::BondMap bm(structure);
 
-	mmcif::EDIAStatsCollector collector(mm, structure, false, bm);
+	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
 	auto r = collector.collect();
 
 	auto ti = test.begin();
@@ -385,13 +392,13 @@ BOOST_AUTO_TEST_CASE(stats_2)
 
 	mmcif::Structure structure(file);
 
-	c::MapMaker<float> mm;
+	MapMaker<float> mm;
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
 	mmcif::BondMap bm(structure);
 
-	mmcif::EDIAStatsCollector collector(mm, structure, false, bm);
+	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
 	auto r = collector.collect();
 
 	for (auto& ri: r)

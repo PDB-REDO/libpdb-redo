@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2020 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -37,51 +37,57 @@
 #undef near
 #endif
 
-namespace mmcif
+namespace pdb_redo
 {
+
+using mmcif::Structure;
+using mmcif::Residue;
+using mmcif::Atom;
+using mmcif::Point;
 
 class DistanceMap
 {
   public:
-	DistanceMap(const Structure& p, const clipper::Spacegroup& spacegroup, const clipper::Cell& cell,
+	DistanceMap(const Structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
 		float maxDistance);
 
-	DistanceMap(const Structure& p, float maxDistance)
-		: DistanceMap(p, getSpacegroup(p), getCell(p), maxDistance) {}
+	DistanceMap(const Structure &p, float maxDistance)
+		: DistanceMap(p, getSpacegroup(p), getCell(p), maxDistance)
+	{
+	}
 
 	// simplified version for subsets of atoms (used in refining e.g.)
-//	DistanceMap(const Structure& p, const std::vector<Atom>& atoms);
-	
-	DistanceMap(const DistanceMap&) = delete;
-	DistanceMap& operator=(const DistanceMap&) = delete;
+	//	DistanceMap(const Structure& p, const std::vector<Atom>& atoms);
 
-	float operator()(const Atom& a, const Atom& b) const;
+	DistanceMap(const DistanceMap &) = delete;
+	DistanceMap &operator=(const DistanceMap &) = delete;
 
-	std::vector<Atom> near(const Atom& a, float maxDistance = 3.5f) const;
+	float operator()(const Atom &a, const Atom &b) const;
+
+	std::vector<Atom> near(const Atom &a, float maxDistance = 3.5f) const;
 	// std::vector<Atom> near(const Point& p, float maxDistance = 3.5f) const;
 
 	static std::vector<clipper::RTop_orth>
-		AlternativeSites(const clipper::Spacegroup& spacegroup, const clipper::Cell& cell);
+	AlternativeSites(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell);
 
   private:
+	typedef std::map<std::tuple<size_t, size_t>, std::tuple<float, int32_t>> DistMap;
 
-	typedef std::map<std::tuple<size_t,size_t>,std::tuple<float,int32_t>> DistMap;
+	void AddDistancesForAtoms(const Residue &a, const Residue &b, DistMap &dm, int32_t rtix);
 
-	void AddDistancesForAtoms(const Residue& a, const Residue& b, DistMap& dm, int32_t rtix);
+	const Structure &structure;
+	clipper::Cell cell;
+	clipper::Spacegroup spacegroup;
+	size_t dim;
+	std::unordered_map<std::string, size_t> index;
+	std::map<size_t, std::string> rIndex;
 
-	const Structure&						structure;
-	clipper::Cell							cell;
-	clipper::Spacegroup						spacegroup;
-	size_t									dim;
-	std::unordered_map<std::string,size_t>	index;
-	std::map<size_t,std::string>			rIndex;
-	
-	float									mMaxDistance, mMaxDistanceSQ;
-	
-	std::vector<std::tuple<float,int32_t>>	mA;
-	std::vector<size_t>						mIA, mJA;
-	Point									mD;			// needed to move atoms to center
-	std::vector<clipper::RTop_orth>			mRtOrth;
+	float mMaxDistance, mMaxDistanceSQ;
+
+	std::vector<std::tuple<float, int32_t>> mA;
+	std::vector<size_t> mIA, mJA;
+	Point mD; // needed to move atoms to center
+	std::vector<clipper::RTop_orth> mRtOrth;
 };
 
-}
+} // namespace pdb_redo
