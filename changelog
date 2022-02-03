@@ -1,3 +1,6 @@
+Version 2.0.3
+- Fix version number, sorry.
+
 Version 2.0.2
 - Changed more signatures to use std::filesystem::path
   instead of std::string. To ease compilation on MSVC
