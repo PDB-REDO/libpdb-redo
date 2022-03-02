@@ -247,7 +247,7 @@ double TorsionRestraint::f(const AtomLocationProvider &atoms) const
 		double theta = DihedralAngle(atoms[mA], atoms[mB], atoms[mC], atoms[mD]);
 		double diff = std::fmod(std::abs(theta - mTarget) + period / 2, period) - period / 2;
 
-		if (not isnan(diff))
+		if (not std::isnan(diff))
 			result = (diff * diff) / (mESD * mESD);
 
 		if (cif::VERBOSE > 2)
@@ -282,7 +282,7 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 		if (diff < -180)
 			diff += 360;
 
-		if (not isnan(diff))
+		if (not std::isnan(diff))
 		{
 			auto tt = std::tan(mmcif::kPI * theta / 180);
 			double scale = 180.0 / ((1 + tt * tt) * mmcif::kPI);

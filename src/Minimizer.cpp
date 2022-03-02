@@ -582,7 +582,7 @@ AtomRef Minimizer::ref(const mmcif::Atom &atom)
 	return result;
 }
 
-void Minimizer::addLinkRestraints(const Monomer &a, const Monomer &b, const Link &link)
+void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link &link)
 {
 	auto &c1 = a.compound();
 	auto &c2 = b.compound();
@@ -1154,6 +1154,37 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 		residues.emplace_back(&res);
 	}
 
+	// Add any residue that might be bonded to our list of residues via a struct_conn record
+
+	auto &db = structure.datablock();
+	auto &struct_conn = db["struct_conn"];
+	std::vector<std::pair<Residue*,Residue*>> linked;
+
+	for (const auto &[ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id,
+		ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id] : struct_conn.rows<std::string,std::string,int,std::string,std::string,int>(
+			"ptnr1_label_asym_id", "ptnr1_label_comp_id", "ptnr1_label_seq_id",
+			"ptnr2_label_asym_id", "ptnr2_label_comp_id", "ptnr2_label_seq_id"))
+	{
+		auto ai = find_if(residues.begin(), residues.end(),
+			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id](Residue *res) { return res->asymID() == asym_id and res->seqID() == seq_id; });
+		auto bi = find_if(residues.begin(), residues.end(),
+			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id](Residue *res) { return res->asymID() == asym_id and res->seqID() == seq_id; });
+		
+		if (ai != residues.end() and bi != residues.end())
+		{
+			linked.emplace_back(*ai, *bi);
+			continue;
+		}
+		
+		if (ai == residues.end())
+			std::swap(ai, bi);
+		
+		auto &res = structure.getResidue((*ai)->asymID(), (*ai)->compoundID(), (*ai)->seqID());
+		residues.emplace_back(&res);
+
+		linked.emplace_back(*ai, residues.back());
+	}
+
 	// sort by asym, seq_id
 
 	sort(residues.begin(), residues.end(), [](const mmcif::Residue *a, const mmcif::Residue *b)
@@ -1194,6 +1225,19 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 			throw std::runtime_error("Polymer not found for asym ID " + monomer->asymID());
 
 		result->addPolySection(*pi, startSeqID, endSeqID);
+	}
+
+	// The struct conn records
+	for (const auto &[a, b] : linked)
+	{
+		try
+		{
+			result->addLinkRestraints(*a, *b, a->compoundID() + "-" + b->compoundID());
+		}
+		catch(const std::exception& e)
+		{
+			result->addLinkRestraints(*b, *a, b->compoundID() + "-" + a->compoundID());
+		}
 	}
 
 	if (xMap != nullptr and mapWeight != 0)
