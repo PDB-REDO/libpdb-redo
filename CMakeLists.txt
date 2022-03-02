@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(pdb-redo VERSION 3.0.0 LANGUAGES CXX C)
+project(pdb-redo VERSION 2.0.3 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -34,19 +34,15 @@ enable_testing()
 include(GNUInstallDirs)
 include(CheckFunctionExists)
 include(CheckIncludeFile)
-include(FindFilesystem)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(Dart)
-include(FindFilesystem)
 include(FindPkgConfig)
 include(GenerateExportHeader)
 
 set(CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-find_package(Filesystem REQUIRED)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	# https://stackoverflow.com/questions/63902528/program-crashes-when-filesystempath-is-destroyed
@@ -158,7 +154,7 @@ endif()
 # Libraries
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(cifpp 3.0.0 REQUIRED)
-find_package(zeep 5.1.4 REQUIRED)
+find_package(zeep 5.1.7 REQUIRED)
 
 pkg_check_modules(GSL gsl)
 						   
@@ -216,7 +212,7 @@ add_library(pdb-redo ${project_sources} ${project_headers})
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(pdb-redo PUBLIC ${CIFPP_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} std::filesystem ${GSL_LIBRARIES})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} ${GSL_LIBRARIES})
 
 target_include_directories(pdb-redo
 	PUBLIC
@@ -227,8 +223,6 @@ target_include_directories(pdb-redo
 target_include_directories(pdb-redo PUBLIC
 	${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS}
 )
-
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep std::filesystem)
 
 if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
     target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
@@ -335,7 +329,7 @@ if(PDB_REDO_BUILD_TESTS)
 			${CMAKE_CURRENT_BINARY_DIR}  # for config.h
 		)
 
-		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} std::filesystem)
+		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo)
 	
 		if(MSVC)
 			# Specify unwind semantics so that MSVC knowns how to handle exceptions

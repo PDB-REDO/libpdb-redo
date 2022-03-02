@@ -2,4 +2,4 @@
 .gdb_history
 data/
 .gitignore
-build
+**/build/

@@ -10,8 +10,6 @@ namespace fs = std::filesystem;
 
 int main()
 {
-	namespace c = mmcif;
-
 	// a sample structure file, lets use 1CBS
 	const fs::path example("1cbs.cif.gz");
 
@@ -22,7 +20,7 @@ int main()
 	mmcif::Structure structure(file);
 
 	// now create the maps based on the MTZ file
-	c::MapMaker<float> mm;
+	pdb_redo::MapMaker<float> mm;
 	float samplingRate = 0.75;
 	mm.loadMTZ("1cbs_map.mtz", samplingRate);
 
@@ -30,7 +28,7 @@ int main()
 	mmcif::BondMap bm(structure);
 
 	// and finally collect the statistics
-	mmcif::EDIAStatsCollector collector(mm, structure, false, bm);
+	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
 	auto r = collector.collect();
 
 	for (auto& ri: r)
