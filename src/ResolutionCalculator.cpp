@@ -44,7 +44,7 @@ ResolutionCalculator::ResolutionCalculator(const clipper::Cell &cell)
 ResolutionCalculator::ResolutionCalculator(double a, double b, double c,
 	double alpha, double beta, double gamma)
 {
-	double deg2rad = atan(1.0) / 45.0;
+	double deg2rad = std::atan(1.0) / 45.0;
 
 	double ca = std::cos(deg2rad * alpha);
 	double sa = std::sin(deg2rad * alpha);

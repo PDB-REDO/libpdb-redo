@@ -3,7 +3,7 @@ Version 2.0.2
   instead of std::string. To ease compilation on MSVC
 
 Version 2.0.1
-- Fix math problem, on some system combinations abs(x) would
+- Fix math problem, on some system combinations std::abs(x) would
   first truncate x to an integer. Replacing with std::abs(x)
   restores normal behaviour.
 

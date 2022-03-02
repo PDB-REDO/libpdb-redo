@@ -998,7 +998,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 
 	gsl_multimin_fdfminimizer_set(m_s, &fdf, x, stepSize, tolerance);
 
-	double gradLim = sqrt(mRestraints.size()) * 0.15;
+	double gradLim = std::sqrt(mRestraints.size()) * 0.15;
 	if (gradLim < 0.3)
 		gradLim = 0.3;
 

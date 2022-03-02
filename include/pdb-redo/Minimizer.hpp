@@ -149,7 +149,7 @@ class Minimizer
 				0.0, [&atoms](double sum, const R &r)
 				{ double z = r.f(atoms); return sum + z; });
 
-			result = sqrt(sumZ / a.size());
+			result = std::sqrt(sumZ / a.size());
 		}
 
 		return result;

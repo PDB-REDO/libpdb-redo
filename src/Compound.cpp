@@ -522,10 +522,10 @@ float Compound::bondAngle(const std::string &atomId_1, const std::string &atomId
 
 // static float calcC(float a, float b, float alpha)
 //{
-//	float f = b * sin(alpha * kPI / 180);
-//	float d = sqrt(b * b - f * f);
+//	float f = b * std::sin(alpha * kPI / 180);
+//	float d = std::sqrt(b * b - f * f);
 //	float e = a - d;
-//	float c = sqrt(f * f + e * e);
+//	float c = std::sqrt(f * f + e * e);
 //
 //	return c;
 // }
@@ -553,11 +553,11 @@ float Compound::chiralVolume(const std::string &centreID) const
 		float beta = bondAngle(cv.atomID[1], cv.atomIDCentre, cv.atomID[2]);
 		float gamma = bondAngle(cv.atomID[2], cv.atomIDCentre, cv.atomID[0]);
 
-		float cosa = cos(alpha * kPI / 180);
-		float cosb = cos(beta * kPI / 180);
-		float cosc = cos(gamma * kPI / 180);
+		float cosa = std::cos(alpha * kPI / 180);
+		float cosb = std::cos(beta * kPI / 180);
+		float cosc = std::cos(gamma * kPI / 180);
 
-		result = (a * b * c * sqrt(1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc))) / 6;
+		result = (a * b * c * std::sqrt(1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc))) / 6;
 
 		if (cv.volumeSign == negativ)
 			result = -result;
@@ -757,11 +757,11 @@ float Link::chiralVolume(const std::string &centreID) const
 		float beta = bondAngle(cv.atom[1], cv.atomCentre, cv.atom[2]);
 		float gamma = bondAngle(cv.atom[2], cv.atomCentre, cv.atom[0]);
 
-		float cosa = cos(alpha * kPI / 180);
-		float cosb = cos(beta * kPI / 180);
-		float cosc = cos(gamma * kPI / 180);
+		float cosa = std::cos(alpha * kPI / 180);
+		float cosb = std::cos(beta * kPI / 180);
+		float cosc = std::cos(gamma * kPI / 180);
 
-		result = (a * b * c * sqrt(1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc))) / 6;
+		result = (a * b * c * std::sqrt(1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc))) / 6;
 
 		if (cv.volumeSign == negativ)
 			result = -result;

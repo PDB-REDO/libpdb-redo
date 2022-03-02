@@ -87,7 +87,7 @@ clipper::Atom toClipper(const mmcif::Atom &atom)
 
 clipper::Spacegroup getSpacegroup(const mmcif::Structure &structure)
 {
-	auto &db = structure.getFile().data();
+	auto &db = structure.datablock();
 
 	auto refine = db["refine"][cif::Key("entry_id") == db.getName()];
 	if (refine.empty())
@@ -172,7 +172,7 @@ clipper::Spacegroup getSpacegroup(const mmcif::Structure &structure)
 
 clipper::Cell getCell(const mmcif::Structure &structure)
 {
-	auto &db = structure.getFile().data();
+	auto &db = structure.datablock();
 
 	double a, b, c, alpha, beta, gamma;
 	cif::tie(a, b, c, alpha, beta, gamma) = db["cell"][cif::Key("entry_id") == db.getName()]

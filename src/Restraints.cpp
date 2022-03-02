@@ -102,7 +102,7 @@ double AngleRestraint::f(const AtomLocationProvider &atoms) const
 	DPoint p[3] = {atoms[mA], atoms[mB], atoms[mC]};
 
 	double c = CosinusAngle(p[1], p[0], p[1], p[2]);
-	double angle = atan2(sqrt(1 - c * c), c) * 180 / mmcif::kPI;
+	double angle = std::atan2(std::sqrt(1 - c * c), c) * 180 / mmcif::kPI;
 
 	double d = mAngle - angle;
 	double result = (d * d) / (mESD * mESD);
@@ -144,14 +144,14 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 		cosTheta = 1.0;
 	if (cosTheta < -1.0)
 		cosTheta = -1.0;
-	auto theta = acos(cosTheta);
+	auto theta = std::cos(cosTheta);
 	if (theta < 0.001)
 		theta = 0.001;
 
 	auto target = mAngle * kDegreeToRad;
 
 	auto wf = 2 * (theta - target) * kRadToDegree * kRadToDegree / (mESD * mESD);
-	auto prem = -wf / sin(theta);
+	auto prem = -wf / std::sin(theta);
 
 	df.add(mA, prem * (cosTheta * (l - k) / (a * a) + (m - l) / (a * b)));
 	df.add(mC, prem * (cosTheta * (l - m) / (b * b) + (k - l) / (a * b)));
@@ -175,7 +175,7 @@ TorsionRestraint::CalculateTorsionGradients(float theta, DPoint p[4]) const
 	auto a = p[1] - p[0], b = p[2] - p[1], c = p[3] - p[2];
 
 	auto blensq = b.lengthsq();
-	auto blen = sqrt(blensq);
+	auto blen = std::sqrt(blensq);
 
 	if (blen < 0.01)
 	{
@@ -245,7 +245,7 @@ double TorsionRestraint::f(const AtomLocationProvider &atoms) const
 			period /= mPeriodicity;
 
 		double theta = DihedralAngle(atoms[mA], atoms[mB], atoms[mC], atoms[mD]);
-		double diff = fmod(abs(theta - mTarget) + period / 2, period) - period / 2;
+		double diff = std::fmod(std::abs(theta - mTarget) + period / 2, period) - period / 2;
 
 		if (not isnan(diff))
 			result = (diff * diff) / (mESD * mESD);
@@ -284,7 +284,7 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 		if (not isnan(diff))
 		{
-			auto tt = tan(mmcif::kPI * theta / 180);
+			auto tt = std::tan(mmcif::kPI * theta / 180);
 			double scale = 180.0 / ((1 + tt * tt) * mmcif::kPI);
 			auto w = 1 / (mESD * mESD);
 
@@ -379,7 +379,7 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 	mat(2, 0) = mat(0, 2);
 	mat(2, 1) = mat(1, 2);
 
-	auto eigen = mat.eigen(true);
+	/*auto eigen = */mat.eigen(true);
 
 	abcd[0] = mat(0, 0);
 	abcd[1] = mat(1, 0);
@@ -401,14 +401,14 @@ double PlanarityRestraint::f(const AtomLocationProvider &atoms) const
 	calculatePlaneFunction(atoms, abcd);
 
 	double result = accumulate(mAtoms.begin(), mAtoms.end(), 0.,
-		[&atoms, &abcd, this](double sum, AtomRef a)
+		[&atoms, &abcd, esd = mESD](double sum, AtomRef a)
 		{
 			double v = abcd[0] * atoms[a].mX +
 		               abcd[1] * atoms[a].mY +
 		               abcd[2] * atoms[a].mZ -
 		               abcd[3];
 
-			double r = v / mESD;
+			double r = v / esd;
 
 			return sum + r * r;
 		});
@@ -478,12 +478,12 @@ double NonBondedContactRestraint::f(const AtomLocationProvider &atoms) const
 	double distance = DistanceSquared(atoms[mA], atoms[mB]);
 	if (distance < mMinDistSq)
 	{
-		double d = mMinDist - sqrt(distance);
+		double d = mMinDist - std::sqrt(distance);
 		result = (d * d) / (mDistESD * mDistESD);
 	}
 
 	if (cif::VERBOSE > 2)
-		std::cerr << "non-bonded-contact::f() = " << result << " min-dist is " << mMinDist << " and dist is " << sqrt(distance)
+		std::cerr << "non-bonded-contact::f() = " << result << " min-dist is " << mMinDist << " and dist is " << std::sqrt(distance)
 				  << " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << std::endl
 				  << " a1: " << atoms[mA] << " a2: " << atoms[mB] << std::endl;
 
@@ -497,7 +497,7 @@ void NonBondedContactRestraint::df(const AtomLocationProvider &atoms, DFCollecto
 	auto bi = DistanceSquared(a1, a2);
 	if (bi < mMinDistSq)
 	{
-		bi = sqrt(bi);
+		bi = std::sqrt(bi);
 		if (bi < 0.1)
 			bi = 0.1;
 

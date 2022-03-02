@@ -378,7 +378,7 @@ BOOST_AUTO_TEST_CASE(stats_2)
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	mmcif::File file(example.string());
 
-	BOOST_CHECK(file.file().isValid());
+	BOOST_CHECK(file.isValid());
 	
 	// Rename a compound to an unknown ID
 

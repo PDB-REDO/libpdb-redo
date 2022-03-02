@@ -792,7 +792,7 @@ void MapMaker<FTYPE>::recalc(const Structure &structure,
 
 	if (not electronScattering)
 	{
-		auto &exptl = structure.getFile().data()["exptl"];
+		auto &exptl = structure.category("exptl");
 		electronScattering = not exptl.empty() and exptl.front()["method"] == "ELECTRON CRYSTALLOGRAPHY";
 	}
 
