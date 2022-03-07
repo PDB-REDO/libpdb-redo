@@ -903,7 +903,7 @@ CompoundFactoryImpl::CompoundFactoryImpl(const std::string &file, CompoundFactor
 {
 	const std::regex peptideRx("(?:[lmp]-)?peptide", std::regex::icase);
 
-	auto &cat = mFile.firstDatablock()["chem_comp"];
+	auto &cat = mFile["comp_list"]["chem_comp"];
 
 	for (auto &chemComp : cat)
 	{
@@ -950,7 +950,7 @@ Compound *CompoundFactoryImpl::create(std::string id)
 	{
 		std::unique_lock lock(mMutex);
 
-		auto &cat = mFile.firstDatablock()["chem_comp"];
+		auto &cat = mFile["comp_list"]["chem_comp"];
 
 		auto rs = cat.find(cif::Key("three_letter_code") == id);
 
