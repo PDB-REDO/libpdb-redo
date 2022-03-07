@@ -1170,19 +1170,28 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 		auto bi = find_if(residues.begin(), residues.end(),
 			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id](Residue *res) { return res->asymID() == asym_id and res->seqID() == seq_id; });
 		
+		if (ai == residues.end() and bi == residues.end())
+			continue;
+
+		Residue *ra = *ai;
+		Residue *rb = *bi;
+
 		if (ai != residues.end() and bi != residues.end())
 		{
-			linked.emplace_back(*ai, *bi);
+			linked.emplace_back(ra, rb);
 			continue;
 		}
 		
-		if (ai == residues.end())
-			std::swap(ai, bi);
-		
-		auto &res = structure.getResidue((*ai)->asymID(), (*ai)->compoundID(), (*ai)->seqID());
-		residues.emplace_back(&res);
-
-		linked.emplace_back(*ai, residues.back());
+		if (ai != residues.end())
+		{
+			residues.emplace_back(&structure.getResidue(ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id));
+			linked.emplace_back(ra, residues.back());
+		}
+		else
+		{
+			residues.emplace_back(&structure.getResidue(ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id));
+			linked.emplace_back(rb, residues.back());
+		}
 	}
 
 	// sort by asym, seq_id
