@@ -38,10 +38,12 @@
 #include <clipper/clipper-contrib.h>
 
 #include "cif++/Cif++.hpp"
+#include "cif++/AtomType.hpp"
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
+#include "pdb-redo/Statistics.hpp"
 
 #ifdef _MSC_VER
 #include <io.h>
@@ -413,6 +415,52 @@ void Map<FTYPE>::write_masked(const std::filesystem::path &f, clipper::Grid_rang
 
 	write_masked(file, r);
 }
+
+// --------------------------------------------------------------------
+
+template <typename FTYPE>
+Map<FTYPE> Map<FTYPE>::masked(const Structure &structure, const std::vector<Atom> &atoms) const
+{
+	Map<FTYPE> result(*this);
+
+	for (auto &atom : atoms)
+	{
+		float radius = mmcif::AtomTypeTraits(atom.type()).radius(mmcif::RadiusType::VanderWaals);
+		
+		iterateGrid(toClipper(atom.location()), radius, result.mMap,
+			[&result, radiusSq = radius * radius, a = atom.location()](auto iw)
+			{
+			Point p = toPoint(iw.coord_orth());
+
+			if (DistanceSquared(a, p) < radiusSq)
+				result.mMap[iw] = -10;
+			});
+	}
+
+	return result;
+}
+
+template <typename FTYPE>
+float Map<FTYPE>::z_weighted_density(const Structure &structure, const std::vector<Atom> &atoms) const
+{
+	FTYPE result = 0;
+
+	for (auto &atom : atoms)
+	{
+		auto co = toClipper(atom.location());
+		auto a_cf = co.coord_frac(mMap.cell());
+		auto a_cm = a_cf.coord_map(mMap.grid_sampling());
+
+		FTYPE dv;
+		clipper::Interp_nearest::interp(mMap, a_cm, dv);
+
+		result += dv * static_cast<int>(atom.type() == mmcif::AtomType::D ? mmcif::AtomType::H : atom.type());
+	}
+
+	return result;
+}
+
+// --------------------------------------------------------------------
 
 template class Map<float>;
 template class Map<double>;

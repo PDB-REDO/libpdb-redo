@@ -39,10 +39,11 @@ namespace pdb_redo
 {
 
 using mmcif::Structure;
+using mmcif::Atom;
 using mmcif::kPI;
 using mmcif::Gd;
 
-template <typename FTYPE>
+template <typename FTYPE = float>
 class Map
 {
   public:
@@ -50,7 +51,10 @@ class Map
 	typedef typename clipper::Xmap<ftype> Xmap;
 
 	Map();
+	Map(const Map &rhs) = default;
 	~Map();
+
+	Map& operator=(const Map &rhs) = default;
 
 	void calculateStats();
 
@@ -72,6 +76,12 @@ class Map
 
 	clipper::Spacegroup spacegroup() const { return mMap.spacegroup(); }
 	clipper::Cell cell() const { return mMap.cell(); }
+
+	/// \brief Create a masked map blotting out the density for all \a atoms in \a structure
+	Map masked(const Structure &structure, const std::vector<Atom> &atoms) const;
+
+	/// \brief Return the z-weighted density sum for the atoms in \a atoms
+	float z_weighted_density(const Structure &structure, const std::vector<Atom> &atoms) const;
 
   private:
 	Xmap mMap;

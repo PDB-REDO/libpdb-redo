@@ -231,31 +231,6 @@ class PointWeightFunction
 
 // --------------------------------------------------------------------
 
-template <typename F>
-void iterateGrid(const Coord_orth &p, float r, const Xmap<float> &m, F &&func)
-{
-	using namespace clipper;
-
-	Coord_frac fp = p.coord_frac(m.cell());
-
-	Coord_frac o = Coord_orth(r, r, r).coord_frac(m.cell());
-	o[0] = std::abs(o[0]);
-	o[1] = std::abs(o[1]);
-	o[2] = std::abs(o[2]);
-
-	Coord_frac fMin = fp - o, fMax = fp + o;
-	Coord_map mMin = fMin.coord_map(m.grid_sampling()), mMax = fMax.coord_map(m.grid_sampling());
-	Coord_grid gMin = mMin.floor(), gMax = mMax.ceil();
-
-	auto i0 = Xmap_base::Map_reference_coord(m, gMin);
-	for (auto iu = i0; iu.coord().u() <= gMax[0]; iu.next_u())
-		for (auto iv = iu; iv.coord().v() <= gMax[1]; iv.next_v())
-			for (auto iw = iv; iw.coord().w() <= gMax[2]; iw.next_w())
-				func(iw);
-}
-
-// --------------------------------------------------------------------
-
 struct AtomGridData
 {
 	AtomGridData(const Coord_grid &gp, double density)

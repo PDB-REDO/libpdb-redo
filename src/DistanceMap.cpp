@@ -203,7 +203,7 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 		AddDistancesForAtoms(r, r, dist, 0);
 	}
 
-	cif::Progress progress(residues.size() * residues.size(), "Creating distance std::map");
+	cif::Progress progress(residues.size() * residues.size(), "Creating distance map");
 
 	for (size_t i = 0; i + 1 < residues.size(); ++i)
 	{
@@ -332,7 +332,7 @@ float DistanceMap::operator()(const Atom &a, const Atom &b) const
 	}
 	catch (const std::out_of_range &ex)
 	{
-		throw std::runtime_error("atom " + a.id() + " not found in distance std::map");
+		throw std::runtime_error("atom " + a.id() + " not found in distance map");
 	}
 
 	try
@@ -341,7 +341,7 @@ float DistanceMap::operator()(const Atom &a, const Atom &b) const
 	}
 	catch (const std::out_of_range &ex)
 	{
-		throw std::runtime_error("atom " + b.id() + " not found in distance std::map");
+		throw std::runtime_error("atom " + b.id() + " not found in distance map");
 	}
 
 	//	if (ixb < ixa)

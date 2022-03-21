@@ -144,7 +144,7 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 		cosTheta = 1.0;
 	if (cosTheta < -1.0)
 		cosTheta = -1.0;
-	auto theta = std::cos(cosTheta);
+	auto theta = std::acos(cosTheta);
 	if (theta < 0.001)
 		theta = 0.001;
 

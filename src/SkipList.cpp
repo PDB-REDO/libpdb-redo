@@ -177,7 +177,7 @@ SkipList readCIFSkipList(std::istream &is)
 	cif::File file;
 	file.load(is);
 
-	auto &db = file.firstDatablock();
+	auto &db = file["skip"];
 	auto &cat = db["skip_list"];
 
 	for (const auto &[auth_asym_id, auth_comp_id, auth_seq_id, pdbx_PDB_ins_code, label_asym_id, label_comp_id, label_seq_id] :

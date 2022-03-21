@@ -301,7 +301,7 @@ void Minimizer::addPolySection(const mmcif::Polymer &poly, int first, int last)
 			}
 			catch (const std::exception &ex)
 			{
-				if (cif::VERBOSE)
+				if (cif::VERBOSE > 1)
 					std::cerr << "While processing plane-5-atoms restraints: " << ex.what() << std::endl;
 				//			continue;
 			}
@@ -352,7 +352,7 @@ void Minimizer::Finish()
 	enerLibFilePath /= "ener_lib.cif";
 
 	cif::File enerLibFile(enerLibFilePath);
-	auto &db = enerLibFile.firstDatablock();
+	auto &db = enerLibFile["energy"];
 	auto &libAtom = db["lib_atom"];
 
 	const std::regex donorRx("B|D|H"), acceptorRx("B|A|H");
@@ -547,7 +547,7 @@ void Minimizer::Finish()
 
 	// report
 
-	if (cif::VERBOSE)
+	if (cif::VERBOSE > 1)
 		std::cout << "created " << mBondRestraints.size() << " bond restraints" << std::endl
 				  << "created " << mAngleRestraints.size() << " angle restraints" << std::endl
 				  << "created " << mTorsionRestraints.size() << " torsion restraints" << std::endl
@@ -559,7 +559,7 @@ void Minimizer::Finish()
 
 	AtomLocationProvider loc(mReferencedAtoms);
 
-	if (cif::VERBOSE > 1)
+	if (cif::VERBOSE > 2)
 		for (auto r : mRestraints)
 			r->print(loc);
 }
@@ -640,7 +640,7 @@ void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link
 		}
 		catch (const std::exception &ex)
 		{
-			if (cif::VERBOSE)
+			if (cif::VERBOSE > 1)
 				std::cerr << "While processing angle restraints: " << ex.what() << std::endl;
 			continue;
 		}
@@ -922,7 +922,7 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 		gsl_vector_set(mDF, ix * 3 + 1, gsl_vector_get(mDF, ix * 3 + 1) + dy);
 		gsl_vector_set(mDF, ix * 3 + 2, gsl_vector_get(mDF, ix * 3 + 2) + dz);
 
-		if (cif::VERBOSE > 1)
+		if (cif::VERBOSE > 4)
 			std::cerr << "atom: " << label(atom) << " d: " << std::setprecision(10) << dx << ", " << dy << ", " << dz << std::endl;
 	}
 }
@@ -1005,6 +1005,25 @@ double GSLMinimizer::refine(bool storeAtoms)
 	for (size_t i = 0; i < iterations; ++i)
 	{
 		int status = gsl_multimin_fdfminimizer_iterate(m_s);
+
+		if (cif::VERBOSE > 1)
+		{
+			size_t ix = 0;
+			for (auto &a : mAtoms)
+			{
+				auto l = a.location();
+
+				Point p{
+					static_cast<float>(gsl_vector_get(m_s->x, ix + 0)),
+					static_cast<float>(gsl_vector_get(m_s->x, ix + 1)),
+					static_cast<float>(gsl_vector_get(m_s->x, ix + 2))
+				};
+				
+				ix += 3;
+
+				std::cerr << a << " l: " << l << " => p: " << p << " d = " << (p - l) << std::endl;
+			}
+		}
 
 		if (status != 0)
 		{
@@ -1220,13 +1239,12 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 		int startSeqID = monomer->seqID();
 		int endSeqID = startSeqID;
 
-		auto ni = std::next(ri);
-		while (ni != residues.end())
+		while (ri != residues.end())
 		{
-			if ((*ni)->seqID() != endSeqID + 1 or (*ni)->asymID() != monomer->asymID())
+			if ((*ri)->seqID() != endSeqID + 1 or (*ri)->asymID() != monomer->asymID())
 				break;
 			++endSeqID;
-			++ni;
+			++ri;
 		}
 
 		auto pi = find_if(polymers.begin(), polymers.end(), [id=monomer->asymID()](mmcif::Polymer &poly) { return poly.asymID() == id; });
