@@ -195,12 +195,15 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 		AddDistancesForAtoms(r, r, dist, 0);
 	}
 
-	for (auto &r : p.getBranchResidues())
+	for (auto &branch : p.branches())
 	{
-		residues.emplace_back(&r);
+		for (auto &sugar : branch)
+		{
+			residues.emplace_back(&sugar);
 
-		// Add distances for atoms in this residue
-		AddDistancesForAtoms(r, r, dist, 0);
+			// Add distances for atoms in this residue
+			AddDistancesForAtoms(sugar, sugar, dist, 0);
+		}
 	}
 
 	cif::Progress progress(residues.size() * residues.size(), "Creating distance map");
