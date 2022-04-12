@@ -52,6 +52,7 @@ std::string describeRToperation(const clipper::Spacegroup &spacegroup, const cli
 class SymmetryAtomIteratorFactory
 {
   public:
+	SymmetryAtomIteratorFactory(const mmcif::Structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell);
 	SymmetryAtomIteratorFactory(const mmcif::Structure &p, int spacegroupNr, const clipper::Cell &cell);
 
 	SymmetryAtomIteratorFactory(const SymmetryAtomIteratorFactory &) = delete;

@@ -38,6 +38,7 @@
 #include <boost/format.hpp>
 
 #include "pdb-redo/Minimizer.hpp"
+#include "pdb-redo/Symmetry-2.hpp"
 
 using namespace mmcif;
 namespace fs = std::filesystem;
@@ -113,7 +114,7 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 			Atom a1 = res.atomByID(b.atomID[0]);
 			Atom a2 = res.atomByID(b.atomID[1]);
 
-			if (not (a1 and a2))
+			if (not(a1 and a2))
 				continue;
 
 			mBondRestraints.emplace_back(ref(a1), ref(a2), b.distance, b.esd);
@@ -141,7 +142,7 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 			Atom a2 = res.atomByID(a.atomID[1]);
 			Atom a3 = res.atomByID(a.atomID[2]);
 
-			if (not (a1 and a2 and a3))
+			if (not(a1 and a2 and a3))
 				continue;
 
 			mAngleRestraints.emplace_back(
@@ -155,35 +156,35 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 		}
 	}
 
-	//		for (auto& a: compound->torsions())
-	//		{
-	//			if (a.esd == 0)
-	//				continue;
-	//
-	//			try
-	//			{
-	//				if (compound->getAtomByID(a.atomID[0]).typeSymbol == H or
-	//					compound->getAtomByID(a.atomID[1]).typeSymbol == H or
-	//					compound->getAtomByID(a.atomID[2]).typeSymbol == H or
-	//					compound->getAtomByID(a.atomID[3]).typeSymbol == H)
-	//				{
-	//					continue;
-	//				}
-	//
-	//				Atom a1 = r.atomByID(a.atomID[0]);
-	//				Atom a2 = r.atomByID(a.atomID[1]);
-	//				Atom a3 = r.atomByID(a.atomID[2]);
-	//				Atom a4 = r.atomByID(a.atomID[3]);
-	//
-	//				mTorsionRestraints.emplace_back(a1, a2, a3, a4, a.angle, a.esd, a.period);
-	//			}
-	//			catch (const exception& ex)
-	//			{
-	//				if (cif::VERBOSE > 1)
-	//					std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
-	//				continue;
-	//			}
-	//		}
+	for (auto &a : compound->torsions())
+	{
+		if (a.esd == 0)
+			continue;
+
+		try
+		{
+			if (compound->getAtomByID(a.atomID[0]).typeSymbol == H or
+				compound->getAtomByID(a.atomID[1]).typeSymbol == H or
+				compound->getAtomByID(a.atomID[2]).typeSymbol == H or
+				compound->getAtomByID(a.atomID[3]).typeSymbol == H)
+			{
+				continue;
+			}
+
+			Atom a1 = res.atomByID(a.atomID[0]);
+			Atom a2 = res.atomByID(a.atomID[1]);
+			Atom a3 = res.atomByID(a.atomID[2]);
+			Atom a4 = res.atomByID(a.atomID[3]);
+
+			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), a.angle, a.esd, a.period);
+		}
+		catch (const std::exception &ex)
+		{
+			if (cif::VERBOSE > 1)
+				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
+			continue;
+		}
+	}
 
 	for (auto &cv : compound->chiralCentres())
 	{
@@ -201,7 +202,7 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 			Atom a2 = res.atomByID(cv.atomID[1]);
 			Atom a3 = res.atomByID(cv.atomID[2]);
 
-			if (not (cc and a1 and a2 and a3))
+			if (not(cc and a1 and a2 and a3))
 				continue;
 
 			auto volume = compound->chiralVolume(cv.id);
@@ -317,7 +318,6 @@ void Minimizer::addPolySection(const mmcif::Polymer &poly, int first, int last)
 	//	{
 	//		// TODO: implement based on struct_conn information and radii from ener_lib?
 	//	}
-
 }
 
 void Minimizer::addDensityMap(const XMap &xMap, float mapWeight)
@@ -359,161 +359,166 @@ void Minimizer::Finish()
 
 	std::set<std::tuple<AtomRef, AtomRef>> nbc;
 
+	SymmetryAtomIteratorFactory saif(mStructure, getSpacegroup(mStructure), getCell(mStructure));
+
 	// now add the non-bonded restraints
 	for (auto &a1 : mAtoms)
 	{
 		AtomRef ra1 = ref(a1);
 
-		for (auto &a2 : mStructure.atoms())
+		for (auto sAtom : mStructure.atoms())
 		{
-			if (a1 == a2)
-				continue;
-
-			if (mBonds(a1, a2))
-				continue;
-
-			if (DistanceSquared(a1, a2) > kNonBondedContactDistanceSq)
-				continue;
-
-			AtomRef ra2 = ref(a2);
-
-			if (nbc.count(std::make_tuple(ra1, ra2)))
-				continue;
-
-			if (find_if(mAngleRestraints.begin(), mAngleRestraints.end(),
-					[&](auto &ar)
-					{ return (ar.mA == ra1 and ar.mC == ra2) or (ar.mA == ra2 and ar.mC == ra1); }) != mAngleRestraints.end())
-				continue;
-
-			if ((a1.labelCompID() == "PRO" or a1.labelCompID() == "HYP") and
-				a1.labelSeqID() == a2.labelSeqID() + 1 and
-				a1.labelAtomID() == "CD")
+			for (auto a2 : saif(sAtom, [l = a1.location()](const Point &p) { return DistanceSquared(p, l) <= kNonBondedContactDistanceSq; }))
 			{
-				continue;
-			}
+				if (a1 == a2)
+					continue;
 
-			if ((a2.labelCompID() == "PRO" or a2.labelCompID() == "HYP") and
-				a2.labelSeqID() == a1.labelSeqID() + 1 and
-				a2.labelAtomID() == "CD")
-			{
-				continue;
-			}
+				if (mBonds(a1, a2))
+					continue;
 
-			if ((a1.labelCompID() == "ASN" or a2.labelCompID() == "NAG") and
-				a1.labelAtomID() == "OD1" and a2.labelAtomID() == "C1")
-			{
-				continue;
-			}
+				if (DistanceSquared(a1, a2) > kNonBondedContactDistanceSq)
+					continue;
 
-			if ((a1.labelCompID() == "NAG" or a2.labelCompID() == "ASN") and
-				a1.labelAtomID() == "C1" and a2.labelAtomID() == "OD1")
-			{
-				continue;
-			}
+				AtomRef ra2 = ref(a2);
 
-			double minDist = 2.8;
+				if (nbc.count(std::make_tuple(ra1, ra2)))
+					continue;
 
-			if (mBonds.is1_4(a1, a2))
-			{
-				if (cif::VERBOSE > 1)
-					std::cerr << "1_4 for " << a1 << " and " << a2 << std::endl;
-				minDist = 2.64;
-			}
-			else if ((a1.labelSeqID() + 1 == a2.labelSeqID() and a1.labelAtomID() == "O" and a2.labelAtomID() == "C") or
-					 (a2.labelSeqID() + 1 == a1.labelSeqID() and a2.labelAtomID() == "O" and a1.labelAtomID() == "C"))
-			{
-				minDist = 2.84;
-			}
-			else
-			{
-				try
+				if (find_if(mAngleRestraints.begin(), mAngleRestraints.end(),
+						[&](auto &ar)
+						{ return (ar.mA == ra1 and ar.mC == ra2) or (ar.mA == ra2 and ar.mC == ra1); }) != mAngleRestraints.end())
+					continue;
+
+				if ((a1.labelCompID() == "PRO" or a1.labelCompID() == "HYP") and
+					a1.labelSeqID() == a2.labelSeqID() + 1 and
+					a1.labelAtomID() == "CD")
 				{
-					auto c1 = Compound::create(a1.labelCompID());
-					auto c2 = Compound::create(a2.labelCompID());
+					continue;
+				}
 
-					std::string et1 = c1->getAtomByID(a1.labelAtomID()).typeEnergy;
-					std::string et2 = c2->getAtomByID(a2.labelAtomID()).typeEnergy;
+				if ((a2.labelCompID() == "PRO" or a2.labelCompID() == "HYP") and
+					a2.labelSeqID() == a1.labelSeqID() + 1 and
+					a2.labelAtomID() == "CD")
+				{
+					continue;
+				}
 
-					if (not(et1.empty() or et2.empty()))
+				if ((a1.labelCompID() == "ASN" or a2.labelCompID() == "NAG") and
+					a1.labelAtomID() == "OD1" and a2.labelAtomID() == "C1")
+				{
+					continue;
+				}
+
+				if ((a1.labelCompID() == "NAG" or a2.labelCompID() == "ASN") and
+					a1.labelAtomID() == "C1" and a2.labelAtomID() == "OD1")
+				{
+					continue;
+				}
+
+				double minDist = 2.8;
+
+				if (mBonds.is1_4(a1, a2))
+				{
+					if (cif::VERBOSE > 1)
+						std::cerr << "1_4 for " << a1 << " and " << a2 << std::endl;
+					minDist = 2.64;
+				}
+				else if ((a1.labelSeqID() + 1 == a2.labelSeqID() and a1.labelAtomID() == "O" and a2.labelAtomID() == "C") or
+						(a2.labelSeqID() + 1 == a1.labelSeqID() and a2.labelAtomID() == "O" and a1.labelAtomID() == "C"))
+				{
+					minDist = 2.84;
+				}
+				else
+				{
+					try
 					{
-						auto r1 = libAtom.find(cif::Key("type") == et1);
-						auto r2 = libAtom.find(cif::Key("type") == et2);
+						auto c1 = Compound::create(a1.labelCompID());
+						auto c2 = Compound::create(a2.labelCompID());
 
-						if (not(r1.empty() or r2.empty()))
+						std::string et1 = c1->getAtomByID(a1.labelAtomID()).typeEnergy;
+						std::string et2 = c2->getAtomByID(a2.labelAtomID()).typeEnergy;
+
+						if (not(et1.empty() or et2.empty()))
 						{
-							if (AtomTypeTraits(a1.type()).isMetal())
-								minDist = r1.front()["ion_radius"].as<float>();
-							else
-								minDist = r1.front()["vdw_radius"].as<float>();
+							auto r1 = libAtom.find(cif::Key("type") == et1);
+							auto r2 = libAtom.find(cif::Key("type") == et2);
 
-							if (AtomTypeTraits(a2.type()).isMetal())
-								minDist += r2.front()["ion_radius"].as<float>();
-							else
-								minDist += r2.front()["vdw_radius"].as<float>();
-
-							// OK, now that we're here, see if the atoms are in the same residue...
-
-							if (a1.labelAsymID() == a2.labelAsymID() and a1.labelSeqID() == a2.labelSeqID())
-								minDist *= 0.84;
-
-							std::string hbType1 = r1.front()["hb_type"].as<std::string>(),
-										hbType2 = r2.front()["hb_type"].as<std::string>();
-
-							if (std::regex_match(hbType1, donorRx) and regex_match(hbType2, acceptorRx))
+							if (not(r1.empty() or r2.empty()))
 							{
-								minDist -= 0.5;
-								if (hbType1 == "H")
-									minDist -= 0.3;
+								if (AtomTypeTraits(a1.type()).isMetal())
+									minDist = r1.front()["ion_radius"].as<float>();
+								else
+									minDist = r1.front()["vdw_radius"].as<float>();
+
+								if (AtomTypeTraits(a2.type()).isMetal())
+									minDist += r2.front()["ion_radius"].as<float>();
+								else
+									minDist += r2.front()["vdw_radius"].as<float>();
+
+								// OK, now that we're here, see if the atoms are in the same residue...
+
+								if (a1.labelAsymID() == a2.labelAsymID() and a1.labelSeqID() == a2.labelSeqID())
+									minDist *= 0.84;
+
+								std::string hbType1 = r1.front()["hb_type"].as<std::string>(),
+											hbType2 = r2.front()["hb_type"].as<std::string>();
+
+								if (std::regex_match(hbType1, donorRx) and regex_match(hbType2, acceptorRx))
+								{
+									minDist -= 0.5;
+									if (hbType1 == "H")
+										minDist -= 0.3;
+								}
+
+								if (regex_match(hbType2, donorRx) and regex_match(hbType1, acceptorRx))
+								{
+									minDist -= 0.5;
+									if (hbType2 == "H")
+										minDist -= 0.3;
+								}
 							}
+						}
 
-							if (regex_match(hbType2, donorRx) and regex_match(hbType1, acceptorRx))
+						// so-called strange exceptions in coot code
+
+						if (find(mAtoms.begin(), mAtoms.end(), a2) == mAtoms.end())
+						{
+							switch (std::abs(a1.labelSeqID() - a2.labelSeqID()))
 							{
-								minDist -= 0.5;
-								if (hbType2 == "H")
-									minDist -= 0.3;
+								case 1:
+									if ((a1.labelAtomID() == "O" and a2.labelAtomID() == "CA") or
+										(a1.labelAtomID() == "CA" and a2.labelAtomID() == "O") or
+										(a1.labelAtomID() == "N" and a2.labelAtomID() == "CB") or
+										(a1.labelAtomID() == "CB" and a2.labelAtomID() == "N") or
+										(a1.labelAtomID() == "C" and a2.labelAtomID() == "CB") or
+										(a1.labelAtomID() == "CB" and a2.labelAtomID() == "C"))
+									{
+										minDist = 2.7;
+									}
+									break;
+
+								case 2:
+									if ((a1.labelAtomID() == "C" and a2.labelAtomID() == "N") or
+										(a1.labelAtomID() == "N" and a2.labelAtomID() == "C"))
+									{
+										minDist = 2.7;
+									}
+									break;
 							}
 						}
 					}
-
-					// so-called strange exceptions in coot code
-
-					if (find(mAtoms.begin(), mAtoms.end(), a2) == mAtoms.end())
+					catch (const std::exception &ex)
 					{
-						switch (std::abs(a1.labelSeqID() - a2.labelSeqID()))
-						{
-							case 1:
-								if ((a1.labelAtomID() == "O" and a2.labelAtomID() == "CA") or
-									(a1.labelAtomID() == "CA" and a2.labelAtomID() == "O") or
-									(a1.labelAtomID() == "N" and a2.labelAtomID() == "CB") or
-									(a1.labelAtomID() == "CB" and a2.labelAtomID() == "N") or
-									(a1.labelAtomID() == "C" and a2.labelAtomID() == "CB") or
-									(a1.labelAtomID() == "CB" and a2.labelAtomID() == "C"))
-								{
-									minDist = 2.7;
-								}
-								break;
-
-							case 2:
-								if ((a1.labelAtomID() == "C" and a2.labelAtomID() == "N") or
-									(a1.labelAtomID() == "N" and a2.labelAtomID() == "C"))
-								{
-									minDist = 2.7;
-								}
-								break;
-						}
+						if (cif::VERBOSE)
+							std::cerr << "err calculating nbc distance: " << ex.what() << std::endl;
+						minDist = 2.8;
 					}
 				}
-				catch (const std::exception &ex)
-				{
-					if (cif::VERBOSE)
-						std::cerr << "err calculating nbc distance: " << ex.what() << std::endl;
-					minDist = 2.8;
-				}
-			}
 
-			mNonBondedContactRestraints.emplace_back(ra1, ra2, minDist, 0.02);
-			nbc.insert(std::make_tuple(ra1, ra2));
-			nbc.insert(std::make_tuple(ra2, ra1));
+				mNonBondedContactRestraints.emplace_back(ra1, ra2, minDist, 0.02);
+				nbc.insert(std::make_tuple(ra1, ra2));
+				nbc.insert(std::make_tuple(ra2, ra1));
+			}
 		}
 	}
 
@@ -692,7 +697,7 @@ void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link
 			Atom a2 = getAtom(cv.atom[1]);
 			Atom a3 = getAtom(cv.atom[2]);
 
-			auto volume = link.chiralVolume(cv.id);
+			auto volume = link.chiralVolume(cv.id, a.compoundID(), b.compoundID());
 
 			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1), ref(a2), ref(a3), volume);
 		}
@@ -733,6 +738,9 @@ void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link
 void Minimizer::printStats()
 {
 	AtomLocationProvider loc(mReferencedAtoms);
+
+	// for (auto &r : mBondRestraints)
+	// 	std::cout << mReferencedAtoms[r.mA] << " -> " << mReferencedAtoms[r.mB] << " = " << r.f(loc) << std::endl;
 
 	double bondScore = rmsz(loc, mBondRestraints);
 	double angleScore = rmsz(loc, mAngleRestraints);
@@ -1016,9 +1024,8 @@ double GSLMinimizer::refine(bool storeAtoms)
 				Point p{
 					static_cast<float>(gsl_vector_get(m_s->x, ix + 0)),
 					static_cast<float>(gsl_vector_get(m_s->x, ix + 1)),
-					static_cast<float>(gsl_vector_get(m_s->x, ix + 2))
-				};
-				
+					static_cast<float>(gsl_vector_get(m_s->x, ix + 2))};
+
 				ix += 3;
 
 				std::cerr << a << " l: " << l << " => p: " << p << " d = " << (p - l) << std::endl;
@@ -1160,75 +1167,35 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 {
 	std::unique_ptr<Minimizer> result(new GSLMinimizer(structure, bm, plane5AtomsESD));
 
-	std::vector<mmcif::Residue*> residues;
+	std::vector<const mmcif::Residue *> residues;
 
 	for (auto atom : atoms)
 	{
 		auto &res = structure.getResidue(atom);
 
-		auto ri = std::find_if(residues.begin(), residues.end(), [rp=&res](const Residue *r) { return r == rp; });
+		auto ri = std::find_if(residues.begin(), residues.end(), [rp = &res](const Residue *r)
+			{ return r == rp; });
 		if (ri != residues.end())
 			continue;
 
 		residues.emplace_back(&res);
 	}
 
-	// Add any residue that might be bonded to our list of residues via a struct_conn record
-
-	auto &db = structure.datablock();
-	auto &struct_conn = db["struct_conn"];
-	std::vector<std::pair<Residue*,Residue*>> linked;
-
-	for (const auto &[ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id,
-		ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id] : struct_conn.rows<std::string,std::string,int,std::string,std::string,int>(
-			"ptnr1_label_asym_id", "ptnr1_label_comp_id", "ptnr1_label_seq_id",
-			"ptnr2_label_asym_id", "ptnr2_label_comp_id", "ptnr2_label_seq_id"))
-	{
-		auto ai = find_if(residues.begin(), residues.end(),
-			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id](Residue *res) { return res->asymID() == asym_id and res->seqID() == seq_id; });
-		auto bi = find_if(residues.begin(), residues.end(),
-			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id](Residue *res) { return res->asymID() == asym_id and res->seqID() == seq_id; });
-		
-		if (ai == residues.end() and bi == residues.end())
-			continue;
-
-		Residue *ra = *ai;
-		Residue *rb = *bi;
-
-		if (ai != residues.end() and bi != residues.end())
-		{
-			linked.emplace_back(ra, rb);
-			continue;
-		}
-		
-		if (ai != residues.end())
-		{
-			residues.emplace_back(&structure.getResidue(ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id));
-			linked.emplace_back(ra, residues.back());
-		}
-		else
-		{
-			residues.emplace_back(&structure.getResidue(ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id));
-			linked.emplace_back(rb, residues.back());
-		}
-	}
-
 	// sort by asym, seq_id
 
 	sort(residues.begin(), residues.end(), [](const mmcif::Residue *a, const mmcif::Residue *b)
-	{
+		{
 		int d = a->asymID().compare(b->asymID());
 		if (d == 0)
 			d = a->seqID() - b->seqID();
-		return d < 0;
-	});
+		return d < 0; });
 
 	auto &polymers = structure.polymers();
 
 	for (auto ri = residues.begin(); ri != residues.end(); ++ri)
 	{
 		auto res = *ri;
-		auto monomer = dynamic_cast<mmcif::Monomer*>(res);
+		auto monomer = dynamic_cast<const mmcif::Monomer *>(res);
 
 		if (monomer == nullptr)
 		{
@@ -1247,21 +1214,71 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 			++ri;
 		}
 
-		auto pi = find_if(polymers.begin(), polymers.end(), [id=monomer->asymID()](mmcif::Polymer &poly) { return poly.asymID() == id; });
+		auto pi = find_if(polymers.begin(), polymers.end(), [id = monomer->asymID()](mmcif::Polymer &poly)
+			{ return poly.asymID() == id; });
 		if (pi == polymers.end())
 			throw std::runtime_error("Polymer not found for asym ID " + monomer->asymID());
 
 		result->addPolySection(*pi, startSeqID, endSeqID);
 	}
 
-	// The struct conn records
-	for (const auto &[a, b] : linked)
+	// Add any residue that might be bonded to our list of residues via a struct_conn record
+
+	auto &db = structure.datablock();
+	auto &struct_conn = db["struct_conn"];
+	std::vector<std::tuple<const Residue *, const Residue *, std::string>> linked;
+
+	for (const auto &[ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id, ptnr1_auth_seq_id,
+			 ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id, ptnr2_auth_seq_id,
+			 link_id] : struct_conn.rows<std::string, std::string, int, std::string, std::string, std::string, int, std::string, std::string>("ptnr1_label_asym_id", "ptnr1_label_comp_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id",
+			 "ptnr2_label_asym_id", "ptnr2_label_comp_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id",
+			 "ccp4_link_id"))
 	{
+		auto ai = find_if(residues.begin(), residues.end(),
+			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, auth_seq_id = ptnr1_auth_seq_id](const Residue *res)
+			{ return res->asymID() == asym_id and res->seqID() == seq_id and res->authSeqID() == auth_seq_id; });
+		auto bi = find_if(residues.begin(), residues.end(),
+			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id, auth_seq_id = ptnr2_auth_seq_id](const Residue *res)
+			{ return res->asymID() == asym_id and res->seqID() == seq_id and res->authSeqID() == auth_seq_id; });
+
+		if (ai == residues.end() and bi == residues.end())
+			continue;
+
+		const Residue *ra = *ai;
+		const Residue *rb = *bi;
+
+		if (ai != residues.end() and bi != residues.end())
+		{
+			linked.emplace_back(ra, rb, link_id);
+			continue;
+		}
+
+		if (ai != residues.end())
+		{
+			residues.emplace_back(&structure.getResidue(ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id, ptnr2_auth_seq_id));
+			linked.emplace_back(ra, residues.back(), link_id);
+		}
+		else
+		{
+			residues.emplace_back(&structure.getResidue(ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
+			linked.emplace_back(rb, residues.back(), link_id);
+		}
+	}
+
+	// The struct conn records
+	for (const auto &[a, b, link_id] : linked)
+	{
+		if (not link_id.empty())
+		{
+			result->addLinkRestraints(*b, *a, link_id);
+			continue;
+		}
+
 		try
 		{
 			result->addLinkRestraints(*a, *b, a->compoundID() + "-" + b->compoundID());
 		}
-		catch(const std::exception& e)
+		catch (const std::exception &e)
 		{
 			result->addLinkRestraints(*b, *a, b->compoundID() + "-" + a->compoundID());
 		}

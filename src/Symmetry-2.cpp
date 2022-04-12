@@ -339,11 +339,16 @@ mmcif::Atom symmetryCopy(const mmcif::Atom &atom, const mmcif::Point &d,
 
 // -----------------------------------------------------------------------
 
-SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const m::Structure &p, int spacegroupNr, const clipper::Cell &cell)
-	: mSpacegroup(GetCCP4SpacegroupDescr(spacegroupNr))
+SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const m::Structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
+	: mSpacegroup(spacegroup)
 	, mD(toPoint(CalculateOffsetForCell(p, mSpacegroup, cell)))
 	, mRtOrth(AlternativeSites(mSpacegroup, cell))
 	, mCell(cell)
+{
+}
+
+SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const mmcif::Structure &p, int spacegroupNr, const clipper::Cell &cell)
+	: SymmetryAtomIteratorFactory(p, clipper::Spacegroup{GetCCP4SpacegroupDescr(spacegroupNr)}, cell)
 {
 }
 

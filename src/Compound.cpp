@@ -734,9 +734,49 @@ float Link::bondAngle(const LinkAtom &atom1, const LinkAtom &atom2, const LinkAt
 	return result;
 }
 
-float Link::chiralVolume(const std::string &centreID) const
+float Link::chiralVolume(const std::string &centreID, const std::string &compound_id_1, const std::string &compound_id_2) const
 {
 	float result = 0;
+
+	auto bondValue = [&](const LinkAtom &a, const LinkAtom &b) -> float
+	{
+		float result = atomBondValue(a, b);
+
+		if (result == 0)
+		{
+			if (a.compID != b.compID)
+				throw std::runtime_error("cannot calculate chiral volume since bond lengths are missing");
+			
+			auto cmp = Compound::create(a.compID == 1 ? compound_id_1 : compound_id_2);
+
+			if (cmp == nullptr)
+				throw std::runtime_error("cannot calculate chiral volume since compound is not known");
+
+			result = cmp->atomBondValue(a.atomID, b.atomID);
+		}
+
+		return result;
+	};
+
+	auto angle = [&](const LinkAtom &a, const LinkAtom &b, const LinkAtom &c) -> float
+	{
+		float result = bondAngle(a, b, c);
+
+		if (std::isnan(result))
+		{
+			if (a.compID != b.compID or a.compID != c.compID)
+				throw std::runtime_error("cannot calculate chiral volume since bond lengths are missing");
+			
+			auto cmp = Compound::create(a.compID == 1 ? compound_id_1 : compound_id_2);
+
+			if (cmp == nullptr)
+				throw std::runtime_error("cannot calculate chiral volume since compound is not known");
+
+			result = cmp->bondAngle(a.atomID, b.atomID, c.atomID);
+		}
+
+		return result;
+	};
 
 	for (auto &cv : mChiralCentres)
 	{
@@ -747,15 +787,15 @@ float Link::chiralVolume(const std::string &centreID) const
 
 		// the edges
 
-		float a = atomBondValue(cv.atomCentre, cv.atom[0]);
-		float b = atomBondValue(cv.atomCentre, cv.atom[1]);
-		float c = atomBondValue(cv.atomCentre, cv.atom[2]);
+		float a = bondValue(cv.atomCentre, cv.atom[0]);
+		float b = bondValue(cv.atomCentre, cv.atom[1]);
+		float c = bondValue(cv.atomCentre, cv.atom[2]);
 
 		// the angles for the top of the tetrahedron
 
-		float alpha = bondAngle(cv.atom[0], cv.atomCentre, cv.atom[1]);
-		float beta = bondAngle(cv.atom[1], cv.atomCentre, cv.atom[2]);
-		float gamma = bondAngle(cv.atom[2], cv.atomCentre, cv.atom[0]);
+		float alpha = angle(cv.atom[0], cv.atomCentre, cv.atom[1]);
+		float beta = angle(cv.atom[1], cv.atomCentre, cv.atom[2]);
+		float gamma = angle(cv.atom[2], cv.atomCentre, cv.atom[0]);
 
 		float cosa = std::cos(alpha * kPI / 180);
 		float cosb = std::cos(beta * kPI / 180);

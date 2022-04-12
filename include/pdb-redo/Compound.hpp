@@ -297,7 +297,10 @@ class Link
 
 	float atomBondValue(const LinkAtom &atomId_1, const LinkAtom &atomId_2) const;
 	float bondAngle(const LinkAtom &atomId_1, const LinkAtom &atomId_2, const LinkAtom &atomId_3) const;
-	float chiralVolume(const std::string &id) const;
+
+	/// \brief Calculate the target chiral volume for \a id for the link between \a compound_id_1 and \a compound_id_2
+	/// The compound id's are required to calculate standard bond lengths in case these are not recorded in the link record
+	float chiralVolume(const std::string &id, const std::string &compound_id_1, const std::string &compound_id_2) const;
 
   private:
 	~Link();

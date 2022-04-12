@@ -753,7 +753,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 		// EDIA
 
-		auto &res = mStructure.getResidue(asymID, compID, seqID);
+		auto &res = mStructure.getResidue(asymID, compID, seqID, authSeqID);
 		auto alts = res.getAlternateIDs();
 
 		if (alts.empty())

@@ -44,6 +44,7 @@
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
 #include "pdb-redo/Statistics.hpp"
+#include "pdb-redo/Symmetry-2.hpp"
 
 #ifdef _MSC_VER
 #include <io.h>
@@ -423,18 +424,27 @@ Map<FTYPE> Map<FTYPE>::masked(const Structure &structure, const std::vector<Atom
 {
 	Map<FTYPE> result(*this);
 
+	auto rtops = AlternativeSites(getSpacegroup(structure), getCell(structure));
+
 	for (auto &atom : atoms)
 	{
 		float radius = mmcif::AtomTypeTraits(atom.type()).radius(mmcif::RadiusType::VanderWaals);
 		
-		iterateGrid(toClipper(atom.location()), radius, result.mMap,
-			[&result, radiusSq = radius * radius, a = atom.location()](auto iw)
-			{
-			Point p = toPoint(iw.coord_orth());
+		auto cloc = toClipper(atom.location());
 
-			if (DistanceSquared(a, p) < radiusSq)
-				result.mMap[iw] = -10;
-			});
+		for (auto &rt : rtops)
+		{
+			auto rcloc = cloc.transform(rt);
+
+			iterateGrid(toClipper(toPoint(rcloc)), radius, result.mMap,
+				[&result, radiusSq = radius * radius, a = atom.location()](auto iw)
+				{
+					Point p = toPoint(iw.coord_orth());
+
+					if (DistanceSquared(a, p) < radiusSq)
+						result.mMap[iw] = -10;
+				});
+		}
 	}
 
 	return result;
