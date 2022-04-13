@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 
 		AtomShape shape(atom, kResHi, kResLo, false);
 
-		BOOST_CHECK(mmcif::AtomTypeTraits(atom.type()).symbol() == kTestRadii[i].type);
+		BOOST_CHECK_EQUAL(mmcif::AtomTypeTraits(atom.type()).symbol(), kTestRadii[i].type);
 
 		float radius = shape.radius();
 		float test = kTestRadii[i].radius;
@@ -279,7 +279,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 {
 	namespace c = mmcif;
 
-	cif::VERBOSE = 3;
+	cif::VERBOSE = 2;
 
 	// read test data first (output from previous stats version)
 
