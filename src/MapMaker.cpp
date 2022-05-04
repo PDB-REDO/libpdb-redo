@@ -37,8 +37,8 @@
 #include <clipper/clipper-ccp4.h>
 #include <clipper/clipper-contrib.h>
 
-#include "cif++/Cif++.hpp"
 #include "cif++/AtomType.hpp"
+#include "cif++/Cif++.hpp"
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"
@@ -429,7 +429,7 @@ Map<FTYPE> Map<FTYPE>::masked(const Structure &structure, const std::vector<Atom
 	for (auto &atom : atoms)
 	{
 		float radius = mmcif::AtomTypeTraits(atom.type()).radius(mmcif::RadiusType::VanderWaals);
-		
+
 		auto cloc = toClipper(atom.location());
 
 		for (auto &rt : rtops)
@@ -655,6 +655,11 @@ void MapMaker<FTYPE>::loadMaps(const fs::path &fbMapFile, const fs::path &fdMapF
 
 	if (not mFb.cell().equals(mFd.cell()))
 		throw std::runtime_error("Fb and Fd map do not contain the same cell");
+
+	clipper::Resolution reso(reshi);
+
+	mHKLInfo.init(mFb.spacegroup(), mFb.cell(), reso, true);
+	mGrid = mFb.get().grid_sampling();
 }
 
 // --------------------------------------------------------------------
