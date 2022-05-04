@@ -1,5 +1,6 @@
 Version 3.0.0
 - Real space refinement update
+- Fix reading from maps instead of mtz
 
 Version 2.0.4
 - Better real space refinement engine
