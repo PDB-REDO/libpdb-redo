@@ -21,6 +21,8 @@ Other requirements are:
 - [libzeep](https://github.com/mhekkel/libzeep), a library that
   contains a full validating XML parser as well as a complete HTTP,
   SOAP and REST server implementation
+- [libcifpp](https://github.com/PDB-REDO/libcifpp.git), a library containing
+  code to read and manipulate macro molecular models in mmCIF and PDB format.
 - [cmake](https://cmake.org)
 
 
