@@ -125,7 +125,7 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure &p, const clipper:
 
 	if (D.mX != 0 or D.mY != 0 or D.mZ != 0)
 	{
-		if (cif::VERBOSE)
+		if (cif::VERBOSE > 1)
 			std::cerr << "moving coorinates by " << D.mX << ", " << D.mY << " and " << D.mZ << std::endl;
 	}
 

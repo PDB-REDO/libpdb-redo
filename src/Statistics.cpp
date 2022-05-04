@@ -1154,7 +1154,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 		float ediaSum[2] = {};
 
 		iterateGrid(toClipper(atom.location()), radius, Fb, [&](auto iw)
-			{
+		{
 			Point p = toPoint(iw.coord_orth());
 			
 			// EDIA calculations
@@ -1233,12 +1233,10 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 				}
 			}
 
-//					if (cif::VERBOSE > 2)
-//						std::cout << Point(p) << ":\td: " << xmap[iw] << "\tz: " << z << "\to: " << o << "\tzraw: " << ((xmap[iw] - meanDensity) / rmsDensity) << "\twp: " << wp << std::endl;
-			
 			ediaSum[0] += z * wp * o;
 			if (wp > 0)
-				ediaSum[1] += wp; });
+				ediaSum[1] += wp;
+		});
 
 		data.edia = ediaSum[0] / ediaSum[1];
 		if (data.edia < 0)

@@ -160,7 +160,7 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 
 	if (mD.mX != 0 or mD.mY != 0 or mD.mZ != 0)
 	{
-		if (cif::VERBOSE)
+		if (cif::VERBOSE > 1)
 			std::cerr << "moving coorinates by " << mD.mX << ", " << mD.mY << " and " << mD.mZ << std::endl;
 
 		for_each(locations.begin(), locations.end(), [&](auto &p)
