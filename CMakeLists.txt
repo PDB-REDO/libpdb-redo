@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(pdb-redo VERSION 2.0.3 LANGUAGES CXX C)
+project(pdb-redo VERSION 2.0.4 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
@@ -153,7 +153,7 @@ endif()
 
 # Libraries
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
-find_package(cifpp 3.0.0 REQUIRED)
+find_package(cifpp 4.0.0 REQUIRED)
 find_package(zeep 5.1.7 REQUIRED)
 
 pkg_check_modules(GSL gsl)
