@@ -934,7 +934,7 @@ void MapMaker<FTYPE>::recalc(const Structure &structure,
 	if (cif::VERBOSE > 1)
 		std::cerr << "calculated reshi = " << mResHigh << " reslo = " << mResLow << std::endl;
 
-	samplingRate /= 2;
+	// samplingRate /= 2;
 
 	mGrid.init(spacegroup, cell,
 		mHKLInfo.resolution(), samplingRate); // define grid
@@ -951,8 +951,9 @@ void MapMaker<FTYPE>::recalc(const Structure &structure,
 	if (cif::VERBOSE)
 	{
 		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << std::endl
-				  << "  resolution: " << mResHigh
-				  << std::endl;
+				  << "  resolution: " << mResHigh << std::endl
+				  << "  cell: " << cell.format() << std::endl
+				  << "  grid: " << mGrid.format() << std::endl;
 
 		printStats();
 	}
