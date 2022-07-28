@@ -270,17 +270,6 @@ struct AtomDataSums
 		return *this;
 	}
 
-	friend AtomDataSums operator*(const AtomDataSums &a, float factor)
-	{
-		return {
-			static_cast<size_t>(std::round(a.ngrid * factor)),
-			{a.rfSums[0] * factor, a.rfSums[1] * factor},
-			{a.edSums[0] * factor, a.edSums[1] * factor},
-			{a.ccSums[0] * factor, a.ccSums[1] * factor, a.ccSums[2] * factor},
-			{a.rgSums[0] * factor, a.rgSums[1] * factor},
-			{a.swSums[0] * factor, a.swSums[1] * factor, a.swSums[2] * factor}};
-	}
-
 	double cc() const
 	{
 		double s = (ccSums[1] - (edSums[0] * edSums[0]) / ngrid) * (ccSums[2] - (edSums[1] * edSums[1]) / ngrid);
@@ -289,9 +278,10 @@ struct AtomDataSums
 
 	double srg() const
 	{
-		double rg = std::sqrt(rgSums[0] / rgSums[1]);
+		double rgsq = rgSums[0] / rgSums[1];
+		double rg = std::sqrt(rgsq);
 
-		return std::sqrt(swSums[0] - rg * rg * swSums[1] + 0.5 * rg * rg * rg * rg * swSums[2]) / (rg * rgSums[1]);
+		return std::sqrt(swSums[0] - rgsq * swSums[1] + 0.5 * rgsq * rgsq * swSums[2]) / (rg * rgSums[1]);
 	}
 };
 
@@ -349,43 +339,6 @@ std::tuple<float, float> CalculateMapStatistics(const Xmap<float> &f)
 class BoundingBox
 {
   public:
-	//	BoundingBox(const Structure& structure, const std::vector<std::tuple<std::string,int,std::string,std::string>>& residues, float margin)
-	//	{
-	//		mXMin = mYMin = mZMin = std::numeric_limits<float>::max();
-	//		mXMax = mYMax = mZMax = std::numeric_limits<float>::min();
-	//
-	//		for (auto& r: residues)
-	//		{
-	//			int seqID;
-	//			std::string asymID, compID, pdbID;
-	//			std::tie(asymID, seqID, compID, pdbID) = r;
-	//
-	//			Residue res(structure, compID, asymID, seqID);
-	//			for (auto& atom: res.atoms())
-	//			{
-	//				auto l = atom.location();
-	//				if (mXMin > l.mX)
-	//					mXMin = l.mX;
-	//				if (mXMax < l.mX)
-	//					mXMax = l.mX;
-	//				if (mYMin > l.mY)
-	//					mYMin = l.mY;
-	//				if (mYMax < l.mY)
-	//					mYMax = l.mY;
-	//				if (mZMin > l.mZ)
-	//					mZMin = l.mZ;
-	//				if (mZMax < l.mZ)
-	//					mZMax = l.mZ;
-	//			}
-	//		}
-	//
-	//		mXMin -= margin;
-	//		mXMax += margin;
-	//		mYMin -= margin;
-	//		mYMax += margin;
-	//		mZMin -= margin;
-	//		mZMax += margin;
-	//	}
 
 	template <class List>
 	BoundingBox(const Structure &structure, List atoms, float margin)
@@ -714,16 +667,11 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 						if (d->atom.labelAtomID() != compAtom)
 							continue;
 
-						float o_d = d->occupancy;
+						// We used to factor in the occupancy here, but that seems to be incorrect
+						// since occupancy was already used.
+						// sums += d->sums * d->occupancy;
 
-						if (o_d == 0)
-							continue;
-
-						if (o_d == 1)
-							sums += d->sums;
-						else
-							sums += d->sums * o_d;
-
+						sums += d->sums;
 						break;
 					}
 
@@ -744,12 +692,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 		// atoms that were present but not part of the Compound
 		for (auto d : resAtomData)
-		{
-			if (d->occupancy == 1)
-				sums += d->sums;
-			else
-				sums += d->sums * d->occupancy;
-		}
+			sums += d->sums;
 
 		// EDIA
 
