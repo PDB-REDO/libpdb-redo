@@ -24,7 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define BOOST_TEST_MODULE Libpdb_redo_Test
+#define BOOST_TEST_ALTERNATIVE_INIT_API
 #include <boost/test/included/unit_test.hpp>
 
 #include <boost/algorithm/string.hpp>
@@ -32,7 +32,7 @@
 #include <stdexcept>
 #include <filesystem>
 
-#include <cif++/Structure.hpp>
+#include <cif++.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/MapMaker.hpp"

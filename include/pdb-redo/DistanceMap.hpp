@@ -30,7 +30,7 @@
 
 #include <clipper/clipper.h>
 
-#include "cif++/Structure.hpp"
+#include <cif++.hpp>
 #include "pdb-redo/ClipperWrapper.hpp"
 
 #ifdef near

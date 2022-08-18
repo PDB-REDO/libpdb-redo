@@ -31,9 +31,9 @@
 
 #pragma once
 
-#include <boost/optional.hpp>
+#include <optional>
 
-#include "cif++/Structure.hpp"
+#include <cif++.hpp>
 
 #include "cif++/BondMap.hpp"
 #include "pdb-redo/Compound.hpp"

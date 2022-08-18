@@ -37,7 +37,7 @@
 
 #include <zeep/nvp.hpp>
 
-#include "cif++/Structure.hpp"
+#include <cif++.hpp>
 
 #if __has_include(<experimental/optional>)
 #include <experimental/optional>

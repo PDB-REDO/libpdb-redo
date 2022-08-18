@@ -28,7 +28,7 @@
 
 #pragma once
 
-#include "cif++/Structure.hpp"
+#include <cif++.hpp>
 
 namespace pdb_redo
 {

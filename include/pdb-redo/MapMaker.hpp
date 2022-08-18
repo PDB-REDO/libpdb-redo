@@ -28,7 +28,7 @@
 
 #include <clipper/clipper.h>
 
-#include "cif++/Structure.hpp"
+#include <cif++.hpp>
 
 // My apologies, but this code is emitting way too many warnings...
 #if defined(_MSC_VER)

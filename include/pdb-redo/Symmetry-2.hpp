@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include "cif++/Structure.hpp"
+#include <cif++.hpp>
 
 #include "pdb-redo/ClipperWrapper.hpp"
 

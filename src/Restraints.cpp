@@ -34,7 +34,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include "cif++/CifUtils.hpp"
-#include "cif++/Structure.hpp"
+#include <cif++.hpp>
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/Minimizer.hpp"

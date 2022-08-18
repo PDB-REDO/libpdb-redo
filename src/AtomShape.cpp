@@ -27,7 +27,7 @@
 #include <thread>
 #include <mutex>
 
-#include "cif++/Structure.hpp"
+#include <cif++.hpp>
 #include "cif++/Point.hpp"
 
 #include "pdb-redo/AtomShape.hpp"

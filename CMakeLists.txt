@@ -6,10 +6,10 @@
 # modification, are permitted provided that the following conditions are met:
 
 # 1. Redistributions of source code must retain the above copyright notice, this
-#    list of conditions and the following disclaimer
+# list of conditions and the following disclaimer
 # 2. Redistributions in binary form must reproduce the above copyright notice,
-#    this list of conditions and the following disclaimer in the documentation
-#    and/or other materials provided with the distribution.
+# this list of conditions and the following disclaimer in the documentation
+# and/or other materials provided with the distribution.
 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -48,7 +48,7 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	# https://stackoverflow.com/questions/63902528/program-crashes-when-filesystempath-is-destroyed
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
 elseif(MSVC)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
 # Build shared libraries by default (not my cup of tea, but hey)
@@ -59,6 +59,7 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # Optionally build a version to be installed inside CCP4
 option(BUILD_FOR_CCP4 "Build a version to be installed in CCP4" OFF)
+
 if(BUILD_FOR_CCP4)
 	if("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
 		message(FATAL_ERROR "A CCP4 built was requested but CCP4 was not sourced")
@@ -79,16 +80,17 @@ if(EXISTS "$ENV{CCP4}")
 	set(CCP4 $ENV{CCP4})
 	set(CLIBD ${CCP4}/lib/data)
 endif()
+
 if(CCP4 AND NOT CLIBD)
 	set(CLIBD ${CCP4}/lib/data)
 endif()
 
 if(MSVC)
-    # make msvc standards compliant...
-    add_compile_options(/permissive-)
+	# make msvc standards compliant...
+	add_compile_options(/permissive-)
 
 	macro(get_WIN32_WINNT version)
-		if (WIN32 AND CMAKE_SYSTEM_VERSION)
+		if(WIN32 AND CMAKE_SYSTEM_VERSION)
 			set(ver ${CMAKE_SYSTEM_VERSION})
 			string(REPLACE "." "" ver ${ver})
 			string(REGEX REPLACE "([0-9])" "0\\1" ver ${ver})
@@ -115,7 +117,7 @@ if(MSVC)
 		set(COFF_TYPE "arm64")
 	else()
 		message(FATAL_ERROR "Unsupported or unknown processor type ${CMAKE_SYSTEM_PROCESSOR}")
-	endif()	
+	endif()
 
 	# for mrc, just in case
 	list(APPEND CMAKE_PREFIX_PATH "$ENV{LOCALAPPDATA}/mrc")
@@ -131,7 +133,6 @@ if(UNIX AND NOT APPLE AND NOT BUILD_FOR_CCP4 AND CMAKE_INSTALL_PREFIX_INITIALIZE
 endif()
 
 # Optionally use mrc to create resources
-
 if(WIN32 AND BUILD_SHARED_LIBS)
 	message("Not using resources when building shared libraries for Windows")
 else()
@@ -153,22 +154,22 @@ endif()
 
 # Libraries
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
-find_package(cifpp 4.1.0 REQUIRED)
+find_package(cifpp 5.0.0 REQUIRED)
+find_package(pdbxpp 5.0.0 REQUIRED)
 find_package(zeep 5.1.7 REQUIRED)
 
 pkg_check_modules(GSL gsl)
-						   
+
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
-check_include_file( "newuoa.h" HAVE_NEWUOA )
+check_include_file("newuoa.h" HAVE_NEWUOA)
 
 # Create a revision file, containing the current git version info
 include(VersionString)
 write_version_header("LibPDBREDO")
 
 # Sources
-
-set(project_sources 
+set(project_sources
 	${PROJECT_SOURCE_DIR}/src/AtomShape.cpp
 	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
 	${PROJECT_SOURCE_DIR}/src/DistanceMap.cpp
@@ -180,7 +181,7 @@ set(project_sources
 	${PROJECT_SOURCE_DIR}/src/Symmetry-2.cpp
 )
 
-set(project_headers 
+set(project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/AtomShape.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/ClipperWrapper.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/DistanceMap.hpp
@@ -192,8 +193,7 @@ set(project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Symmetry-2.hpp
 )
 
-if (GSL_FOUND)
-
+if(GSL_FOUND)
 	set(project_sources
 		${project_sources}
 		${PROJECT_SOURCE_DIR}/src/Compound.cpp
@@ -205,7 +205,6 @@ if (GSL_FOUND)
 		${PROJECT_SOURCE_DIR}/include/pdb-redo/Compound.hpp
 		${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
 		${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp)
-
 endif()
 
 add_library(pdb-redo ${project_sources} ${project_headers})
@@ -221,21 +220,20 @@ target_include_directories(pdb-redo
 )
 
 target_include_directories(pdb-redo PUBLIC
-	${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS}
+	${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS}
 )
 
-if (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
-    target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
-endif (CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
+	target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
+endif(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 
-set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR} )
-set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR} )
+set(INCLUDE_INSTALL_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+set(LIBRARY_INSTALL_DIR ${CMAKE_INSTALL_LIBDIR})
 
 generate_export_header(pdb-redo
 	EXPORT_FILE_NAME pdb-redo/pdb-redo_export.hpp)
 
 # Install rules
-
 install(TARGETS pdb-redo
 	EXPORT pdb-redoTargets
 	ARCHIVE DESTINATION ${CMAKE_INSTALL_LIBDIR}
@@ -268,8 +266,8 @@ configure_package_config_file(Config.cmake.in
 )
 
 install(FILES
-		"${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfig.cmake"
-		"${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfigVersion.cmake"
+	"${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfig.cmake"
+	"${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfigVersion.cmake"
 	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pdb-redo
 	COMPONENT Devel
 )
@@ -281,21 +279,20 @@ set_target_properties(pdb-redo PROPERTIES
 	INTERFACE_pdb-redo_MAJOR_VERSION ${pdb-redo_MAJOR_VERSION})
 
 set_property(TARGET pdb-redo APPEND PROPERTY
-  COMPATIBLE_INTERFACE_STRING pdb-redo_MAJOR_VERSION
+	COMPATIBLE_INTERFACE_STRING pdb-redo_MAJOR_VERSION
 )
 
 write_basic_package_version_file(
-  "${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfigVersion.cmake"
-  VERSION ${PROJECT_VERSION}
-  COMPATIBILITY AnyNewerVersion
+	"${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfigVersion.cmake"
+	VERSION ${PROJECT_VERSION}
+	COMPATIBILITY AnyNewerVersion
 )
 
 # pkgconfig support
-
-set(prefix      ${CMAKE_INSTALL_PREFIX})
+set(prefix ${CMAKE_INSTALL_PREFIX})
 set(exec_prefix ${CMAKE_INSTALL_PREFIX})
-set(libdir      ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
-set(includedir  ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR})
+set(libdir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBDIR})
+set(includedir ${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_INCLUDEDIR})
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/libpdb-redo.pc.in
 	${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc.in @ONLY)
@@ -304,11 +301,9 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 # Unit tests
-
 option(PDB_REDO_BUILD_TESTS "Build test exectuables" OFF)
 
 if(PDB_REDO_BUILD_TESTS)
-
 	if(USE_RSRC)
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj
 			COMMAND ${MRC} -o ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj ${CIFPP_SHARE_DIR}/mmcif_pdbx_v50.dic ${COFF_SPEC}
@@ -318,7 +313,7 @@ if(PDB_REDO_BUILD_TESTS)
 
 	list(APPEND PDB_REDO_tests unit)
 
-	if (GSL_FOUND)
+	if(GSL_FOUND)
 		list(APPEND PDB_REDO_tests rsr)
 	endif()
 
@@ -330,11 +325,11 @@ if(PDB_REDO_BUILD_TESTS)
 
 		target_include_directories(${PDB_REDO_TEST} PRIVATE
 			${CMAKE_CURRENT_SOURCE_DIR}/include
-			${CMAKE_CURRENT_BINARY_DIR}  # for config.h
+			${CMAKE_CURRENT_BINARY_DIR} # for config.h
 		)
 
 		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo)
-	
+
 		if(MSVC)
 			# Specify unwind semantics so that MSVC knowns how to handle exceptions
 			target_compile_options(${PDB_REDO_TEST} PRIVATE /EHsc)
@@ -348,6 +343,5 @@ if(PDB_REDO_BUILD_TESTS)
 
 		add_test(NAME ${PDB_REDO_TEST}
 			COMMAND $<TARGET_FILE:${PDB_REDO_TEST}> -- ${CMAKE_SOURCE_DIR}/test)
-
 	endforeach()
 endif()
