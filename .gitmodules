@@ -1,0 +1,3 @@
+[submodule "newuoa-cpp"]
+	path = newuoa-cpp
+	url = https://github.com/elsid/newuoa-cpp.git

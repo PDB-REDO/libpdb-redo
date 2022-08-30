@@ -26,7 +26,8 @@
 
 #pragma once
 
-#include "cif++/BondMap.hpp"
+#include <pdbx++/BondMap.hpp>
+
 #include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/MapMaker.hpp"
 

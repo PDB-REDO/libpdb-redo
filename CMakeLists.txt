@@ -29,7 +29,8 @@ project(pdb-redo VERSION 3.0.2 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 
-enable_testing()
+# Unit tests
+option(ENABLE_TESTING "Build test exectuables" OFF)
 
 include(GNUInstallDirs)
 include(CheckFunctionExists)
@@ -39,13 +40,13 @@ include(CMakePackageConfigHelpers)
 include(Dart)
 include(FindPkgConfig)
 include(GenerateExportHeader)
+include(AddGitSubmodule)
 
 set(CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-	# https://stackoverflow.com/questions/63902528/program-crashes-when-filesystempath-is-destroyed
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
 elseif(MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
@@ -101,35 +102,6 @@ if(MSVC)
 
 	get_WIN32_WINNT(ver)
 	add_definitions(-D_WIN32_WINNT=${ver})
-
-	# On Windows, do not install in the system location
-	if(CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT AND NOT BUILD_FOR_CCP4)
-		message(STATUS "The library and auxiliary files will be installed in $ENV{LOCALAPPDATA}/${PROJECT_NAME}")
-		set(CMAKE_INSTALL_PREFIX "$ENV{LOCALAPPDATA}/${PROJECT_NAME}" CACHE PATH "..." FORCE)
-	endif()
-
-	# Find out the processor type for the target
-	if(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "AMD64")
-		set(COFF_TYPE "x64")
-	elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "i386")
-		set(COFF_TYPE "x86")
-	elseif(${CMAKE_SYSTEM_PROCESSOR} STREQUAL "ARM64")
-		set(COFF_TYPE "arm64")
-	else()
-		message(FATAL_ERROR "Unsupported or unknown processor type ${CMAKE_SYSTEM_PROCESSOR}")
-	endif()
-
-	# for mrc, just in case
-	list(APPEND CMAKE_PREFIX_PATH "$ENV{LOCALAPPDATA}/mrc")
-endif()
-
-if(UNIX AND NOT APPLE AND NOT BUILD_FOR_CCP4 AND CMAKE_INSTALL_PREFIX_INITIALIZED_TO_DEFAULT)
-	# On Linux, install in the $HOME/.local folder by default
-	message(STATUS "The library and auxiliary files will be installed in $ENV{HOME}/.local")
-	set(CMAKE_INSTALL_PREFIX "$ENV{HOME}/.local" CACHE PATH "..." FORCE)
-
-	# libcifpp will be there as well, likely
-	list(PREPEND CMAKE_PREFIX_PATH "$ENV{HOME}/.local")
 endif()
 
 # Optionally use mrc to create resources
@@ -159,6 +131,8 @@ find_package(pdbxpp 5.0.0 REQUIRED)
 find_package(zeep 5.1.7 REQUIRED)
 
 pkg_check_modules(GSL gsl)
+
+# add_git_submodule(newuoa-cpp)
 
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
@@ -210,18 +184,13 @@ endif()
 add_library(pdb-redo ${project_sources} ${project_headers})
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
-target_include_directories(pdb-redo PUBLIC ${CIFPP_INCLUDE_DIR} ${ZEEP_INCLUDE_DIR} ${Boost_INCLUDE_DIR})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} ${GSL_LIBRARIES})
-
 target_include_directories(pdb-redo
 	PUBLIC
 	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
-
-target_include_directories(pdb-redo PUBLIC
-	${Boost_INCLUDE_DIR} ${NEWUOA_INCLUDE_DIR} ${CIFPP_INCLUDE_DIR} ${CCP4_INCLUDE_DIRS}
-)
+target_include_directories(pdb-redo PRIVATE ${CCP4_INCLUDE_DIRS} ${NEWUOA_INCLUDE_DIR})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} ${GSL_LIBRARIES})
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
@@ -300,10 +269,9 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc
 	INPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc.in)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
-# Unit tests
-option(PDB_REDO_BUILD_TESTS "Build test exectuables" OFF)
+if(ENABLE_TESTING)
+	enable_testing()
 
-if(PDB_REDO_BUILD_TESTS)
 	if(USE_RSRC)
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj
 			COMMAND ${MRC} -o ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj ${CIFPP_SHARE_DIR}/mmcif_pdbx_v50.dic ${COFF_SPEC}

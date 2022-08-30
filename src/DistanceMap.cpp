@@ -27,16 +27,16 @@
 #include <atomic>
 #include <mutex>
 
-#include "cif++/CifUtils.hpp"
+#include <cif++/utilities.hpp>
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/Symmetry-2.hpp"
 
-//#define DEBUG_VOOR_BART
-
 namespace pdb_redo
 {
+
+using pdbx::Point;
 
 // --------------------------------------------------------------------
 
@@ -52,9 +52,9 @@ std::vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spa
 	{
 		const auto &symop = spacegroup.symop(i);
 
-		for (int u : {-1, 0, 1})
-			for (int v : {-1, 0, 1})
-				for (int w : {-1, 0, 1})
+		for (int u : { -1, 0, 1 })
+			for (int v : { -1, 0, 1 })
+				for (int w : { -1, 0, 1 })
 				{
 					if (i == 0 and u == 0 and v == 0 and w == 0)
 						continue;
@@ -72,19 +72,47 @@ std::vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spa
 
 // --------------------------------------------------------------------
 
-DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+std::tuple<Point, float> calculateCenterAndRadius(const std::vector<std::tuple<size_t,Point>> &atoms)
+{
+	std::vector<Point> pts;
+	for (const auto &[ix, pt] : atoms)
+		pts.emplace_back(pt);
+
+	auto center = Centroid(pts);
+	float radius = 0;
+
+	for (auto &pt : pts)
+	{
+		float d = static_cast<float>(Distance(pt, center));
+		if (radius < d)
+			radius = d;
+	}
+
+	return std::make_tuple(center, radius);
+}
+
+// --------------------------------------------------------------------
+
+DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
 	float maxDistance)
-	: structure(p)
+	: db(db)
 	, cell(cell)
 	, spacegroup(spacegroup)
 	, dim(0)
 	, mMaxDistance(maxDistance)
 	, mMaxDistanceSQ(maxDistance * maxDistance)
 {
-	auto &atoms = p.atoms();
-	dim = atoms.size();
+	using namespace cif::literals;
 
-	std::vector<clipper::Coord_orth> locations(dim);
+	// First collect the atoms from the datablock
+	std::vector<cif::row_handle> atoms;
+
+	for (auto rh : db["atom_site"].find("pdbx_model_nr"_key == model_nr or "pdbx_model_nr"_key == cif::null))
+		atoms.push_back(rh);
+
+	dim = uint32_t(atoms.size());
+
+	std::vector<Point> locations(dim);
 
 	// bounding box
 	Point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
@@ -92,13 +120,14 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 
 	for (auto &atom : atoms)
 	{
+		const auto &[id, x, y, z] = atom.get<std::string, float, float, float>("id", "Cartn_x", "Cartn_y", "Cartn_z");
+
 		size_t ix = index.size();
-		index[atom.id()] = ix;
-		rIndex[ix] = atom.id();
+		index[id] = ix;
+		rIndex[ix] = id;
 
-		locations[ix] = toClipper(atom.location());
-
-		auto pt = atom.location();
+		pdbx::Point pt{ x, y, z };
+		locations[ix] = pt;
 
 		if (pMin.mX > pt.mX)
 			pMin.mX = pt.mX;
@@ -124,18 +153,18 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 		           : (c[dim / 2 - 1] + c[dim / 2]) / 2;
 	};
 
-	transform(locations.begin(), locations.end(), c.begin(), [](auto &l)
-		{ return static_cast<float>(l[0]); });
+	transform(locations.begin(), locations.end(), c.begin(), [](Point &l)
+		{ return static_cast<float>(l.mX); });
 	sort(c.begin(), c.end());
 	float mx = median();
 
-	transform(locations.begin(), locations.end(), c.begin(), [](auto &l)
-		{ return static_cast<float>(l[1]); });
+	transform(locations.begin(), locations.end(), c.begin(), [](Point &l)
+		{ return static_cast<float>(l.mY); });
 	sort(c.begin(), c.end());
 	float my = median();
 
-	transform(locations.begin(), locations.end(), c.begin(), [](auto &l)
-		{ return static_cast<float>(l[2]); });
+	transform(locations.begin(), locations.end(), c.begin(), [](Point &l)
+		{ return static_cast<float>(l.mZ); });
 	sort(c.begin(), c.end());
 	float mz = median();
 
@@ -163,8 +192,8 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 		if (cif::VERBOSE > 1)
 			std::cerr << "moving coorinates by " << mD.mX << ", " << mD.mY << " and " << mD.mZ << std::endl;
 
-		for_each(locations.begin(), locations.end(), [&](auto &p)
-			{ p += toClipper(mD); });
+		for_each(locations.begin(), locations.end(), [&](Point &p)
+			{ p += mD; });
 	}
 
 	pMin -= mMaxDistance; // extend bounding box
@@ -174,64 +203,74 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 
 	DistMap dist;
 
-	std::vector<const Residue *> residues;
+	std::vector<std::tuple<pdbx::Point, float, std::vector<std::tuple<size_t,Point>>>> residues;
 
-	for (auto &poly : p.polymers())
+	// loop over poly_seq_scheme
+	for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].find<std::string, int>(cif::key("mon_id") == c, "asym_id", "seq_id"))
 	{
-		for (auto &m : poly)
+		std::vector<std::tuple<size_t,Point>> rAtoms;
+		for (size_t i = 0; i < dim; ++i)
 		{
-			residues.emplace_back(&m);
-
-			// Add distances for atoms in this residue
-			AddDistancesForAtoms(m, m, dist, 0);
+			if (atoms[i]["label_asym_id"] == asymID and atoms[i]["label_seq_id"] == seqID)
+				rAtoms.emplace_back(i, locations[i]);
 		}
+		
+		AddDistancesForAtoms(rAtoms, rAtoms, dist, 0);
+
+		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
+		residues.emplace_back(center, radius, std::move(rAtoms));
 	}
 
-	for (auto &r : p.getNonPolymers())
+	// loop over pdbx_nonpoly_scheme
+	for (auto asymID : db["pdbx_nonpoly_scheme"].find<std::string>(cif::key("mon_id") == c, "asym_id"))
 	{
-		residues.emplace_back(&r);
-
-		// Add distances for atoms in this residue
-		AddDistancesForAtoms(r, r, dist, 0);
-	}
-
-	for (auto &branch : p.branches())
-	{
-		for (auto &sugar : branch)
+		std::vector<std::tuple<size_t,Point>> rAtoms;
+		for (size_t i = 0; i < dim; ++i)
 		{
-			residues.emplace_back(&sugar);
-
-			// Add distances for atoms in this residue
-			AddDistancesForAtoms(sugar, sugar, dist, 0);
+			if (atoms[i]["label_asym_id"] == asymID)
+				rAtoms.emplace_back(i, locations[i]);
 		}
+		
+		AddDistancesForAtoms(rAtoms, rAtoms, dist, 0);
+
+		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
+		residues.emplace_back(center, radius, std::move(rAtoms));
 	}
 
-	cif::Progress progress(residues.size() * residues.size(), "Creating distance map");
+	// loop over pdbx_branch_scheme
+	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].find<std::string, std::string>(cif::key("mon_id") == c, "asym_id", "pdb_seq_num"))
+	{
+		std::vector<std::tuple<size_t,Point>> rAtoms;
+		for (size_t i = 0; i < dim; ++i)
+		{
+			if (atoms[i]["label_asym_id"] == asym_id and atoms[i]["label_seq_id"] == pdb_seq_num)
+				rAtoms.emplace_back(i, locations[i]);
+		}
+		
+		AddDistancesForAtoms(rAtoms, rAtoms, dist, 0);
+
+		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
+		residues.emplace_back(center, radius, std::move(rAtoms));
+	}
+
+	cif::Progress progress(residues.size() * (residues.size() - 1), "Creating distance map");
 
 	for (size_t i = 0; i + 1 < residues.size(); ++i)
 	{
-		auto &ri = *residues[i];
-
-		Point centerI;
-		float radiusI;
-		std::tie(centerI, radiusI) = ri.centerAndRadius();
+		const auto &[centerI, radiusI, atomsI] = residues[i];
 
 		for (size_t j = i + 1; j < residues.size(); ++j)
 		{
 			progress.consumed(1);
 
-			auto &rj = *residues[j];
+			const auto &[centerJ, radiusJ, atomsJ] = residues[j];
 
 			// first case, no symmetry operations
-
-			Point centerJ;
-			float radiusJ;
-			std::tie(centerJ, radiusJ) = rj.centerAndRadius();
 
 			auto d = Distance(centerI, centerJ) - radiusI - radiusJ;
 			if (d < mMaxDistance)
 			{
-				AddDistancesForAtoms(ri, rj, dist, 0);
+				AddDistancesForAtoms(atomsI, atomsJ, dist, 0);
 				continue;
 			}
 
@@ -258,7 +297,7 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 			}
 
 			if (minR2 < mMaxDistance)
-				AddDistancesForAtoms(ri, rj, dist, kbest);
+				AddDistancesForAtoms(atomsI, atomsJ, dist, kbest);
 		}
 	}
 
@@ -272,10 +311,10 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 	size_t lastR = 0;
 	mIA.push_back(0);
 
-	for (auto &di : dist)
+	for (const auto &[key, value] : dist)
 	{
 		size_t col, row;
-		std::tie(row, col) = di.first;
+		std::tie(row, col) = key;
 
 		if (row != lastR) // new row
 		{
@@ -284,7 +323,7 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 			lastR = row;
 		}
 
-		mA.push_back(di.second);
+		mA.push_back(value);
 		mJA.push_back(col);
 	}
 
@@ -294,19 +333,18 @@ DistanceMap::DistanceMap(const Structure &p, const clipper::Spacegroup &spacegro
 
 // --------------------------------------------------------------------
 
-void DistanceMap::AddDistancesForAtoms(const Residue &a, const Residue &b, DistMap &dm, int32_t rtix)
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,Point>> &a, const std::vector<std::tuple<size_t,Point>> &b, DistMap &dm, int32_t rtix)
 {
-	for (auto &aa : a.atoms())
+	for (const auto &[ixa, loc_a] : a)
 	{
-		clipper::Coord_orth pa = toClipper(aa.location());
-		size_t ixa = index[aa.id()];
+		clipper::Coord_orth pa = toClipper(loc_a);
 
-		for (auto &bb : b.atoms())
+		for (const auto &[ixb, loc_b] : b)
 		{
-			if (aa.id() == bb.id())
+			if (ixa == ixb)
 				continue;
 
-			clipper::Coord_orth pb = toClipper(bb.location());
+			clipper::Coord_orth pb = toClipper(loc_b);
 
 			if (rtix)
 				pb = pb.transform(mRtOrth[rtix]);
@@ -317,34 +355,32 @@ void DistanceMap::AddDistancesForAtoms(const Residue &a, const Residue &b, DistM
 
 			d = std::sqrt(d);
 
-			size_t ixb = index[bb.id()];
-
 			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, rtix);
 			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, -rtix);
 		}
 	}
 }
 
-float DistanceMap::operator()(const Atom &a, const Atom &b) const
+float DistanceMap::operator()(const std::string &a, const std::string &b) const
 {
 	size_t ixa, ixb;
 
 	try
 	{
-		ixa = index.at(a.id());
+		ixa = index.at(a);
 	}
 	catch (const std::out_of_range &ex)
 	{
-		throw std::runtime_error("atom " + a.id() + " not found in distance map");
+		throw std::runtime_error("atom " + a + " not found in distance map");
 	}
 
 	try
 	{
-		ixb = index.at(b.id());
+		ixb = index.at(b);
 	}
 	catch (const std::out_of_range &ex)
 	{
-		throw std::runtime_error("atom " + b.id() + " not found in distance map");
+		throw std::runtime_error("atom " + b + " not found in distance map");
 	}
 
 	//	if (ixb < ixa)
@@ -369,50 +405,55 @@ float DistanceMap::operator()(const Atom &a, const Atom &b) const
 	return 100.f;
 }
 
-std::vector<Atom> DistanceMap::near(const Atom &a, float maxDistance) const
-{
-	assert(maxDistance <= mMaxDistance);
-	if (maxDistance > mMaxDistance)
-		throw std::runtime_error("Invalid max distance in DistanceMap::near");
+// std::vector<std::string> DistanceMap::near(cif::row_handle atom, float maxDistance) const
+// {
+// 	using namespace cif::literals;
 
-	size_t ixa;
-	try
-	{
-		ixa = index.at(a.id());
-	}
-	catch (const std::out_of_range &ex)
-	{
-		throw std::runtime_error("atom " + a.id() + " not found in distance map");
-	}
+// 	assert(maxDistance <= mMaxDistance);
+// 	if (maxDistance > mMaxDistance)
+// 		throw std::runtime_error("Invalid max distance in DistanceMap::near");
 
-	std::vector<Atom> result;
-	auto alta = a.labelAltID();
+// 	const auto &[a_id, alta] = atom.get<std::string, std::string>("id", "label_alt_id");
 
-	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
-	{
-		float d;
-		int32_t rti;
-		std::tie(d, rti) = mA[i];
+// 	size_t ixa;
+// 	try
+// 	{
+// 		ixa = index.at(a_id);
+// 	}
+// 	catch (const std::out_of_range &ex)
+// 	{
+// 		throw std::runtime_error("atom " + a_id + " not found in distance map");
+// 	}
 
-		if (d > maxDistance)
-			continue;
+// 	std::vector<std::string> result;
+// 	auto &atom_site = db["atom_site"];
 
-		size_t ixb = mJA[i];
-		Atom b = structure.getAtomByID(rIndex.at(ixb));
+// 	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
+// 	{
+// 		float d;
+// 		int32_t rti;
+// 		std::tie(d, rti) = mA[i];
 
-		auto altb = b.labelAltID();
-		if (altb != alta and not altb.empty() and not alta.empty())
-			continue;
+// 		if (d > maxDistance)
+// 			continue;
 
-		if (rti > 0)
-			result.emplace_back(symmetryCopy(b, mD, spacegroup, cell, mRtOrth.at(rti)));
-		else if (rti < 0)
-			result.emplace_back(symmetryCopy(b, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
-		else
-			result.emplace_back(b);
-	}
+// 		size_t ixb = mJA[i];
 
-	return result;
-}
+// 		std::string b_id = rIndex.at(ixb);
+// 		auto altb = atom_site.find1<std::string>("id"_key == b_id, "label_alt_id");
+
+// 		if (altb != alta and not altb.empty() and not alta.empty())
+// 			continue;
+
+// 		if (rti > 0)
+// 			result.emplace_back(symmetryCopy(b_id, mD, spacegroup, cell, mRtOrth.at(rti)));
+// 		else if (rti < 0)
+// 			result.emplace_back(symmetryCopy(b_id, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
+// 		else
+// 			result.emplace_back(b_id);
+// 	}
+
+// 	return result;
+// }
 
 } // namespace pdb_redo

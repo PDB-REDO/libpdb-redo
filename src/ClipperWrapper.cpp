@@ -25,33 +25,32 @@
  */
 
 #include "pdb-redo/ClipperWrapper.hpp"
-#include "cif++/Symmetry.hpp"
+#include <pdbx++/Symmetry.hpp>
+// #include "cif++/Symmetry.hpp"
 
 namespace pdb_redo
 {
 
 // --------------------------------------------------------------------
 
-clipper::Atom toClipper(const mmcif::Atom &atom)
+clipper::Atom toClipper(cif::row_handle atom, cif::row_handle aniso_row)
 {
-	using mmcif::kPI;
-
-	auto row = atom.getRow();
+	const double kPI = pdbx::kPI;
 
 	clipper::Atom result;
 
-	auto location = atom.location();
-	result.set_coord_orth({location.mX, location.mY, location.mZ});
+	pdbx::Point location = atom.get<float, float, float>("Cartn_x", "Cartn_y", "Cartn_z");
+	result.set_coord_orth({ location.mX, location.mY, location.mZ });
 
-	if (row["occupancy"].empty())
+	if (atom["occupancy"].empty())
 		result.set_occupancy(1.0);
 	else
-		result.set_occupancy(row["occupancy"].as<float>());
+		result.set_occupancy(atom["occupancy"].as<float>());
 
-	std::string element = row["type_symbol"].as<std::string>();
-	if (not row["pdbx_formal_charge"].empty())
+	std::string element = atom["type_symbol"].as<std::string>();
+	if (not atom["pdbx_formal_charge"].empty())
 	{
-		int charge = row["pdbx_formal_charge"].as<int>();
+		int charge = atom["pdbx_formal_charge"].as<int>();
 		if (std::abs(charge) > 1)
 			element += std::to_string(charge);
 		if (charge < 0)
@@ -61,22 +60,19 @@ clipper::Atom toClipper(const mmcif::Atom &atom)
 	}
 	result.set_element(element);
 
-	if (not row["U_iso_or_equiv"].empty())
-		result.set_u_iso(row["U_iso_or_equiv"].as<float>());
-	else if (not row["B_iso_or_equiv"].empty())
-		result.set_u_iso(row["B_iso_or_equiv"].as<float>() / (8 * kPI * kPI));
+	if (not atom["U_iso_or_equiv"].empty())
+		result.set_u_iso(atom["U_iso_or_equiv"].as<float>());
+	else if (not atom["B_iso_or_equiv"].empty())
+		result.set_u_iso(atom["B_iso_or_equiv"].as<float>() / (8 * kPI * kPI));
 	else
 		throw std::runtime_error("Missing B_iso or U_iso");
 
-	auto r = atom.getRowAniso();
-	if (r.empty())
+	if (aniso_row.empty())
 		result.set_u_aniso_orth(clipper::U_aniso_orth(nan("0"), 0, 0, 0, 0, 0));
 	else
 	{
-		float u11, u12, u13, u22, u23, u33;
-		cif::tie(u11, u12, u13, u22, u23, u33) =
-			r.get("U[1][1]", "U[1][2]", "U[1][3]", "U[2][2]", "U[2][3]", "U[3][3]");
-
+		const auto &[u11, u12, u13, u22, u23, u33] =
+			aniso_row.get<float, float, float, float, float, float>("U[1][1]", "U[1][2]", "U[1][3]", "U[2][2]", "U[2][3]", "U[3][3]");
 		result.set_u_aniso_orth(clipper::U_aniso_orth(u11, u22, u33, u12, u13, u23));
 	}
 
@@ -85,21 +81,9 @@ clipper::Atom toClipper(const mmcif::Atom &atom)
 
 // --------------------------------------------------------------------
 
-clipper::Spacegroup getSpacegroup(const mmcif::Structure &structure)
+clipper::Spacegroup getSpacegroup(const cif::datablock &db)
 {
-	auto &db = structure.datablock();
-
-	auto refine = db["refine"][cif::Key("entry_id") == db.getName()];
-	if (refine.empty())
-		throw std::runtime_error("No refinement data found");
-
-	double reso, hires = 99, lowres = 0;
-	cif::tie(reso, hires, lowres) = refine.get("ls_d_res_high", "ls_d_res_high", "ls_d_res_low");
-
-	std::string spacegroup = db["symmetry"]
-	                           [cif::Key("entry_id") == db.getName()]
-	                           ["space_group_name_H-M"]
-	                               .as<std::string>();
+	std::string spacegroup = db["symmetry"].find1<std::string>(cif::key("entry_id") == db.name(), "space_group_name_H-M");
 
 	if (spacegroup == "P 1-")
 		spacegroup = "P -1";
@@ -110,7 +94,7 @@ clipper::Spacegroup getSpacegroup(const mmcif::Structure &structure)
 
 	try
 	{
-		return clipper::Spacegroup{clipper::Spgr_descr(mmcif::GetSpacegroupNumber(spacegroup))};
+		return clipper::Spacegroup{ clipper::Spgr_descr(pdbx::GetSpacegroupNumber(spacegroup)) };
 	}
 	catch (const clipper::Message_fatal &m)
 	{
@@ -119,7 +103,7 @@ clipper::Spacegroup getSpacegroup(const mmcif::Structure &structure)
 
 	try
 	{
-		return clipper::Spacegroup{clipper::Spgr_descr(spacegroup)};
+		return clipper::Spacegroup{ clipper::Spgr_descr(spacegroup) };
 	}
 	catch (const clipper::Message_fatal &e)
 	{
@@ -127,72 +111,15 @@ clipper::Spacegroup getSpacegroup(const mmcif::Structure &structure)
 	}
 
 	throw std::runtime_error("Unsupported spacegroup: " + spacegroup);
-
-	// // reconstruct a clipper spacegroup.
-
-	// int sg = mmcif::GetSpacegroupNumber(spacegroup);
-
-	// // locate the symmetry operations
-	// int L = 0, R = mmcif::kSymopNrTableSize - 1;
-	// while (R >= L)
-	// {
-	// 	int i = (L + R) / 2;
-	// 	if (mmcif::kSymopNrTable[i].spacegroup() < sg)
-	// 		L = i + 1;
-	// 	else
-	// 		R = i - 1;
-	// }
-
-	// if (mmcif::kSymopNrTable[L].spacegroup() != sg)
-	// 	throw std::runtime_error("Could not locate spacegroup " + spacegroup);
-
-	// clipper::Spgr_descr::Symop_codes codes;
-
-	// for (int i = L; i < mmcif::kSymopNrTableSize and mmcif::kSymopNrTable[i].spacegroup() == sg; ++i)
-	// {
-	// 	auto data = mmcif::kSymopNrTable[i].symop().data();
-
-	// 	clipper::Mat33<> m(
-	// 			data[0], data[1], data[2],
-	// 			data[3], data[4], data[5],
-	// 			data[6], data[7], data[8]);
-
-	// 	clipper::Vec3<> v(
-	// 		1.0f * data[ 9] / data[10],
-	// 		1.0f * data[11] / data[12],
-	// 		1.0f * data[13] / data[14]);
-
-	// 	clipper::RTop<> rtop(m, v);
-
-	// 	codes.emplace_back(clipper::Symop{rtop});
-	// }
-
-	// return clipper::Spacegroup{clipper::Spgr_descr{codes}};
 }
 
-clipper::Cell getCell(const mmcif::Structure &structure)
+clipper::Cell getCell(const cif::datablock &db)
 {
-	auto &db = structure.datablock();
+	const auto &[a, b, c, alpha, beta, gamma] =
+		db["cell"].find1<float, float, float, float, float, float>(cif::key("entry_id") == db.name(),
+			"length_a", "length_b", "length_c", "angle_alpha", "angle_beta", "angle_gamma");
 
-	double a, b, c, alpha, beta, gamma;
-	cif::tie(a, b, c, alpha, beta, gamma) = db["cell"][cif::Key("entry_id") == db.getName()]
-	                                            .get("length_a", "length_b", "length_c",
-													"angle_alpha", "angle_beta", "angle_gamma");
-
-	return clipper::Cell{clipper::Cell_descr(a, b, c, alpha, beta, gamma)};
+	return clipper::Cell{ clipper::Cell_descr(a, b, c, alpha, beta, gamma) };
 }
-
-// AtomImpl(const AtomImpl& impl, const Point& d, const clipper::RTop_orth& rt)
-// 	: mFile(impl.mFile), mID(impl.mID), mType(impl.mType), mAtomID(impl.mAtomID)
-// 	, mCompID(impl.mCompID), mAsymID(impl.mAsymID), mSeqID(impl.mSeqID)
-// 	, mAltID(impl.mAltID), mLocation(impl.mLocation), mRefcount(1)
-// 	, mRow(impl.mRow), mCompound(impl.mCompound), mRadius(impl.mRadius)
-// 	, mCachedProperties(impl.mCachedProperties)
-// 	, mSymmetryCopy(true), mRTop(rt), mD(d)
-// {
-// 	mLocation += d;
-// 	mLocation = ((clipper::Coord_orth)mLocation).transform(rt);
-// 	mLocation -= d;
-// }
 
 } // namespace pdb_redo

@@ -31,7 +31,9 @@
 #include <clipper/clipper.h>
 
 #include <cif++.hpp>
-#include "pdb-redo/ClipperWrapper.hpp"
+#include <pdbx++/Symmetry.hpp>
+
+#include <pdb-redo/ClipperWrapper.hpp>
 
 #ifdef near
 #undef near
@@ -40,42 +42,36 @@
 namespace pdb_redo
 {
 
-using mmcif::Structure;
-using mmcif::Residue;
-using mmcif::Atom;
-using mmcif::Point;
-
 class DistanceMap
 {
   public:
-	DistanceMap(const Structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+	DistanceMap(const cif::datablock &db, int model_nr, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
 		float maxDistance);
 
-	DistanceMap(const Structure &p, float maxDistance)
-		: DistanceMap(p, getSpacegroup(p), getCell(p), maxDistance)
+	DistanceMap(const cif::datablock &db, int model_nr, float maxDistance)
+		: DistanceMap(db, model_nr, getSpacegroup(db), getCell(db), maxDistance)
 	{
 	}
-
-	// simplified version for subsets of atoms (used in refining e.g.)
-	//	DistanceMap(const Structure& p, const std::vector<Atom>& atoms);
 
 	DistanceMap(const DistanceMap &) = delete;
 	DistanceMap &operator=(const DistanceMap &) = delete;
 
-	float operator()(const Atom &a, const Atom &b) const;
+	float operator()(const std::string &a, const std::string &b) const;
 
-	std::vector<Atom> near(const Atom &a, float maxDistance = 3.5f) const;
-	// std::vector<Atom> near(const Point& p, float maxDistance = 3.5f) const;
+	std::vector<std::string> near(cif::row_handle atom, float maxDistance = 3.5f) const;
 
 	static std::vector<clipper::RTop_orth>
 	AlternativeSites(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell);
 
   private:
-	typedef std::map<std::tuple<size_t, size_t>, std::tuple<float, int32_t>> DistMap;
+	using DistKeyType = std::tuple<size_t, size_t>;
+	using DistValueType = std::tuple<float, int32_t>;
+	using DistMap = std::map<DistKeyType, DistValueType>;
 
-	void AddDistancesForAtoms(const Residue &a, const Residue &b, DistMap &dm, int32_t rtix);
+	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,pdbx::Point>> &a,
+		const std::vector<std::tuple<size_t,pdbx::Point>> &b, DistMap &dm, int32_t rtix);
 
-	const Structure &structure;
+	const cif::datablock &db;
 	clipper::Cell cell;
 	clipper::Spacegroup spacegroup;
 	size_t dim;
@@ -86,7 +82,7 @@ class DistanceMap
 
 	std::vector<std::tuple<float, int32_t>> mA;
 	std::vector<size_t> mIA, mJA;
-	Point mD; // needed to move atoms to center
+	pdbx::Point mD; // needed to move atoms to center
 	std::vector<clipper::RTop_orth> mRtOrth;
 };
 

@@ -29,6 +29,8 @@
    Date: dinsdag 19 juni, 2018
 */
 
+#define _USE_MATH_DEFINES
+
 #include <cassert>
 #include <cmath>
 
@@ -37,12 +39,12 @@
 
 #include <clipper/clipper.h>
 
-#include "cif++/Point.hpp"
-
 #include "pdb-redo/Ramachandran.hpp"
 
 namespace pdb_redo
 {
+
+const double kPI = M_PI;
 
 // --------------------------------------------------------------------
 
@@ -93,15 +95,15 @@ std::mutex RamachandranTables::sMutex;
 float calculateRamachandranZScore(const std::string &aa, bool prePro, float phi, float psi)
 {
 	auto &table = RamachandranTables::instance().table(aa, prePro);
-	return static_cast<float>(table.probability(phi * mmcif::kPI / 180, psi * mmcif::kPI / 180));
+	return static_cast<float>(table.probability(phi * kPI / 180, psi * kPI / 180));
 }
 
 RamachandranScore calculateRamachandranScore(const std::string &aa, bool prePro, float phi, float psi)
 {
 	auto &table = RamachandranTables::instance().table(aa, prePro);
 
-	phi *= static_cast<float>(mmcif::kPI / 180);
-	psi *= static_cast<float>(mmcif::kPI / 180);
+	phi *= static_cast<float>(kPI / 180);
+	psi *= static_cast<float>(kPI / 180);
 
 	RamachandranScore result;
 

@@ -26,27 +26,29 @@
 
 #pragma once
 
-#include <cif++/Structure.hpp>
+#include <cif++.hpp>
 #include <clipper/core/coords.h>
+#include <pdbx++/point.hpp>
 
 namespace pdb_redo
 {
 
-clipper::Atom toClipper(const mmcif::Atom &atom);
+// clipper::Atom toClipper(const mmcif::Atom &atom);
+clipper::Atom toClipper(cif::row_handle atom, cif::row_handle aniso_row);
 
-inline clipper::Coord_orth toClipper(const mmcif::Point &pt)
+inline clipper::Coord_orth toClipper(const pdbx::Point &pt)
 {
-	return {pt.mX, pt.mY, pt.mZ};
+	return { pt.mX, pt.mY, pt.mZ };
 }
 
-inline mmcif::Point toPoint(const clipper::Coord_orth &pt)
+inline pdbx::Point toPoint(const clipper::Coord_orth &pt)
 {
-	return {static_cast<float>(pt.x()), static_cast<float>(pt.y()), static_cast<float>(pt.z())};
+	return { static_cast<float>(pt.x()), static_cast<float>(pt.y()), static_cast<float>(pt.z()) };
 }
 
 // --------------------------------------------------------------------
 
-clipper::Spacegroup getSpacegroup(const mmcif::Structure &structure);
-clipper::Cell getCell(const mmcif::Structure &structure);
+clipper::Spacegroup getSpacegroup(const cif::datablock &db);
+clipper::Cell getCell(const cif::datablock &db);
 
 } // namespace pdb_redo

@@ -37,8 +37,9 @@
 #include <clipper/clipper-ccp4.h>
 #include <clipper/clipper-contrib.h>
 
-#include "cif++/AtomType.hpp"
-#include "cif++/Cif++.hpp"
+#include <cif++.hpp>
+
+#include <pdbx++/AtomType.hpp>
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"

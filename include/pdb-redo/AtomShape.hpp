@@ -30,11 +30,10 @@
 
 #include <cif++.hpp>
 
+#include <pdbx++/point.hpp>
+
 namespace pdb_redo
 {
-
-using mmcif::Atom;
-using mmcif::Point;
 
 // --------------------------------------------------------------------
 // Class used in calculating radii
@@ -42,10 +41,18 @@ using mmcif::Point;
 class AtomShape
 {
   public:
-	AtomShape(const Atom &atom, float resHigh, float resLow,
+	AtomShape(const cif::datablock &db, std::string_view atom_id, float resHigh, float resLow,
+		bool electronScattering)
+		: AtomShape(db["atom_site"].find1(cif::key("id") == atom_id), db["atom_site_anisotrop"].find1(cif::key("id") == atom_id),
+			  resHigh, resLow, electronScattering)
+	{
+	}
+
+	AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow,
 		bool electronScattering);
-	AtomShape(const Atom &atom, float resHigh, float resLow,
-		bool electronScattering, float bFactor);
+
+	// AtomShape(const cif::datablock &db, int atom_id, float resHigh, float resLow,
+	// 	bool electronScattering, float bFactor);
 
 	~AtomShape();
 
@@ -54,7 +61,7 @@ class AtomShape
 
 	float radius() const;
 	float calculatedDensity(float r) const;
-	float calculatedDensity(Point p) const;
+	float calculatedDensity(pdbx::Point p) const;
 
   private:
 	struct AtomShapeImpl *mImpl;
