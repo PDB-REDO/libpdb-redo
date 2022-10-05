@@ -65,11 +65,10 @@ void writeJSONSkipList(std::ostream &os, const SkipList &list)
 
 void writeCIFSkipList(std::ostream &os, const SkipList &list)
 {
-	cif::File file;
-	auto db = new cif::Datablock("skip");
-	file.append(db);
+	cif::file file;
+	auto &db = file.emplace_back("skip");
 
-	auto &&[cat, ignore] = db->emplace("skip_list");
+	auto &&[cat, ignore] = db.emplace("skip_list");
 
 	for (auto &res : list)
 		cat->emplace({{"auth_asym_id", res.auth_asym_id},
@@ -174,7 +173,7 @@ SkipList readCIFSkipList(std::istream &is)
 {
 	SkipList result;
 
-	cif::File file;
+	cif::file file;
 	file.load(is);
 
 	auto &db = file["skip"];

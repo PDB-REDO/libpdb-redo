@@ -39,8 +39,6 @@
 
 #include <cif++.hpp>
 
-#include <pdbx++/AtomType.hpp>
-
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
@@ -421,28 +419,28 @@ void Map<FTYPE>::write_masked(const std::filesystem::path &f, clipper::Grid_rang
 // --------------------------------------------------------------------
 
 template <typename FTYPE>
-Map<FTYPE> Map<FTYPE>::masked(const Structure &structure, const std::vector<Atom> &atoms) const
+Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms) const
 {
 	Map<FTYPE> result(*this);
 
-	auto rtops = AlternativeSites(getSpacegroup(structure), getCell(structure));
+	auto rtops = AlternativeSites(getSpacegroup(structure.get_datablock()), getCell(structure.get_datablock()));
 
 	for (auto &atom : atoms)
 	{
-		float radius = mmcif::AtomTypeTraits(atom.type()).radius(mmcif::RadiusType::VanderWaals);
+		float radius = cif::atom_type_traits(atom.get_type()).radius(cif::radius_type::van_der_waals);
 
-		auto cloc = toClipper(atom.location());
+		auto cloc = toClipper(atom.get_location());
 
 		for (auto &rt : rtops)
 		{
 			auto rcloc = cloc.transform(rt);
 
 			iterateGrid(toClipper(toPoint(rcloc)), radius, result.mMap,
-				[&result, radiusSq = radius * radius, a = atom.location()](auto iw)
+				[&result, radiusSq = radius * radius, a = atom.get_location()](auto iw)
 				{
-					Point p = toPoint(iw.coord_orth());
+					cif::point p = toPoint(iw.coord_orth());
 
-					if (DistanceSquared(a, p) < radiusSq)
+					if (distance_squared(a, p) < radiusSq)
 						result.mMap[iw] = -10;
 				});
 		}
@@ -452,20 +450,20 @@ Map<FTYPE> Map<FTYPE>::masked(const Structure &structure, const std::vector<Atom
 }
 
 template <typename FTYPE>
-float Map<FTYPE>::z_weighted_density(const Structure &structure, const std::vector<Atom> &atoms) const
+float Map<FTYPE>::z_weighted_density(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms) const
 {
 	FTYPE result = 0;
 
 	for (auto &atom : atoms)
 	{
-		auto co = toClipper(atom.location());
+		auto co = toClipper(atom.get_location());
 		auto a_cf = co.coord_frac(mMap.cell());
 		auto a_cm = a_cf.coord_map(mMap.grid_sampling());
 
 		FTYPE dv;
 		clipper::Interp_nearest::interp(mMap, a_cm, dv);
 
-		result += dv * static_cast<int>(atom.type() == mmcif::AtomType::D ? mmcif::AtomType::H : atom.type());
+		result += dv * static_cast<int>(atom.get_type() == cif::atom_type::D ? cif::atom_type::H : atom.get_type());
 	}
 
 	return result;
@@ -678,7 +676,7 @@ std::ostream &operator<<(std::ostream &os, const clipper::HKL &hkl)
 
 template <typename FTYPE>
 void MapMaker<FTYPE>::calculate(const fs::path &hklin,
-	const Structure &structure, bool noBulk, AnisoScalingFlag anisoScaling,
+	const cif::mm::structure &structure, bool noBulk, AnisoScalingFlag anisoScaling,
 	float samplingRate, bool electronScattering,
 	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> freeLabels)
 {
@@ -697,8 +695,8 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 {
 	using clipper::HKL;
 
-	cif::File reflnsFile(hklin);
-	auto &reflns = reflnsFile.firstDatablock();
+	cif::file reflnsFile(hklin);
+	auto &reflns = reflnsFile.front();
 
 	//	m_xname = reflns["exptl_crystal"].front()["id"].as<std::string>();
 	//	m_pname = reflns["entry"].front()["id"].as<std::string>();
@@ -839,7 +837,7 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 // --------------------------------------------------------------------
 
 template <typename FTYPE>
-void MapMaker<FTYPE>::recalc(const Structure &structure,
+void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 	bool noBulk, AnisoScalingFlag anisoScaling,
 	float samplingRate, bool electronScattering)
 {
@@ -856,7 +854,7 @@ void MapMaker<FTYPE>::recalc(const Structure &structure,
 
 	if (not electronScattering)
 	{
-		auto &exptl = structure.category("exptl");
+		auto &exptl = structure.get_category("exptl");
 		electronScattering = not exptl.empty() and exptl.front()["method"] == "ELECTRON CRYSTALLOGRAPHY";
 	}
 
@@ -1059,7 +1057,7 @@ void MapMaker<FTYPE>::fixMTZ()
 					std::cerr << "Test C8 failed at " << ih.hkl() << std::endl;
 			}
 
-			if (tests[C9] and (1.01 * FC + Gd - WFO) < -0.05)
+			if (tests[C9] and (1.01 * FC + FD - WFO) < -0.05)
 			{
 				tests[C9] = false;
 				if (cif::VERBOSE)

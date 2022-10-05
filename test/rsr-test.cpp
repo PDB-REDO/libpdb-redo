@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(refine_0)
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
 
-		std::cout << a1 << ": " << a1.location() << " => " << a2.location() << "  distance: " << Distance(a1, a2) << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
 	}
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
@@ -112,7 +112,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 
 	auto &res3 = chain.at(2);
 	for (auto a : res3.atoms())
-		structure.moveAtom(a, Nudge(a.location(), 0.5f));
+		structure.moveAtom(a, Nudge(a.get_location(), 0.5f));
 
 	mmcif::File refFile(example.string());
 	c::Structure reference(refFile);
@@ -128,7 +128,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
 
-		std::cout << a1 << ": " << a1.location() << " => " << a2.location() << "  distance: " << Distance(a1, a2) << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
 	}
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
 
-		std::cout << a1 << ": " << a1.location() << " => " << a2.location() << "  distance: " << Distance(a1, a2) << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
 	}
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
@@ -167,9 +167,9 @@ BOOST_AUTO_TEST_CASE(refine_2)
 
 	// Move the REA residue somewhat
 
-	auto &rea = structure.getResidue("B");
+	auto &rea = structure.get_residue("B");
 
-	std::vector<mmcif::Atom> atoms;
+	std::vector<cif::mm::atom> atoms;
 	for (auto a : rea.atoms())
 	{
 		for (auto b : dm.near(a, kNearBy))
@@ -196,7 +196,7 @@ BOOST_AUTO_TEST_CASE(refine_2)
 	c::Structure reference(refFile);
 
 	auto &atomsRea = rea.atoms();
-	auto &refAtomsRea = reference.getResidue("B").atoms();
+	auto &refAtomsRea = reference.get_residue("B").atoms();
 
 	BOOST_ASSERT(atomsRea.size() == refAtomsRea.size());
 
@@ -205,7 +205,7 @@ BOOST_AUTO_TEST_CASE(refine_2)
 		auto a1 = atomsRea.at(i);
 		auto a2 = refAtomsRea.at(i);
 
-		std::cout << a1 << ": " << a1.location() << " => " << a2.location() << "  distance: " << Distance(a1, a2) << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
 	}
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
@@ -233,7 +233,7 @@ BOOST_AUTO_TEST_CASE(refine_2)
 		auto a1 = atomsRea.at(i);
 		auto a2 = refAtomsRea.at(i);
 
-		std::cout << a1 << ": " << a1.location() << " => " << a2.location() << "  distance: " << Distance(a1, a2) << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
 	}
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;

@@ -31,7 +31,6 @@
 #include <clipper/clipper.h>
 
 #include <cif++.hpp>
-#include <pdbx++/Symmetry.hpp>
 
 #include <pdb-redo/ClipperWrapper.hpp>
 
@@ -45,11 +44,12 @@ namespace pdb_redo
 class DistanceMap
 {
   public:
-	DistanceMap(const cif::datablock &db, int model_nr, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+
+	DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
 		float maxDistance);
 
-	DistanceMap(const cif::datablock &db, int model_nr, float maxDistance)
-		: DistanceMap(db, model_nr, getSpacegroup(db), getCell(db), maxDistance)
+	DistanceMap(const cif::mm::structure &p, float maxDistance)
+		: DistanceMap(p, getSpacegroup(p.get_datablock()), getCell(p.get_datablock()), maxDistance)
 	{
 	}
 
@@ -58,7 +58,7 @@ class DistanceMap
 
 	float operator()(const std::string &a, const std::string &b) const;
 
-	std::vector<std::string> near(cif::row_handle atom, float maxDistance = 3.5f) const;
+	std::vector<cif::mm::atom> near(const cif::mm::atom &atom, float maxDistance = 3.5f) const;
 
 	static std::vector<clipper::RTop_orth>
 	AlternativeSites(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell);
@@ -68,10 +68,10 @@ class DistanceMap
 	using DistValueType = std::tuple<float, int32_t>;
 	using DistMap = std::map<DistKeyType, DistValueType>;
 
-	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,pdbx::Point>> &a,
-		const std::vector<std::tuple<size_t,pdbx::Point>> &b, DistMap &dm, int32_t rtix);
+	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
+		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, int32_t rtix);
 
-	const cif::datablock &db;
+	const cif::mm::structure &mStructure;
 	clipper::Cell cell;
 	clipper::Spacegroup spacegroup;
 	size_t dim;
@@ -82,7 +82,7 @@ class DistanceMap
 
 	std::vector<std::tuple<float, int32_t>> mA;
 	std::vector<size_t> mIA, mJA;
-	pdbx::Point mD; // needed to move atoms to center
+	cif::point mD; // needed to move atoms to center
 	std::vector<clipper::RTop_orth> mRtOrth;
 };
 

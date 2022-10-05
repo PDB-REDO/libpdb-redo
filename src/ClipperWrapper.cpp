@@ -25,8 +25,6 @@
  */
 
 #include "pdb-redo/ClipperWrapper.hpp"
-#include <pdbx++/Symmetry.hpp>
-// #include "cif++/Symmetry.hpp"
 
 namespace pdb_redo
 {
@@ -35,12 +33,12 @@ namespace pdb_redo
 
 clipper::Atom toClipper(cif::row_handle atom, cif::row_handle aniso_row)
 {
-	const double kPI = pdbx::kPI;
+	const double kPI = cif::kPI;
 
 	clipper::Atom result;
 
-	pdbx::Point location = atom.get<float, float, float>("Cartn_x", "Cartn_y", "Cartn_z");
-	result.set_coord_orth({ location.mX, location.mY, location.mZ });
+	cif::point location = atom.get<float, float, float>("Cartn_x", "Cartn_y", "Cartn_z");
+	result.set_coord_orth({ location.m_x, location.m_y, location.m_z });
 
 	if (atom["occupancy"].empty())
 		result.set_occupancy(1.0);
@@ -79,6 +77,11 @@ clipper::Atom toClipper(cif::row_handle atom, cif::row_handle aniso_row)
 	return result;
 }
 
+clipper::Atom toClipper(const cif::mm::atom &atom)
+{
+	return toClipper(atom.get_row(), atom.get_row_aniso());
+}
+
 // --------------------------------------------------------------------
 
 clipper::Spacegroup getSpacegroup(const cif::datablock &db)
@@ -94,7 +97,7 @@ clipper::Spacegroup getSpacegroup(const cif::datablock &db)
 
 	try
 	{
-		return clipper::Spacegroup{ clipper::Spgr_descr(pdbx::GetSpacegroupNumber(spacegroup)) };
+		return clipper::Spacegroup{ clipper::Spgr_descr(cif::get_space_group_number(spacegroup)) };
 	}
 	catch (const clipper::Message_fatal &m)
 	{

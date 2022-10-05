@@ -40,7 +40,6 @@
 #include "pdb-redo/Minimizer.hpp"
 #include "pdb-redo/Symmetry-2.hpp"
 
-using namespace mmcif;
 namespace fs = std::filesystem;
 
 namespace pdb_redo
@@ -58,10 +57,10 @@ const double
 
 struct lessAtom
 {
-	bool operator()(const Atom &a, const Atom &b) const { return a.id().compare(b.id()) < 0; }
+	bool operator()(const cif::mm::atom &a, const cif::mm::atom &b) const { return a.id().compare(b.id()) < 0; }
 };
 
-typedef std::set<Atom, lessAtom> AtomSet;
+typedef std::set<cif::mm::atom, lessAtom> AtomSet;
 
 // --------------------------------------------------------------------
 
@@ -69,7 +68,7 @@ DPoint AtomLocationProvider::operator[](AtomRef atomID) const
 {
 	if (atomID >= mAtoms.size())
 		throw std::range_error("Unknown atom " + std::to_string(atomID));
-	return mAtoms[atomID].location();
+	return mAtoms[atomID].get_location();
 }
 
 std::string AtomLocationProvider::atom(AtomRef atomID) const
@@ -77,23 +76,23 @@ std::string AtomLocationProvider::atom(AtomRef atomID) const
 	if (atomID >= mAtoms.size())
 		throw std::range_error("Unknown atom " + std::to_string(atomID));
 	auto &a = mAtoms[atomID];
-	return std::to_string(a.labelSeqID()) + ' ' + a.labelAtomID();
+	return std::to_string(a.get_label_seq_id()) + ' ' + a.get_label_atom_id();
 }
 
 // --------------------------------------------------------------------
 
-Minimizer::Minimizer(const mmcif::Structure &structure, const mmcif::BondMap &bonds, float plane5AtomsESD)
+Minimizer::Minimizer(const cif::mm::structure &structure, const BondMap &bonds, float plane5AtomsESD)
 	: mStructure(structure)
 	, mBonds(bonds)
 	, mPlane5ESD(plane5AtomsESD)
 {
 }
 
-void Minimizer::addResidue(const mmcif::Residue &res)
+void Minimizer::addResidue(const cif::mm::residue &res)
 {
-	auto compound = Compound::create(res.compoundID()); // r.compound();
+	auto compound = Compound::create(res.get_compound_id()); // r.get_compound();
 	if (not compound)
-		throw std::runtime_error("Missing compound information for " + res.compoundID());
+		throw std::runtime_error("Missing compound information for " + res.get_compound_id());
 
 	for (auto a : res.atoms())
 	{
@@ -105,14 +104,14 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 	{
 		try
 		{
-			if (compound->getAtomByID(b.atomID[0]).typeSymbol == H or
-				compound->getAtomByID(b.atomID[1]).typeSymbol == H)
+			if (compound->get_atom_by_atom_id(b.atomID[0]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(b.atomID[1]).typeSymbol == cif::H)
 			{
 				continue;
 			}
 
-			Atom a1 = res.atomByID(b.atomID[0]);
-			Atom a2 = res.atomByID(b.atomID[1]);
+			cif::mm::atom a1 = res.get_atom_by_atom_id(b.atomID[0]);
+			cif::mm::atom a2 = res.get_atom_by_atom_id(b.atomID[1]);
 
 			if (not(a1 and a2))
 				continue;
@@ -131,16 +130,16 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 	{
 		try
 		{
-			if (compound->getAtomByID(a.atomID[0]).typeSymbol == H or
-				compound->getAtomByID(a.atomID[1]).typeSymbol == H or
-				compound->getAtomByID(a.atomID[2]).typeSymbol == H)
+			if (compound->get_atom_by_atom_id(a.atomID[0]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(a.atomID[1]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(a.atomID[2]).typeSymbol == cif::H)
 			{
 				continue;
 			}
 
-			Atom a1 = res.atomByID(a.atomID[0]);
-			Atom a2 = res.atomByID(a.atomID[1]);
-			Atom a3 = res.atomByID(a.atomID[2]);
+			cif::mm::atom a1 = res.get_atom_by_atom_id(a.atomID[0]);
+			cif::mm::atom a2 = res.get_atom_by_atom_id(a.atomID[1]);
+			cif::mm::atom a3 = res.get_atom_by_atom_id(a.atomID[2]);
 
 			if (not(a1 and a2 and a3))
 				continue;
@@ -163,18 +162,18 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 
 		try
 		{
-			if (compound->getAtomByID(a.atomID[0]).typeSymbol == H or
-				compound->getAtomByID(a.atomID[1]).typeSymbol == H or
-				compound->getAtomByID(a.atomID[2]).typeSymbol == H or
-				compound->getAtomByID(a.atomID[3]).typeSymbol == H)
+			if (compound->get_atom_by_atom_id(a.atomID[0]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(a.atomID[1]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(a.atomID[2]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(a.atomID[3]).typeSymbol == cif::H)
 			{
 				continue;
 			}
 
-			Atom a1 = res.atomByID(a.atomID[0]);
-			Atom a2 = res.atomByID(a.atomID[1]);
-			Atom a3 = res.atomByID(a.atomID[2]);
-			Atom a4 = res.atomByID(a.atomID[3]);
+			cif::mm::atom a1 = res.get_atom_by_atom_id(a.atomID[0]);
+			cif::mm::atom a2 = res.get_atom_by_atom_id(a.atomID[1]);
+			cif::mm::atom a3 = res.get_atom_by_atom_id(a.atomID[2]);
+			cif::mm::atom a4 = res.get_atom_by_atom_id(a.atomID[3]);
 
 			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), a.angle, a.esd, a.period);
 		}
@@ -190,17 +189,17 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 	{
 		try
 		{
-			if (compound->getAtomByID(cv.atomID[0]).typeSymbol == H or
-				compound->getAtomByID(cv.atomID[1]).typeSymbol == H or
-				compound->getAtomByID(cv.atomID[2]).typeSymbol == H)
+			if (compound->get_atom_by_atom_id(cv.atomID[0]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(cv.atomID[1]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(cv.atomID[2]).typeSymbol == cif::H)
 			{
 				continue;
 			}
 
-			Atom cc = res.atomByID(cv.atomIDCentre);
-			Atom a1 = res.atomByID(cv.atomID[0]);
-			Atom a2 = res.atomByID(cv.atomID[1]);
-			Atom a3 = res.atomByID(cv.atomID[2]);
+			cif::mm::atom cc = res.get_atom_by_atom_id(cv.atomIDCentre);
+			cif::mm::atom a1 = res.get_atom_by_atom_id(cv.atomID[0]);
+			cif::mm::atom a2 = res.get_atom_by_atom_id(cv.atomID[1]);
+			cif::mm::atom a3 = res.get_atom_by_atom_id(cv.atomID[2]);
 
 			if (not(cc and a1 and a2 and a3))
 				continue;
@@ -226,10 +225,10 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 
 			for (auto a : p.atomID)
 			{
-				if (compound->getAtomByID(a).typeSymbol == H)
+				if (compound->get_atom_by_atom_id(a).typeSymbol == cif::H)
 					continue;
 
-				auto a1 = res.atomByID(a);
+				auto a1 = res.get_atom_by_atom_id(a);
 				if (not a1)
 					continue;
 
@@ -248,39 +247,39 @@ void Minimizer::addResidue(const mmcif::Residue &res)
 	}
 }
 
-void Minimizer::addPolySection(const mmcif::Polymer &poly, int first, int last)
+void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last)
 {
-	const Monomer *prev = nullptr; // used to link residues
+	const cif::mm::monomer *prev = nullptr; // used to link residues
 
 	for (auto &r : poly)
 	{
-		if (r.seqID() < first)
+		if (r.get_seq_id() < first)
 		{
 			prev = &r;
 			continue;
 		}
 
-		if (r.seqID() <= last)
+		if (r.get_seq_id() <= last)
 			addResidue(r);
 
 		if (prev != nullptr)
 			try
 			{
-				Atom c = prev->atomByID("C"), n = r.atomByID("N");
+				cif::mm::atom c = prev->get_atom_by_atom_id("C"), n = r.get_atom_by_atom_id("N");
 
-				if (c and n and DistanceSquared(c, n) < kMaxPeptideBondLengthSq)
+				if (c and n and distance_squared(c, n) < kMaxPeptideBondLengthSq)
 				{
-					bool trans = not Monomer::isCis(*prev, r);
+					bool trans = not cif::mm::monomer::is_cis(*prev, r);
 
 					if (trans)
-						addLinkRestraints(*prev, r, r.compoundID() == "PRO" ? "PTRANS" : "TRANS");
+						addLinkRestraints(*prev, r, r.get_compound_id() == "PRO" ? "PTRANS" : "TRANS");
 					else
-						addLinkRestraints(*prev, r, r.compoundID() == "PRO" ? "PCIS" : "CIS");
+						addLinkRestraints(*prev, r, r.get_compound_id() == "PRO" ? "PCIS" : "CIS");
 
 					if (trans)
 					{
-						Atom ca1 = prev->atomByID("CA");
-						Atom ca2 = r.atomByID("CA");
+						cif::mm::atom ca1 = prev->get_atom_by_atom_id("CA");
+						cif::mm::atom ca2 = r.get_atom_by_atom_id("CA");
 
 						mTransPeptideRestraints.emplace_back(TransPeptideRestraint{
 							ref(ca1),
@@ -291,11 +290,11 @@ void Minimizer::addPolySection(const mmcif::Polymer &poly, int first, int last)
 
 					// add planar restraints
 					std::vector<AtomRef> atoms = {
-						ref(prev->atomByID("CA")),
+						ref(prev->get_atom_by_atom_id("CA")),
 						ref(c),
-						ref(prev->atomByID("O")),
+						ref(prev->get_atom_by_atom_id("O")),
 						ref(n),
-						ref(r.atomByID("CA"))};
+						ref(r.get_atom_by_atom_id("CA"))};
 
 					mPlanarityRestraints.emplace_back(PlanarityRestraint{move(atoms), mPlane5ESD});
 				}
@@ -307,7 +306,7 @@ void Minimizer::addPolySection(const mmcif::Polymer &poly, int first, int last)
 				//			continue;
 			}
 
-		if (r.seqID() > last)
+		if (r.get_seq_id() > last)
 			break;
 
 		prev = &r;
@@ -326,11 +325,11 @@ void Minimizer::addDensityMap(const XMap &xMap, float mapWeight)
 	densityAtoms.reserve(mAtoms.size());
 
 	transform(mAtoms.begin(), mAtoms.end(), back_inserter(densityAtoms),
-		[this](const Atom &a)
+		[this](const cif::mm::atom &a)
 		{
-			double z = static_cast<int>(a.type());
+			double z = static_cast<int>(a.get_type());
 			double weight = 1;
-			double occupancy = a.occupancy();
+			double occupancy = a.get_occupancy();
 
 			if (occupancy > 1)
 				occupancy = 1;
@@ -351,7 +350,7 @@ void Minimizer::Finish()
 	fs::path enerLibFilePath(getenv("CLIBD_MON"));
 	enerLibFilePath /= "ener_lib.cif";
 
-	cif::File enerLibFile(enerLibFilePath);
+	cif::file enerLibFile(enerLibFilePath);
 	auto &db = enerLibFile["energy"];
 	auto &libAtom = db["lib_atom"];
 
@@ -359,7 +358,7 @@ void Minimizer::Finish()
 
 	std::set<std::tuple<AtomRef, AtomRef>> nbc;
 
-	SymmetryAtomIteratorFactory saif(mStructure, getSpacegroup(mStructure), getCell(mStructure));
+	SymmetryAtomIteratorFactory saif(mStructure, getSpacegroup(mStructure.get_datablock()), getCell(mStructure.get_datablock()));
 
 	// now add the non-bonded restraints
 	for (auto &a1 : mAtoms)
@@ -368,7 +367,7 @@ void Minimizer::Finish()
 
 		for (auto sAtom : mStructure.atoms())
 		{
-			for (auto a2 : saif(sAtom, [l = a1.location()](const Point &p) { return DistanceSquared(p, l) <= kNonBondedContactDistanceSq; }))
+			for (auto a2 : saif(sAtom, [l = a1.get_location()](const cif::point &p) { return distance_squared(p, l) <= kNonBondedContactDistanceSq; }))
 			{
 				if (a1 == a2)
 					continue;
@@ -376,7 +375,7 @@ void Minimizer::Finish()
 				if (mBonds(a1, a2))
 					continue;
 
-				if (DistanceSquared(a1, a2) > kNonBondedContactDistanceSq)
+				if (distance_squared(a1, a2) > kNonBondedContactDistanceSq)
 					continue;
 
 				AtomRef ra2 = ref(a2);
@@ -389,28 +388,28 @@ void Minimizer::Finish()
 						{ return (ar.mA == ra1 and ar.mC == ra2) or (ar.mA == ra2 and ar.mC == ra1); }) != mAngleRestraints.end())
 					continue;
 
-				if ((a1.labelCompID() == "PRO" or a1.labelCompID() == "HYP") and
-					a1.labelSeqID() == a2.labelSeqID() + 1 and
-					a1.labelAtomID() == "CD")
+				if ((a1.get_label_comp_id() == "PRO" or a1.get_label_comp_id() == "HYP") and
+					a1.get_label_seq_id() == a2.get_label_seq_id() + 1 and
+					a1.get_label_atom_id() == "CD")
 				{
 					continue;
 				}
 
-				if ((a2.labelCompID() == "PRO" or a2.labelCompID() == "HYP") and
-					a2.labelSeqID() == a1.labelSeqID() + 1 and
-					a2.labelAtomID() == "CD")
+				if ((a2.get_label_comp_id() == "PRO" or a2.get_label_comp_id() == "HYP") and
+					a2.get_label_seq_id() == a1.get_label_seq_id() + 1 and
+					a2.get_label_atom_id() == "CD")
 				{
 					continue;
 				}
 
-				if ((a1.labelCompID() == "ASN" or a2.labelCompID() == "NAG") and
-					a1.labelAtomID() == "OD1" and a2.labelAtomID() == "C1")
+				if ((a1.get_label_comp_id() == "ASN" or a2.get_label_comp_id() == "NAG") and
+					a1.get_label_atom_id() == "OD1" and a2.get_label_atom_id() == "C1")
 				{
 					continue;
 				}
 
-				if ((a1.labelCompID() == "NAG" or a2.labelCompID() == "ASN") and
-					a1.labelAtomID() == "C1" and a2.labelAtomID() == "OD1")
+				if ((a1.get_label_comp_id() == "NAG" or a2.get_label_comp_id() == "ASN") and
+					a1.get_label_atom_id() == "C1" and a2.get_label_atom_id() == "OD1")
 				{
 					continue;
 				}
@@ -423,8 +422,8 @@ void Minimizer::Finish()
 						std::cerr << "1_4 for " << a1 << " and " << a2 << std::endl;
 					minDist = 2.64;
 				}
-				else if ((a1.labelSeqID() + 1 == a2.labelSeqID() and a1.labelAtomID() == "O" and a2.labelAtomID() == "C") or
-						(a2.labelSeqID() + 1 == a1.labelSeqID() and a2.labelAtomID() == "O" and a1.labelAtomID() == "C"))
+				else if ((a1.get_label_seq_id() + 1 == a2.get_label_seq_id() and a1.get_label_atom_id() == "O" and a2.get_label_atom_id() == "C") or
+						(a2.get_label_seq_id() + 1 == a1.get_label_seq_id() and a2.get_label_atom_id() == "O" and a1.get_label_atom_id() == "C"))
 				{
 					minDist = 2.84;
 				}
@@ -432,32 +431,32 @@ void Minimizer::Finish()
 				{
 					try
 					{
-						auto c1 = Compound::create(a1.labelCompID());
-						auto c2 = Compound::create(a2.labelCompID());
+						auto c1 = Compound::create(a1.get_label_comp_id());
+						auto c2 = Compound::create(a2.get_label_comp_id());
 
-						std::string et1 = c1->getAtomByID(a1.labelAtomID()).typeEnergy;
-						std::string et2 = c2->getAtomByID(a2.labelAtomID()).typeEnergy;
+						std::string et1 = c1->get_atom_by_atom_id(a1.get_label_atom_id()).typeEnergy;
+						std::string et2 = c2->get_atom_by_atom_id(a2.get_label_atom_id()).typeEnergy;
 
 						if (not(et1.empty() or et2.empty()))
 						{
-							auto r1 = libAtom.find(cif::Key("type") == et1);
-							auto r2 = libAtom.find(cif::Key("type") == et2);
+							auto r1 = libAtom.find(cif::key("type") == et1);
+							auto r2 = libAtom.find(cif::key("type") == et2);
 
 							if (not(r1.empty() or r2.empty()))
 							{
-								if (AtomTypeTraits(a1.type()).isMetal())
+								if (cif::atom_type_traits(a1.get_type()).is_metal())
 									minDist = r1.front()["ion_radius"].as<float>();
 								else
 									minDist = r1.front()["vdw_radius"].as<float>();
 
-								if (AtomTypeTraits(a2.type()).isMetal())
+								if (cif::atom_type_traits(a2.get_type()).is_metal())
 									minDist += r2.front()["ion_radius"].as<float>();
 								else
 									minDist += r2.front()["vdw_radius"].as<float>();
 
 								// OK, now that we're here, see if the atoms are in the same residue...
 
-								if (a1.labelAsymID() == a2.labelAsymID() and a1.labelSeqID() == a2.labelSeqID())
+								if (a1.get_label_asym_id() == a2.get_label_asym_id() and a1.get_label_seq_id() == a2.get_label_seq_id())
 									minDist *= 0.84;
 
 								std::string hbType1 = r1.front()["hb_type"].as<std::string>(),
@@ -483,23 +482,23 @@ void Minimizer::Finish()
 
 						if (find(mAtoms.begin(), mAtoms.end(), a2) == mAtoms.end())
 						{
-							switch (std::abs(a1.labelSeqID() - a2.labelSeqID()))
+							switch (std::abs(a1.get_label_seq_id() - a2.get_label_seq_id()))
 							{
 								case 1:
-									if ((a1.labelAtomID() == "O" and a2.labelAtomID() == "CA") or
-										(a1.labelAtomID() == "CA" and a2.labelAtomID() == "O") or
-										(a1.labelAtomID() == "N" and a2.labelAtomID() == "CB") or
-										(a1.labelAtomID() == "CB" and a2.labelAtomID() == "N") or
-										(a1.labelAtomID() == "C" and a2.labelAtomID() == "CB") or
-										(a1.labelAtomID() == "CB" and a2.labelAtomID() == "C"))
+									if ((a1.get_label_atom_id() == "O" and a2.get_label_atom_id() == "CA") or
+										(a1.get_label_atom_id() == "CA" and a2.get_label_atom_id() == "O") or
+										(a1.get_label_atom_id() == "N" and a2.get_label_atom_id() == "CB") or
+										(a1.get_label_atom_id() == "CB" and a2.get_label_atom_id() == "N") or
+										(a1.get_label_atom_id() == "C" and a2.get_label_atom_id() == "CB") or
+										(a1.get_label_atom_id() == "CB" and a2.get_label_atom_id() == "C"))
 									{
 										minDist = 2.7;
 									}
 									break;
 
 								case 2:
-									if ((a1.labelAtomID() == "C" and a2.labelAtomID() == "N") or
-										(a1.labelAtomID() == "N" and a2.labelAtomID() == "C"))
+									if ((a1.get_label_atom_id() == "C" and a2.get_label_atom_id() == "N") or
+										(a1.get_label_atom_id() == "N" and a2.get_label_atom_id() == "C"))
 									{
 										minDist = 2.7;
 									}
@@ -569,7 +568,7 @@ void Minimizer::Finish()
 			r->print(loc);
 }
 
-AtomRef Minimizer::ref(const mmcif::Atom &atom)
+AtomRef Minimizer::ref(const cif::mm::atom &atom)
 {
 	std::string atomID = atom.id();
 	AtomRef result;
@@ -587,34 +586,34 @@ AtomRef Minimizer::ref(const mmcif::Atom &atom)
 	return result;
 }
 
-void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link &link)
+void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b, const Link &link)
 {
-	auto &c1 = a.compound();
-	auto &c2 = b.compound();
+	auto c1 = cif::compound_factory::instance().create(a.get_compound_id());
+	auto c2 = cif::compound_factory::instance().create(b.get_compound_id());
 
 	auto getCompoundAtom = [&](const LinkAtom &la)
 	{
-		return la.compID == 1 ? c1.getAtomByID(la.atomID) : c2.getAtomByID(la.atomID);
+		return la.compID == 1 ? c1->get_atom_by_atom_id(la.atomID) : c2->get_atom_by_atom_id(la.atomID);
 	};
 
 	auto getAtom = [&](const LinkAtom &la)
 	{
-		const Residue &r = la.compID == 1 ? a : b;
-		return r.atomByID(la.atomID);
+		const cif::mm::residue &r = la.compID == 1 ? a : b;
+		return r.get_atom_by_atom_id(la.atomID);
 	};
 
 	for (auto &b : link.bonds())
 	{
 		try
 		{
-			if (getCompoundAtom(b.atom[0]).typeSymbol == H or
-				getCompoundAtom(b.atom[1]).typeSymbol == H)
+			if (getCompoundAtom(b.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(b.atom[1]).type_symbol == cif::H)
 			{
 				continue;
 			}
 
-			Atom a1 = getAtom(b.atom[0]);
-			Atom a2 = getAtom(b.atom[1]);
+			cif::mm::atom a1 = getAtom(b.atom[0]);
+			cif::mm::atom a2 = getAtom(b.atom[1]);
 
 			mBondRestraints.emplace_back(ref(a1), ref(a2), b.distance, b.esd);
 		}
@@ -630,16 +629,16 @@ void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link
 	{
 		try
 		{
-			if (getCompoundAtom(a.atom[0]).typeSymbol == H or
-				getCompoundAtom(a.atom[1]).typeSymbol == H or
-				getCompoundAtom(a.atom[2]).typeSymbol == H)
+			if (getCompoundAtom(a.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(a.atom[1]).type_symbol == cif::H or
+				getCompoundAtom(a.atom[2]).type_symbol == cif::H)
 			{
 				continue;
 			}
 
-			Atom a1 = getAtom(a.atom[0]);
-			Atom a2 = getAtom(a.atom[1]);
-			Atom a3 = getAtom(a.atom[2]);
+			cif::mm::atom a1 = getAtom(a.atom[0]);
+			cif::mm::atom a2 = getAtom(a.atom[1]);
+			cif::mm::atom a3 = getAtom(a.atom[2]);
 
 			mAngleRestraints.emplace_back(ref(a1), ref(a2), ref(a3), a.angle, a.esd);
 		}
@@ -658,18 +657,18 @@ void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link
 	//
 	//		try
 	//		{
-	//			if (getCompoundAtom(a.atom[0]).typeSymbol == H or
-	//				getCompoundAtom(a.atom[1]).typeSymbol == H or
-	//				getCompoundAtom(a.atom[2]).typeSymbol == H or
-	//				getCompoundAtom(a.atom[3]).typeSymbol == H)
+	//			if (getCompoundAtom(a.atom[0]).type_symbol == cif::H or
+	//				getCompoundAtom(a.atom[1]).type_symbol == cif::H or
+	//				getCompoundAtom(a.atom[2]).type_symbol == cif::H or
+	//				getCompoundAtom(a.atom[3]).type_symbol == cif::H)
 	//			{
 	//				continue;
 	//			}
 	//
-	//			Atom a1 = getAtom(a.atom[0]);
-	//			Atom a2 = getAtom(a.atom[1]);
-	//			Atom a3 = getAtom(a.atom[2]);
-	//			Atom a4 = getAtom(a.atom[3]);
+	//			cif::mm::atom a1 = getAtom(a.atom[0]);
+	//			cif::mm::atom a2 = getAtom(a.atom[1]);
+	//			cif::mm::atom a3 = getAtom(a.atom[2]);
+	//			cif::mm::atom a4 = getAtom(a.atom[3]);
 	//
 	//			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), a.angle, a.esd, a.period);
 	//		}
@@ -685,19 +684,19 @@ void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link
 	{
 		try
 		{
-			if (getCompoundAtom(cv.atom[0]).typeSymbol == H or
-				getCompoundAtom(cv.atom[1]).typeSymbol == H or
-				getCompoundAtom(cv.atom[2]).typeSymbol == H)
+			if (getCompoundAtom(cv.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(cv.atom[1]).type_symbol == cif::H or
+				getCompoundAtom(cv.atom[2]).type_symbol == cif::H)
 			{
 				continue;
 			}
 
-			Atom cc = getAtom(cv.atomCentre);
-			Atom a1 = getAtom(cv.atom[0]);
-			Atom a2 = getAtom(cv.atom[1]);
-			Atom a3 = getAtom(cv.atom[2]);
+			cif::mm::atom cc = getAtom(cv.atomCentre);
+			cif::mm::atom a1 = getAtom(cv.atom[0]);
+			cif::mm::atom a2 = getAtom(cv.atom[1]);
+			cif::mm::atom a3 = getAtom(cv.atom[2]);
 
-			auto volume = link.chiralVolume(cv.id, a.compoundID(), b.compoundID());
+			auto volume = link.chiralVolume(cv.id, a.get_compound_id(), b.get_compound_id());
 
 			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1), ref(a2), ref(a3), volume);
 		}
@@ -717,7 +716,7 @@ void Minimizer::addLinkRestraints(const Residue &a, const Residue &b, const Link
 
 			for (auto a : p.atoms)
 			{
-				if (getCompoundAtom(a).typeSymbol == H)
+				if (getCompoundAtom(a).type_symbol == cif::H)
 					continue;
 
 				atoms.push_back(ref(getAtom(a)));
@@ -787,7 +786,7 @@ double Minimizer::score(const AtomLocationProvider &loc)
 class GSLAtomLocation : public AtomLocationProvider
 {
   public:
-	GSLAtomLocation(std::vector<Atom> &atoms, const std::vector<Point> &fixedAtoms,
+	GSLAtomLocation(std::vector<cif::mm::atom> &atoms, const std::vector<cif::point> &fixedAtoms,
 		const std::vector<size_t> &index, const gsl_vector *v)
 		: AtomLocationProvider(atoms)
 		, mFixedLocations(fixedAtoms)
@@ -819,7 +818,7 @@ class GSLAtomLocation : public AtomLocationProvider
 	void storeLocations();
 
   private:
-	const std::vector<Point> &mFixedLocations;
+	const std::vector<cif::point> &mFixedLocations;
 	const std::vector<size_t> &mIndex;
 	const gsl_vector *mV;
 };
@@ -852,7 +851,7 @@ void GSLAtomLocation::storeLocations()
 			gsl_vector_get(mV, ri * 3 + 1),
 			gsl_vector_get(mV, ri * 3 + 2)};
 
-		mAtoms[i].location(p);
+		mAtoms[i].set_location(p);
 	}
 }
 
@@ -861,7 +860,7 @@ void GSLAtomLocation::storeLocations()
 class GSLDFCollector : public DFCollector
 {
   public:
-	GSLDFCollector(const std::vector<mmcif::Atom> &atoms, const std::vector<size_t> &index, gsl_vector *df)
+	GSLDFCollector(const std::vector<cif::mm::atom> &atoms, const std::vector<size_t> &index, gsl_vector *df)
 		: mAtoms(atoms)
 		, mIndex(index)
 		, mDF(df)
@@ -885,12 +884,12 @@ class GSLDFCollector : public DFCollector
 	// for debugging
 	std::string label(AtomRef atom) const
 	{
-		std::string atomName = " " + mAtoms[atom].labelAtomID();
+		std::string atomName = " " + mAtoms[atom].get_label_atom_id();
 		atomName += std::string(5 - atomName.length(), ' ');
-		return std::to_string(mAtoms[atom].labelSeqID()) + atomName;
+		return std::to_string(mAtoms[atom].get_label_seq_id()) + atomName;
 	}
 
-	const std::vector<mmcif::Atom> &mAtoms;
+	const std::vector<cif::mm::atom> &mAtoms;
 	const std::vector<size_t> &mIndex;
 	gsl_vector *mDF;
 };
@@ -940,7 +939,7 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 class GSLMinimizer : public Minimizer
 {
   public:
-	GSLMinimizer(const mmcif::Structure &structure, const mmcif::BondMap &bm, float plane5AtomsESD)
+	GSLMinimizer(const cif::mm::structure &structure, const BondMap &bm, float plane5AtomsESD)
 		: Minimizer(structure, bm, plane5AtomsESD)
 	{
 	}
@@ -950,7 +949,7 @@ class GSLMinimizer : public Minimizer
 		Minimizer::Finish();
 
 		for (auto &a : mReferencedAtoms)
-			mFixedLocations.push_back(a.location());
+			mFixedLocations.push_back(a.get_location());
 	}
 
 	~GSLMinimizer()
@@ -960,7 +959,7 @@ class GSLMinimizer : public Minimizer
 	}
 
 	virtual double refine(bool storeAtoms);
-	virtual std::vector<std::pair<std::string, mmcif::Point>> getAtoms() const;
+	virtual std::vector<std::pair<std::string, cif::point>> getAtoms() const;
 	virtual void storeAtomLocations();
 
   private:
@@ -972,7 +971,7 @@ class GSLMinimizer : public Minimizer
 	void Df(const gsl_vector *v, gsl_vector *df);
 	void Fdf(const gsl_vector *x, double *f, gsl_vector *df);
 
-	std::vector<Point> mFixedLocations;
+	std::vector<cif::point> mFixedLocations;
 	gsl_multimin_fdfminimizer *m_s = nullptr;
 };
 
@@ -993,10 +992,10 @@ double GSLMinimizer::refine(bool storeAtoms)
 	size_t ix = 0;
 	for (auto &a : mAtoms)
 	{
-		auto l = a.location();
-		gsl_vector_set(x, ix++, l.mX);
-		gsl_vector_set(x, ix++, l.mY);
-		gsl_vector_set(x, ix++, l.mZ);
+		auto l = a.get_location();
+		gsl_vector_set(x, ix++, l.m_x);
+		gsl_vector_set(x, ix++, l.m_y);
+		gsl_vector_set(x, ix++, l.m_z);
 	}
 
 	m_s = gsl_multimin_fdfminimizer_alloc(T, 3 * mAtoms.size());
@@ -1019,9 +1018,9 @@ double GSLMinimizer::refine(bool storeAtoms)
 			size_t ix = 0;
 			for (auto &a : mAtoms)
 			{
-				auto l = a.location();
+				auto l = a.get_location();
 
-				Point p{
+				cif::point p{
 					static_cast<float>(gsl_vector_get(m_s->x, ix + 0)),
 					static_cast<float>(gsl_vector_get(m_s->x, ix + 1)),
 					static_cast<float>(gsl_vector_get(m_s->x, ix + 2))};
@@ -1070,9 +1069,9 @@ double GSLMinimizer::refine(bool storeAtoms)
 	return m_s->f;
 }
 
-std::vector<std::pair<std::string, mmcif::Point>> GSLMinimizer::getAtoms() const
+std::vector<std::pair<std::string, cif::point>> GSLMinimizer::getAtoms() const
 {
-	std::vector<std::pair<std::string, mmcif::Point>> result;
+	std::vector<std::pair<std::string, cif::point>> result;
 
 	for (size_t i = 0; i < mRef2AtomIndex.size(); ++i)
 	{
@@ -1152,28 +1151,28 @@ void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 
 // --------------------------------------------------------------------
 
-Minimizer *Minimizer::create(const Polymer &poly, int first, int last, const BondMap &bonds,
+Minimizer *Minimizer::create(const cif::mm::polymer &poly, int first, int last, const BondMap &bonds,
 	const XMap &xMap, float mapWeight, float plane5AtomsESD)
 {
-	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.structure(), bonds, plane5AtomsESD));
+	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure(), bonds, plane5AtomsESD));
 	result->addPolySection(poly, first, last);
 	result->addDensityMap(xMap, mapWeight);
 	result->Finish();
 	return result.release();
 }
 
-Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
-	const mmcif::BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight)
+Minimizer *Minimizer::create(cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
+	const BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight)
 {
 	std::unique_ptr<Minimizer> result(new GSLMinimizer(structure, bm, plane5AtomsESD));
 
-	std::vector<const mmcif::Residue *> residues;
+	std::vector<const cif::mm::residue *> residues;
 
 	for (auto atom : atoms)
 	{
-		auto &res = structure.getResidue(atom);
+		auto &res = structure.get_residue(atom);
 
-		auto ri = std::find_if(residues.begin(), residues.end(), [rp = &res](const Residue *r)
+		auto ri = std::find_if(residues.begin(), residues.end(), [rp = &res](const cif::mm::residue *r)
 			{ return r == rp; });
 		if (ri != residues.end())
 			continue;
@@ -1183,11 +1182,11 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 
 	// sort by asym, seq_id
 
-	sort(residues.begin(), residues.end(), [](const mmcif::Residue *a, const mmcif::Residue *b)
+	sort(residues.begin(), residues.end(), [](const cif::mm::residue *a, const cif::mm::residue *b)
 		{
-		int d = a->asymID().compare(b->asymID());
+		int d = a->get_asym_id().compare(b->get_asym_id());
 		if (d == 0)
-			d = a->seqID() - b->seqID();
+			d = a->get_seq_id() - b->get_seq_id();
 		return d < 0; });
 
 	auto &polymers = structure.polymers();
@@ -1195,7 +1194,7 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 	for (auto ri = residues.begin(); ri != residues.end(); ++ri)
 	{
 		auto res = *ri;
-		auto monomer = dynamic_cast<const mmcif::Monomer *>(res);
+		auto monomer = dynamic_cast<const cif::mm::monomer *>(res);
 
 		if (monomer == nullptr)
 		{
@@ -1203,30 +1202,30 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 			continue;
 		}
 
-		int startSeqID = monomer->seqID();
+		int startSeqID = monomer->get_seq_id();
 		int endSeqID = startSeqID;
 
 		while (ri != residues.end())
 		{
-			if ((*ri)->seqID() != endSeqID + 1 or (*ri)->asymID() != monomer->asymID())
+			if ((*ri)->get_seq_id() != endSeqID + 1 or (*ri)->get_asym_id() != monomer->get_asym_id())
 				break;
 			++endSeqID;
 			++ri;
 		}
 
-		auto pi = find_if(polymers.begin(), polymers.end(), [id = monomer->asymID()](mmcif::Polymer &poly)
-			{ return poly.asymID() == id; });
+		auto pi = find_if(polymers.begin(), polymers.end(), [id = monomer->get_asym_id()](cif::mm::polymer &poly)
+			{ return poly.get_asym_id() == id; });
 		if (pi == polymers.end())
-			throw std::runtime_error("Polymer not found for asym ID " + monomer->asymID());
+			throw std::runtime_error("cif::mm::polymer not found for asym ID " + monomer->get_asym_id());
 
 		result->addPolySection(*pi, startSeqID, endSeqID);
 	}
 
 	// Add any residue that might be bonded to our list of residues via a struct_conn record
 
-	auto &db = structure.datablock();
+	auto &db = structure.get_datablock();
 	auto &struct_conn = db["struct_conn"];
-	std::vector<std::tuple<const Residue *, const Residue *, std::string>> linked;
+	std::vector<std::tuple<const cif::mm::residue *, const cif::mm::residue *, std::string>> linked;
 
 	for (const auto &[ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id, ptnr1_auth_seq_id,
 			 ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id, ptnr2_auth_seq_id,
@@ -1235,17 +1234,17 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 			 "ccp4_link_id"))
 	{
 		auto ai = find_if(residues.begin(), residues.end(),
-			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, auth_seq_id = ptnr1_auth_seq_id](const Residue *res)
-			{ return res->asymID() == asym_id and res->seqID() == seq_id and res->authSeqID() == auth_seq_id; });
+			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, auth_seq_id = ptnr1_auth_seq_id](const cif::mm::residue *res)
+			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_auth_seq_id() == auth_seq_id; });
 		auto bi = find_if(residues.begin(), residues.end(),
-			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id, auth_seq_id = ptnr2_auth_seq_id](const Residue *res)
-			{ return res->asymID() == asym_id and res->seqID() == seq_id and res->authSeqID() == auth_seq_id; });
+			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id, auth_seq_id = ptnr2_auth_seq_id](const cif::mm::residue *res)
+			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_auth_seq_id() == auth_seq_id; });
 
 		if (ai == residues.end() and bi == residues.end())
 			continue;
 
-		const Residue *ra = *ai;
-		const Residue *rb = *bi;
+		const cif::mm::residue *ra = *ai;
+		const cif::mm::residue *rb = *bi;
 
 		if (ai != residues.end() and bi != residues.end())
 		{
@@ -1255,12 +1254,12 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 
 		if (ai != residues.end())
 		{
-			residues.emplace_back(&structure.getResidue(ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id, ptnr2_auth_seq_id));
+			residues.emplace_back(&structure.get_residue(ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id, ptnr2_auth_seq_id));
 			linked.emplace_back(ra, residues.back(), link_id);
 		}
 		else
 		{
-			residues.emplace_back(&structure.getResidue(ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
+			residues.emplace_back(&structure.get_residue(ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
 			linked.emplace_back(rb, residues.back(), link_id);
 		}
 	}
@@ -1276,11 +1275,11 @@ Minimizer *Minimizer::create(mmcif::Structure &structure, const std::vector<mmci
 
 		try
 		{
-			result->addLinkRestraints(*a, *b, a->compoundID() + "-" + b->compoundID());
+			result->addLinkRestraints(*a, *b, a->get_compound_id() + "-" + b->get_compound_id());
 		}
 		catch (const std::exception &e)
 		{
-			result->addLinkRestraints(*b, *a, b->compoundID() + "-" + a->compoundID());
+			result->addLinkRestraints(*b, *a, b->get_compound_id() + "-" + a->get_compound_id());
 		}
 	}
 

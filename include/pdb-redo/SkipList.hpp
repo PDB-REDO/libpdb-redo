@@ -97,26 +97,26 @@ struct ResidueSpec
 	ResidueSpec(const ResidueSpec &rhs) = default;
 	ResidueSpec &operator=(const ResidueSpec &rhs) = default;
 
-	// ResidueSpec(const mmcif::Residue &res)
+	// ResidueSpec(const cif::mm::residue &res)
 	// 	: auth_asym_id(res.authAsymID())
-	// 	, auth_comp_id(res.compoundID())
-	// 	, auth_seq_id(res.authSeqID())
-	// 	, label_asym_id(res.asymID())
-	// 	, label_comp_id(res.compoundID())
-	// 	, label_seq_id(res.seqID())
+	// 	, auth_comp_id(res.get_compound_id())
+	// 	, auth_seq_id(res.get_auth_seq_id())
+	// 	, label_asym_id(res.get_asym_id())
+	// 	, label_comp_id(res.get_compound_id())
+	// 	, label_seq_id(res.get_seq_id())
 	// {
 	// 	char ins_code = res.authInsCode().c_str()[0];
 	// 	if (ins_code != 0 and ins_code != ' ')
 	// 		pdbx_PDB_ins_code = ins_code;
 	// }
 
-	// ResidueSpec(const mmcif::Atom &atom)
+	// ResidueSpec(const cif::mm::atom &atom)
 	// 	: auth_asym_id(atom.authAsymID())
 	// 	, auth_comp_id(atom.authCompID())
-	// 	, auth_seq_id(atom.authSeqID())
-	// 	, label_asym_id(atom.labelAsymID())
-	// 	, label_comp_id(atom.labelCompID())
-	// 	, label_seq_id(atom.labelSeqID())
+	// 	, auth_seq_id(atom.get_auth_seq_id())
+	// 	, label_asym_id(atom.get_label_asym_id())
+	// 	, label_comp_id(atom.get_label_comp_id())
+	// 	, label_seq_id(atom.get_label_seq_id())
 	// {
 	// 	char ins_code = atom.pdbxAuthInsCode().c_str()[0];
 	// 	if (ins_code != 0 and ins_code != ' ')

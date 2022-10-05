@@ -55,7 +55,7 @@ namespace
 		{
 			assert(s.length() <= 4);
 			if (s.length() > 4)
-				throw BondMapException("Atom ID '" + s + "' is too long");
+				throw BondMapException("cif::mm::atom ID '" + s + "' is too long");
 			std::copy(s.begin(), s.end(), id_s);
 		}
 
@@ -70,7 +70,7 @@ namespace
 			id_n = 0;
 			assert(s.length() <= 4);
 			if (s.length() > 4)
-				throw BondMapException("Atom ID '" + s + "' is too long");
+				throw BondMapException("cif::mm::atom ID '" + s + "' is too long");
 			std::copy(s.begin(), s.end(), id_s);
 			return *this;
 		}

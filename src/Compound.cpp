@@ -34,11 +34,6 @@
 #include <filesystem>
 #include <fstream>
 
-#include "cif++/Cif++.hpp"
-#include "cif++/CifUtils.hpp"
-#include "cif++/Compound.hpp"
-#include "cif++/Point.hpp"
-
 #include "pdb-redo/Compound.hpp"
 
 namespace ba = boost::algorithm;
@@ -47,8 +42,8 @@ namespace fs = std::filesystem;
 namespace pdb_redo
 {
 
-using mmcif::kPI;
-using mmcif::AtomTypeTraits;
+using cif::kPI;
+using cif::atom_type_traits;
 
 // --------------------------------------------------------------------
 // Factory class for Compound and Link objects
@@ -126,7 +121,7 @@ Compound::Compound(const std::string &file, const std::string &id,
 
 			cif::tie(id, symbol, energy, charge) = row.get("atom_id", "type_symbol", "type_energy", "partial_charge");
 
-			mAtoms.push_back({id, mmcif::AtomTypeTraits(symbol).type(), energy, charge});
+			mAtoms.push_back({id, atom_type_traits(symbol).type(), energy, charge});
 		}
 		sort(mAtoms.begin(), mAtoms.end(), CompoundAtomLess());
 
@@ -243,7 +238,7 @@ std::string Compound::formula() const
 
 	for (auto r : mAtoms)
 	{
-		atoms[mmcif::AtomTypeTraits(r.typeSymbol).symbol()] += 1;
+		atoms[atom_type_traits(r.typeSymbol).symbol()] += 1;
 		chargeSum += r.partialCharge;
 	}
 
@@ -290,7 +285,7 @@ float Compound::formulaWeight() const
 	float result = 0;
 
 	for (auto r : mAtoms)
-		result += AtomTypeTraits(r.typeSymbol).weight();
+		result += atom_type_traits(r.typeSymbol).weight();
 
 	return result;
 }
@@ -352,7 +347,7 @@ bool Compound::isSugar() const
 	return cif::iequals(mGroup, "furanose") or cif::iequals(mGroup, "pyranose");
 }
 
-CompoundAtom Compound::getAtomByID(const std::string &atomID) const
+CompoundAtom Compound::get_atom_by_atom_id(const std::string &atomID) const
 {
 	CompoundAtom result = {};
 	for (auto &a : mAtoms)
@@ -570,9 +565,9 @@ float Compound::chiralVolume(const std::string &centreID) const
 
 // --------------------------------------------------------------------
 
-Link::Link(cif::Datablock &db)
+Link::Link(cif::datablock &db)
 {
-	mID = db.getName();
+	mID = db.name();
 
 	auto &linkBonds = db["chem_link_bond"];
 
@@ -992,7 +987,7 @@ Compound *CompoundFactoryImpl::create(std::string id)
 
 		auto &cat = mFile["comp_list"]["chem_comp"];
 
-		auto rs = cat.find(cif::Key("three_letter_code") == id);
+		auto rs = cat.find(cif::key("three_letter_code") == id);
 
 		if (not rs.empty())
 		{

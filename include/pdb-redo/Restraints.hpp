@@ -33,12 +33,14 @@
 
 #include <set>
 
-#include "cif++/Point.hpp"
+#include <cif++/point.hpp>
 
-#include "pdb-redo/MapMaker.hpp"
+#include <pdb-redo/MapMaker.hpp>
 
 namespace pdb_redo
 {
+
+using DPoint = cif::point_type<double>;
 
 // --------------------------------------------------------------------
 
@@ -121,7 +123,7 @@ struct TorsionRestraint : public Restraint
 	double mTarget, mESD;
 
   private:
-	std::tuple<mmcif::DPoint, mmcif::DPoint, mmcif::DPoint, mmcif::DPoint> CalculateTorsionGradients(float theta, mmcif::DPoint p[4]) const;
+	std::tuple<DPoint, DPoint, DPoint, DPoint> CalculateTorsionGradients(float theta, DPoint p[4]) const;
 };
 
 struct TransPeptideRestraint : public TorsionRestraint

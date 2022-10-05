@@ -35,7 +35,7 @@
 
 #include <cif++.hpp>
 
-#include "cif++/BondMap.hpp"
+#include "pdb-redo/BondMap.hpp"
 #include "pdb-redo/Compound.hpp"
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/Restraints.hpp"
@@ -51,17 +51,17 @@ class AtomLocationProvider
 	AtomLocationProvider(const AtomLocationProvider &) = delete;
 	AtomLocationProvider &operator=(const AtomLocationProvider &) = delete;
 
-	AtomLocationProvider(std::vector<mmcif::Atom> &atoms)
+	AtomLocationProvider(std::vector<cif::mm::atom> &atoms)
 		: mAtoms(atoms)
 	{
 	}
 	virtual ~AtomLocationProvider() {}
 
-	virtual mmcif::DPoint operator[](AtomRef atomID) const;
+	virtual DPoint operator[](AtomRef atomID) const;
 	virtual std::string atom(AtomRef atomID) const;
 
   protected:
-	std::vector<mmcif::Atom> &mAtoms;
+	std::vector<cif::mm::atom> &mAtoms;
 };
 
 // --------------------------------------------------------------------
@@ -76,9 +76,9 @@ class DFCollector
 	virtual ~DFCollector() {}
 
 	virtual void add(AtomRef atom, double dx, double dy, double dz) = 0;
-	void add(AtomRef atom, mmcif::DPoint &&d)
+	void add(AtomRef atom, DPoint &&d)
 	{
-		add(atom, d.mX, d.mY, d.mZ);
+		add(atom, d.m_x, d.m_y, d.m_z);
 	}
 };
 
@@ -95,18 +95,18 @@ class Minimizer
 	virtual ~Minimizer() {}
 
 	// factory method:
-	static Minimizer *create(const mmcif::Polymer &poly, int first, int last,
-		const mmcif::BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11);
+	static Minimizer *create(const cif::mm::polymer &poly, int first, int last,
+		const BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11);
 
-	static Minimizer *create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
-		const mmcif::BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11)
+	static Minimizer *create(cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
+		const BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11)
 	{
 		return create(structure, atoms, bm, plane5AtomsESD, &xMap, mapWeight);
 	}
 
 	// factory method for minimizer without density:
-	static Minimizer *create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
-		const mmcif::BondMap &bm, float plane5AtomsESD = 0.11)
+	static Minimizer *create(cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
+		const BondMap &bm, float plane5AtomsESD = 0.11)
 	{
 		return create(structure, atoms, bm, plane5AtomsESD, nullptr, 0);
 	}
@@ -115,28 +115,28 @@ class Minimizer
 
 	virtual double refine(bool storeAtoms) = 0;
 	double score();
-	virtual std::vector<std::pair<std::string, mmcif::Point>> getAtoms() const = 0;
+	virtual std::vector<std::pair<std::string, cif::point>> getAtoms() const = 0;
 	virtual void storeAtomLocations() = 0;
 
   protected:
-	Minimizer(const mmcif::Structure &structure, const mmcif::BondMap &bm, float plane5AtomsESD);
+	Minimizer(const cif::mm::structure &structure, const BondMap &bm, float plane5AtomsESD);
 
-	static Minimizer *create(mmcif::Structure &structure, const std::vector<mmcif::Atom> &atoms,
-		const mmcif::BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight);
+	static Minimizer *create(cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
+		const BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight);
 
-	virtual void addResidue(const mmcif::Residue &res);
-	virtual void addPolySection(const mmcif::Polymer &poly, int first, int last);
+	virtual void addResidue(const cif::mm::residue &res);
+	virtual void addPolySection(const cif::mm::polymer &poly, int first, int last);
 	virtual void addDensityMap(const XMap &xMap, float mapWeight);
 	virtual void Finish();
 
 	double score(const AtomLocationProvider &loc);
 
-	void addLinkRestraints(const mmcif::Residue &a, const mmcif::Residue &b, const std::string &linkName)
+	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b, const std::string &linkName)
 	{
 		addLinkRestraints(a, b, Link::create(linkName));
 	}
 
-	void addLinkRestraints(const mmcif::Residue &a, const mmcif::Residue &b, const Link &link);
+	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b, const Link &link);
 
 	template <typename R>
 	double rmsz(const AtomLocationProvider &atoms, const std::vector<R> &a) const
@@ -155,15 +155,15 @@ class Minimizer
 		return result;
 	}
 
-	AtomRef ref(const mmcif::Atom &atom);
+	AtomRef ref(const cif::mm::atom &atom);
 
 	bool mElectronScattering = false; // TODO: use!
 
-	const mmcif::Structure &mStructure;
-	const mmcif::BondMap &mBonds;
+	const cif::mm::structure &mStructure;
+	const BondMap &mBonds;
 	float mPlane5ESD;
 
-	std::vector<mmcif::Atom> mAtoms, mReferencedAtoms;
+	std::vector<cif::mm::atom> mAtoms, mReferencedAtoms;
 	std::vector<size_t> mRef2AtomIndex;
 	std::map<std::string, AtomRef> mRefIndex;
 

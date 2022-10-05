@@ -30,8 +30,6 @@
 
 #include <cif++.hpp>
 
-#include <pdbx++/point.hpp>
-
 namespace pdb_redo
 {
 
@@ -48,11 +46,15 @@ class AtomShape
 	{
 	}
 
-	AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow,
-		bool electronScattering);
+	AtomShape(const cif::datablock &db, std::string_view atom_id, float resHigh, float resLow,
+		bool electronScattering, float bFactor)
+		: AtomShape(db["atom_site"].find1(cif::key("id") == atom_id), db["atom_site_anisotrop"].find1(cif::key("id") == atom_id),
+			  resHigh, resLow, electronScattering, bFactor)
+	{
+	}
 
-	// AtomShape(const cif::datablock &db, int atom_id, float resHigh, float resLow,
-	// 	bool electronScattering, float bFactor);
+	AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow,
+		bool electronScattering, std::optional<float> bFactor = {});
 
 	~AtomShape();
 
@@ -61,7 +63,7 @@ class AtomShape
 
 	float radius() const;
 	float calculatedDensity(float r) const;
-	float calculatedDensity(pdbx::Point p) const;
+	float calculatedDensity(cif::point p) const;
 
   private:
 	struct AtomShapeImpl *mImpl;

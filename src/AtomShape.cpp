@@ -29,9 +29,6 @@
 
 #include <cif++.hpp>
 
-#include <pdbx++/AtomType.hpp>
-#include <pdbx++/Compound.hpp>
-
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 
@@ -53,11 +50,11 @@
 namespace pdb_redo
 {
 
-using pdbx::AtomType;
-using pdbx::AtomTypeTraits;
-using pdbx::Point;
+using cif::atom_type;
+using cif::atom_type_traits;
+using cif::point;
 
-using pdbx::kPI;
+using cif::kPI;
 
 // --------------------------------------------------------------------
 
@@ -216,7 +213,7 @@ double sineIntegration(double x)
 
 		double gx = (sn / sd) / (x * x);
 
-		result = pdbx::kPI / 2 - fx * std::cos(x) - gx * std::sin(x);
+		result = cif::kPI / 2 - fx * std::cos(x) - gx * std::sin(x);
 	}
 
 	return result;
@@ -294,7 +291,7 @@ DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh
 	{
 		double z, zo, dp;
 
-		z = std::cos(pdbx::kPI * (i - 0.25) / (N + 0.5));
+		z = std::cos(cif::kPI * (i - 0.25) / (N + 0.5));
 
 		do
 		{
@@ -337,7 +334,7 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 
 	if (rt > 1e-10)
 	{
-		double t = 4 * pdbx::kPI * rt;
+		double t = 4 * cif::kPI * rt;
 		y = 0;
 
 		for (size_t i = 0; i < mST.size(); ++i)
@@ -367,7 +364,7 @@ NewuoaClosure make_closure(F &function)
 
 double DensityIntegration::integrateRadius(float perc, float occupancy, double yi, const std::vector<double> &fst) const
 {
-	double yt = perc * 0.25 * pdbx::kPI * occupancy * yi;
+	double yt = perc * 0.25 * cif::kPI * occupancy * yi;
 
 #if HAVE_NEWUOA
 	double initialValue = 0.25;
@@ -457,7 +454,7 @@ double DensityIntegration::integrateRadius(float perc, float occupancy, double y
 
 struct AtomShapeImpl
 {
-	AtomShapeImpl(Point location, AtomType symbol, int charge, float uIso, float occupancy, float resHigh, float resLow, bool electronScattering)
+	AtomShapeImpl(point location, atom_type symbol, int charge, float uIso, float occupancy, float resHigh, float resLow, bool electronScattering)
 		: mSymbol(symbol)
 		, mCharge(charge)
 		, mUIso(uIso)
@@ -476,7 +473,7 @@ struct AtomShapeImpl
 		mFst = std::vector<double>(st.size(), 0);
 
 		auto &D =
-			mElectronScattering ? AtomTypeTraits(symbol).elsf() : AtomTypeTraits(symbol).wksf(charge);
+			mElectronScattering ? atom_type_traits(symbol).elsf() : atom_type_traits(symbol).wksf(charge);
 		auto bIso = clipper::Util::u2b(uIso);
 
 		float as = mIntegrator.a() * mIntegrator.a();
@@ -509,12 +506,12 @@ struct AtomShapeImpl
 
 	virtual ~AtomShapeImpl() {}
 
-	AtomType mSymbol;
+	atom_type mSymbol;
 	int mCharge;
 	float mUIso, mOccupancy;
 	float mResHigh, mResLow;
 	bool mElectronScattering;
-	Point mLocation;
+	point mLocation;
 
 	const DensityIntegration &mIntegrator;
 	double mYi;
@@ -539,20 +536,20 @@ struct AtomShapeImpl
 				   mAW[4] * std::exp(mBW[4] * rsq) + mAW[5] * std::exp(mBW[5] * rsq));
 	}
 
-	virtual float calculatedDensity(Point p) const
+	virtual float calculatedDensity(point p) const
 	{
-		return calculatedDensity(Distance(mLocation, p));
+		return calculatedDensity(distance(mLocation, p));
 	}
 };
 
 struct AtomShapeAnisoImpl : public AtomShapeImpl
 {
-	AtomShapeAnisoImpl(Point location, AtomType symbol, int charge, clipper::U_aniso_orth &anisou, float occupancy, float resHigh, float resLow, bool electronScattering)
+	AtomShapeAnisoImpl(point location, atom_type symbol, int charge, clipper::U_aniso_orth &anisou, float occupancy, float resHigh, float resLow, bool electronScattering)
 		: AtomShapeImpl(location, symbol, charge, static_cast<float>(anisou.u_iso()), occupancy, resHigh, resLow, electronScattering)
 		, mAnisoU(anisou)
 	{
 		auto &D =
-			mElectronScattering ? AtomTypeTraits(symbol).elsf() : AtomTypeTraits(symbol).wksf(charge);
+			mElectronScattering ? atom_type_traits(symbol).elsf() : atom_type_traits(symbol).wksf(charge);
 
 		const float fourpi2 = static_cast<float>(4 * kPI * kPI);
 		const float pi3 = static_cast<float>(kPI * kPI * kPI);
@@ -575,10 +572,10 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 		}
 	}
 
-	virtual float calculatedDensity(Point p) const
+	virtual float calculatedDensity(point p) const
 	{
-		const Point l = p - mLocation;
-		const clipper::Coord_orth dxyz(l.mX, l.mY, l.mZ);
+		const point l = p - mLocation;
+		const clipper::Coord_orth dxyz(l.m_x, l.m_y, l.m_z);
 		return mOccupancy *
 		       static_cast<float>(
 				   mAW[0] * std::exp(mAnisoInv[0].quad_form(dxyz)) +
@@ -595,24 +592,26 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 
 // --------------------------------------------------------------------
 
-AtomShape::AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow, bool electronScattering)
+AtomShape::AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow, bool electronScattering, std::optional<float> bFactor)
 	: mImpl(nullptr)
 {
 	const auto &[x, y, z, charge, type_symbol, occupancy, compound_id] =
 		atom.get<float, float, float, std::optional<int>, std::string, float, std::string>(
 			"Cartn_x", "Cartn_y", "Cartn_z", "pdbx_formal_charge", "type_symbol", "occupancy", "label_comp_id");
 
-	AtomType type = type_symbol == "X" ? pdbx::Nn : AtomTypeTraits(type_symbol).type();
+	atom_type type = type_symbol == "X" ? cif::Nn : atom_type_traits(type_symbol).type();
 
 	int formal_charge = charge.value_or(0);
 	if (not charge.has_value())
 	{
-		auto compound = pdbx::CompoundFactory::instance().create(compound_id);
+		auto compound = cif::compound_factory::instance().create(compound_id);
 		if (compound != nullptr and compound->atoms().size() == 1)
 			formal_charge = compound->atoms().front().charge;
 	}
 
-	if (not atom_aniso.empty())
+	if (bFactor.has_value())
+		mImpl = new AtomShapeImpl({ x, y, z }, type, formal_charge, static_cast<float>(clipper::Util::b2u(*bFactor)), 1.0, resHigh, resLow, electronScattering);
+	else if (not atom_aniso.empty())
 	{
 		const auto &[u11, u12, u13, u22, u23, u33] =
 			atom_aniso.get<float, float, float, float, float, float>("U[1][1]", "U[1][2]", "U[1][3]", "U[2][2]", "U[2][3]", "U[3][3]");
@@ -641,8 +640,8 @@ AtomShape::AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float res
 	}
 }
 
-// AtomShape::AtomShape(const Atom &atom, float resHigh, float resLow, bool electronScattering, float bFactor)
-// 	: mImpl(new AtomShapeImpl(atom.location(), atom.type(), atom.charge(), static_cast<float>(clipper::Util::b2u(bFactor)),
+// AtomShape::AtomShape(const cif::mm::atom &atom, float resHigh, float resLow, bool electronScattering, float bFactor)
+// 	: mImpl(new AtomShapeImpl(atom.get_location(), atom.type(), atom.charge(), static_cast<float>(clipper::Util::b2u(bFactor)),
 // 		  1.0, resHigh, resLow, electronScattering))
 // {
 // }
@@ -662,7 +661,7 @@ float AtomShape::calculatedDensity(float r) const
 	return mImpl->calculatedDensity(r);
 }
 
-float AtomShape::calculatedDensity(Point p) const
+float AtomShape::calculatedDensity(point p) const
 {
 	return mImpl->calculatedDensity(p);
 }

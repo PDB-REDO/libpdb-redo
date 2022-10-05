@@ -17,7 +17,7 @@ int main()
 	mmcif::File file(example);
 
 	// and load this into a structure (note, structure caches data from the file, so order is important)
-	mmcif::Structure structure(file);
+	cif::mm::structure structure(file);
 
 	// now create the maps based on the MTZ file
 	pdb_redo::MapMaker<float> mm;
@@ -25,7 +25,7 @@ int main()
 	mm.loadMTZ("1cbs_map.mtz", samplingRate);
 
 	// create a map for the bonds in this structure
-	mmcif::BondMap bm(structure);
+	BondMap bm(structure);
 
 	// and finally collect the statistics
 	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);

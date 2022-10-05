@@ -176,7 +176,7 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 
 	mmcif::File file(example.string());
-	mmcif::Structure structure(file);
+	cif::mm::structure structure(file);
 
 	const float kResHi = 1.80009, kResLo = 7.99918; 
 
@@ -190,7 +190,7 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 
 		AtomShape shape(atom, kResHi, kResLo, false);
 
-		BOOST_CHECK_EQUAL(mmcif::AtomTypeTraits(atom.type()).symbol(), kTestRadii[i].type);
+		BOOST_CHECK_EQUAL(cif::mm::atomTypeTraits(atom.type()).symbol(), kTestRadii[i].type);
 
 		float radius = shape.radius();
 		float test = kTestRadii[i].radius;
@@ -240,7 +240,7 @@ BOOST_AUTO_TEST_CASE(map_maker_2)
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 
 	mmcif::File file(example.string());
-	mmcif::Structure structure(file);
+	cif::mm::structure structure(file);
 
 	MapMaker<float> mm;
 	
@@ -318,13 +318,13 @@ BOOST_AUTO_TEST_CASE(stats_1)
 
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	mmcif::File file(example.string());
-	mmcif::Structure structure(file);
+	cif::mm::structure structure(file);
 
 	MapMaker<float> mm;
 	float samplingRate = 1.5;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	mmcif::BondMap bm(structure);
+	BondMap bm(structure);
 
 	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
 	auto r = collector.collect();
@@ -382,7 +382,7 @@ BOOST_AUTO_TEST_CASE(stats_2)
 	
 	// Rename a compound to an unknown ID
 
-	for (auto r: file.data()["chem_comp"].find(cif::Key("id") == "ALA"))
+	for (auto r: file.data()["chem_comp"].find(cif::key("id") == "ALA"))
 	{
 		r["id"] = "U_K";
 		break;
@@ -390,13 +390,13 @@ BOOST_AUTO_TEST_CASE(stats_2)
 
 	// and load this into a structure (note, structure caches data from the file, so order is important)
 
-	mmcif::Structure structure(file);
+	cif::mm::structure structure(file);
 
 	MapMaker<float> mm;
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	mmcif::BondMap bm(structure);
+	BondMap bm(structure);
 
 	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
 	auto r = collector.collect();

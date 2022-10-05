@@ -36,7 +36,7 @@
 namespace pdb_redo
 {
 
-using pdbx::Point;
+using cif::point;
 
 // --------------------------------------------------------------------
 
@@ -72,18 +72,18 @@ std::vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spa
 
 // --------------------------------------------------------------------
 
-std::tuple<Point, float> calculateCenterAndRadius(const std::vector<std::tuple<size_t,Point>> &atoms)
+std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<size_t,point>> &atoms)
 {
-	std::vector<Point> pts;
+	std::vector<point> pts;
 	for (const auto &[ix, pt] : atoms)
 		pts.emplace_back(pt);
 
-	auto center = Centroid(pts);
+	auto center = centroid(pts);
 	float radius = 0;
 
 	for (auto &pt : pts)
 	{
-		float d = static_cast<float>(Distance(pt, center));
+		float d = static_cast<float>(distance(pt, center));
 		if (radius < d)
 			radius = d;
 	}
@@ -93,9 +93,9 @@ std::tuple<Point, float> calculateCenterAndRadius(const std::vector<std::tuple<s
 
 // --------------------------------------------------------------------
 
-DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
 	float maxDistance)
-	: db(db)
+	: mStructure(p)
 	, cell(cell)
 	, spacegroup(spacegroup)
 	, dim(0)
@@ -107,15 +107,17 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 	// First collect the atoms from the datablock
 	std::vector<cif::row_handle> atoms;
 
-	for (auto rh : db["atom_site"].find("pdbx_model_nr"_key == model_nr or "pdbx_model_nr"_key == cif::null))
+	auto &db = p.get_datablock();
+
+	for (auto rh : db["atom_site"].find("pdbx_model_nr"_key == p.get_model_nr() or "pdbx_model_nr"_key == cif::null))
 		atoms.push_back(rh);
 
 	dim = uint32_t(atoms.size());
 
-	std::vector<Point> locations(dim);
+	std::vector<point> locations(dim);
 
 	// bounding box
-	Point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
+	point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
 		pMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 
 	for (auto &atom : atoms)
@@ -126,22 +128,22 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 		index[id] = ix;
 		rIndex[ix] = id;
 
-		pdbx::Point pt{ x, y, z };
+		cif::point pt{ x, y, z };
 		locations[ix] = pt;
 
-		if (pMin.mX > pt.mX)
-			pMin.mX = pt.mX;
-		if (pMin.mY > pt.mY)
-			pMin.mY = pt.mY;
-		if (pMin.mZ > pt.mZ)
-			pMin.mZ = pt.mZ;
+		if (pMin.m_x > pt.m_x)
+			pMin.m_x = pt.m_x;
+		if (pMin.m_y > pt.m_y)
+			pMin.m_y = pt.m_y;
+		if (pMin.m_z > pt.m_z)
+			pMin.m_z = pt.m_z;
 
-		if (pMax.mX < pt.mX)
-			pMax.mX = pt.mX;
-		if (pMax.mY < pt.mY)
-			pMax.mY = pt.mY;
-		if (pMax.mZ < pt.mZ)
-			pMax.mZ = pt.mZ;
+		if (pMax.m_x < pt.m_x)
+			pMax.m_x = pt.m_x;
+		if (pMax.m_y < pt.m_y)
+			pMax.m_y = pt.m_y;
+		if (pMax.m_z < pt.m_z)
+			pMax.m_z = pt.m_z;
 	};
 
 	// correct locations so that the median of x, y and z are inside the cell
@@ -153,23 +155,23 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 		           : (c[dim / 2 - 1] + c[dim / 2]) / 2;
 	};
 
-	transform(locations.begin(), locations.end(), c.begin(), [](Point &l)
-		{ return static_cast<float>(l.mX); });
+	transform(locations.begin(), locations.end(), c.begin(), [](point &l)
+		{ return static_cast<float>(l.m_x); });
 	sort(c.begin(), c.end());
 	float mx = median();
 
-	transform(locations.begin(), locations.end(), c.begin(), [](Point &l)
-		{ return static_cast<float>(l.mY); });
+	transform(locations.begin(), locations.end(), c.begin(), [](point &l)
+		{ return static_cast<float>(l.m_y); });
 	sort(c.begin(), c.end());
 	float my = median();
 
-	transform(locations.begin(), locations.end(), c.begin(), [](Point &l)
-		{ return static_cast<float>(l.mZ); });
+	transform(locations.begin(), locations.end(), c.begin(), [](point &l)
+		{ return static_cast<float>(l.m_z); });
 	sort(c.begin(), c.end());
 	float mz = median();
 
 	if (cif::VERBOSE > 1)
-		std::cerr << "median position of atoms: " << Point(mx, my, mz) << std::endl;
+		std::cerr << "median position of atoms: " << point(mx, my, mz) << std::endl;
 
 	auto calculateD = [&](float m, float c)
 	{
@@ -181,18 +183,18 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 		return d;
 	};
 
-	mD.mX = calculateD(mx, static_cast<float>(cell.a()));
-	mD.mY = calculateD(my, static_cast<float>(cell.b()));
-	mD.mZ = calculateD(mz, static_cast<float>(cell.c()));
+	mD.m_x = calculateD(mx, static_cast<float>(cell.a()));
+	mD.m_y = calculateD(my, static_cast<float>(cell.b()));
+	mD.m_z = calculateD(mz, static_cast<float>(cell.c()));
 
 	clipper::Coord_orth D = toClipper(mD);
 
-	if (mD.mX != 0 or mD.mY != 0 or mD.mZ != 0)
+	if (mD.m_x != 0 or mD.m_y != 0 or mD.m_z != 0)
 	{
 		if (cif::VERBOSE > 1)
-			std::cerr << "moving coorinates by " << mD.mX << ", " << mD.mY << " and " << mD.mZ << std::endl;
+			std::cerr << "moving coorinates by " << mD.m_x << ", " << mD.m_y << " and " << mD.m_z << std::endl;
 
-		for_each(locations.begin(), locations.end(), [&](Point &p)
+		for_each(locations.begin(), locations.end(), [&](point &p)
 			{ p += mD; });
 	}
 
@@ -203,12 +205,12 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 
 	DistMap dist;
 
-	std::vector<std::tuple<pdbx::Point, float, std::vector<std::tuple<size_t,Point>>>> residues;
+	std::vector<std::tuple<cif::point, float, std::vector<std::tuple<size_t,point>>>> residues;
 
 	// loop over poly_seq_scheme
-	for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].find<std::string, int>(cif::key("mon_id") == c, "asym_id", "seq_id"))
+	for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].rows<std::string, int>("asym_id", "seq_id"))
 	{
-		std::vector<std::tuple<size_t,Point>> rAtoms;
+		std::vector<std::tuple<size_t,point>> rAtoms;
 		for (size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asymID and atoms[i]["label_seq_id"] == seqID)
@@ -222,9 +224,9 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 	}
 
 	// loop over pdbx_nonpoly_scheme
-	for (auto asymID : db["pdbx_nonpoly_scheme"].find<std::string>(cif::key("mon_id") == c, "asym_id"))
+	for (const auto& [ asymID ] : db["pdbx_nonpoly_scheme"].rows<std::string>("asym_id"))
 	{
-		std::vector<std::tuple<size_t,Point>> rAtoms;
+		std::vector<std::tuple<size_t,point>> rAtoms;
 		for (size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asymID)
@@ -238,9 +240,9 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 	}
 
 	// loop over pdbx_branch_scheme
-	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].find<std::string, std::string>(cif::key("mon_id") == c, "asym_id", "pdb_seq_num"))
+	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].rows<std::string, std::string>("asym_id", "pdb_seq_num"))
 	{
-		std::vector<std::tuple<size_t,Point>> rAtoms;
+		std::vector<std::tuple<size_t,point>> rAtoms;
 		for (size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asym_id and atoms[i]["label_seq_id"] == pdb_seq_num)
@@ -267,7 +269,7 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 
 			// first case, no symmetry operations
 
-			auto d = Distance(centerI, centerJ) - radiusI - radiusJ;
+			auto d = distance(centerI, centerJ) - radiusI - radiusJ;
 			if (d < mMaxDistance)
 			{
 				AddDistancesForAtoms(atomsI, atomsJ, dist, 0);
@@ -333,7 +335,7 @@ DistanceMap::DistanceMap(const cif::datablock &db, int model_nr, const clipper::
 
 // --------------------------------------------------------------------
 
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,Point>> &a, const std::vector<std::tuple<size_t,Point>> &b, DistMap &dm, int32_t rtix)
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b, DistMap &dm, int32_t rtix)
 {
 	for (const auto &[ixa, loc_a] : a)
 	{

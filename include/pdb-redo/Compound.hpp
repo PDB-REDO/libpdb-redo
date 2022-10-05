@@ -31,8 +31,7 @@
 #include <tuple>
 #include <vector>
 
-#include "cif++/AtomType.hpp"
-#include "cif++/Cif++.hpp"
+#include "cif++.hpp"
 
 namespace pdb_redo
 {
@@ -64,7 +63,7 @@ enum BondType
 struct CompoundAtom
 {
 	std::string id;
-	mmcif::AtomType typeSymbol;
+	cif::atom_type typeSymbol;
 	std::string typeEnergy;
 	float partialCharge;
 };
@@ -175,7 +174,7 @@ class Compound
 	std::vector<CompoundPlane> planes() const { return mPlanes; }
 	std::vector<CompoundTorsion> torsions() const { return mTorsions; }
 
-	CompoundAtom getAtomByID(const std::string &atomID) const;
+	CompoundAtom get_atom_by_atom_id(const std::string &atomID) const;
 
 	bool atomsBonded(const std::string &atomId_1, const std::string &atomId_2) const;
 	float atomBondValue(const std::string &atomId_1, const std::string &atomId_2) const;
@@ -195,7 +194,7 @@ class Compound
   private:
 	~Compound();
 
-	cif::File mCF;
+	cif::file mCF;
 
 	std::string mID;
 	std::string mName;
@@ -282,7 +281,7 @@ struct LinkChiralCentre
 class Link
 {
   public:
-	Link(cif::Datablock &db);
+	Link(cif::datablock &db);
 
 	// Factory method.
 	static const Link &create(const std::string &id);

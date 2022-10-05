@@ -30,6 +30,7 @@
 #include <cif++.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
+#include "pdb-redo/BondMap.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/Statistics.hpp"
 
@@ -42,8 +43,7 @@ using clipper::Coord_grid;
 using clipper::Coord_orth;
 using clipper::Xmap;
 
-using mmcif::AtomTypeTraits;
-using mmcif::BondMap;
+using cif::atom_type_traits;
 
 // --------------------------------------------------------------------
 
@@ -185,7 +185,7 @@ double errsol(double a)
 class PointWeightFunction
 {
   public:
-	PointWeightFunction(Point center, float atomRadius)
+	PointWeightFunction(cif::point center, float atomRadius)
 		: m_Center(center)
 		, m_Radius(atomRadius)
 	{
@@ -194,9 +194,9 @@ class PointWeightFunction
 		m_P[2] = P{-0.9507f, 2, 0, 2};
 	}
 
-	float operator()(Point p) const
+	float operator()(cif::point p) const
 	{
-		float d = Distance(m_Center, p);
+		float d = distance(m_Center, p);
 		d /= m_Radius;
 
 		float result = 0;
@@ -224,7 +224,7 @@ class PointWeightFunction
 		float m, c, b, x;
 	};
 
-	Point m_Center;
+	cif::point m_Center;
 	float m_Radius;
 	P m_P[3];
 };
@@ -287,20 +287,20 @@ struct AtomDataSums
 
 struct AtomData
 {
-	AtomData(Atom atom, float radius)
+	AtomData(cif::mm::atom atom, float radius)
 		: atom(atom)
-		, asymID(atom.labelAsymID())
-		, seqID(atom.labelSeqID())
-		, authSeqID(atom.authSeqID())
+		, asymID(atom.get_label_asym_id())
+		, seqID(atom.get_label_seq_id())
+		, auth_seq_id(atom.get_auth_seq_id())
 		, radius(radius)
-		, occupancy(atom.occupancy())
+		, occupancy(atom.get_occupancy())
 	{
 	}
 
-	Atom atom;
+	cif::mm::atom atom;
 	std::string asymID;
 	int seqID;
-	std::string authSeqID; // required for waters
+	std::string auth_seq_id; // required for waters
 	float radius;
 	float occupancy;
 	std::vector<AtomGridData> points;
@@ -341,26 +341,26 @@ class BoundingBox
   public:
 
 	template <class List>
-	BoundingBox(const Structure &structure, List atoms, float margin)
+	BoundingBox(const cif::mm::structure &structure, List atoms, float margin)
 	{
 		mXMin = mYMin = mZMin = std::numeric_limits<float>::max();
 		mXMax = mYMax = mZMax = std::numeric_limits<float>::min();
 
 		for (auto &atom : atoms)
 		{
-			auto l = atom.location();
-			if (mXMin > l.mX)
-				mXMin = l.mX;
-			if (mXMax < l.mX)
-				mXMax = l.mX;
-			if (mYMin > l.mY)
-				mYMin = l.mY;
-			if (mYMax < l.mY)
-				mYMax = l.mY;
-			if (mZMin > l.mZ)
-				mZMin = l.mZ;
-			if (mZMax < l.mZ)
-				mZMax = l.mZ;
+			auto l = atom.get_location();
+			if (mXMin > l.m_x)
+				mXMin = l.m_x;
+			if (mXMax < l.m_x)
+				mXMax = l.m_x;
+			if (mYMin > l.m_y)
+				mYMin = l.m_y;
+			if (mYMax < l.m_y)
+				mYMax = l.m_y;
+			if (mZMin > l.m_z)
+				mZMin = l.m_z;
+			if (mZMax < l.m_z)
+				mZMax = l.m_z;
 		}
 
 		mXMin -= margin;
@@ -371,9 +371,9 @@ class BoundingBox
 		mZMax += margin;
 	}
 
-	bool contains(const Point &p) const
+	bool contains(const cif::point &p) const
 	{
-		return p.mX >= mXMin and p.mX <= mXMax and p.mY >= mYMin and p.mY <= mYMax and p.mZ >= mZMin and p.mZ <= mZMax;
+		return p.m_x >= mXMin and p.m_x <= mXMax and p.m_y >= mYMin and p.m_y <= mYMax and p.m_z >= mZMin and p.m_z <= mZMax;
 	}
 
   private:
@@ -381,7 +381,7 @@ class BoundingBox
 };
 // --------------------------------------------------------------------
 
-StatsCollector::StatsCollector(const MapMaker<float> &mm, Structure &structure, bool electronScattering)
+StatsCollector::StatsCollector(const MapMaker<float> &mm, cif::mm::structure &structure, bool electronScattering)
 	: mStructure(structure)
 	, mMapMaker(mm)
 	, mElectronScattering(electronScattering)
@@ -421,11 +421,11 @@ void StatsCollector::initialize()
 
 	for (auto &a : mStructure.atoms())
 	{
-		auto t = a.type();
-		if (t <= mmcif::He)
+		auto t = a.get_type();
+		if (t <= cif::atom_type::He)
 			continue;
 
-		float w = a.occupancy() * t;
+		float w = a.get_occupancy() * t;
 
 		if (w <= 0)
 			continue;
@@ -451,13 +451,13 @@ void StatsCollector::initialize()
 
 	for (auto atom : mStructure.atoms())
 	{
-		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
+		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering);
 
 		float radius = shape.radius();
 
 		if (cif::VERBOSE > 2)
 			std::cerr << (atomData.size() + 1) << '\t'
-					  << AtomTypeTraits(atom.type()).symbol() << '\t'
+					  << atom_type_traits(atom.get_type()).symbol() << '\t'
 					  << radius << std::endl;
 
 		atomData.emplace_back(atom, radius);
@@ -545,15 +545,15 @@ void StatsCollector::initialize()
 std::vector<ResidueStatistics> StatsCollector::collect() const
 {
 	std::vector<std::tuple<std::string, int, std::string, std::string>> residues;
-	std::vector<Atom> atoms;
+	std::vector<cif::mm::atom> atoms;
 
 	for (auto atom : mStructure.atoms())
 	{
-		if (atom.isWater())
+		if (atom.is_water())
 			continue;
 
-		auto k = std::make_tuple(atom.labelAsymID(), atom.labelSeqID(), atom.labelCompID(), atom.authSeqID());
-		//		auto k = std::make_tuple(atom.authAsymID(), atom.property<std::string>("auth_seq_id"), atom.authCompID());
+		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_label_comp_id(), atom.get_auth_seq_id());
+		//		auto k = std::make_tuple(atom.get_auth_asym_id(), atom.property<std::string>("auth_seq_id"), atom.authCompID());
 
 		if (residues.empty() or residues.back() != k)
 		{
@@ -569,28 +569,28 @@ std::vector<ResidueStatistics> StatsCollector::collect() const
 std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID, int resFirst, int resLast, bool authNameSpace) const
 {
 	std::vector<std::tuple<std::string, int, std::string, std::string>> residues;
-	std::vector<Atom> atoms;
+	std::vector<cif::mm::atom> atoms;
 
 	for (auto atom : mStructure.atoms())
 	{
-		if (atom.isWater())
+		if (atom.is_water())
 			continue;
 
 		if (authNameSpace)
 		{
-			int authSeqID = stoi(atom.authSeqID());
+			int auth_seq_id = stoi(atom.get_auth_seq_id());
 
-			if (atom.authAsymID() != asymID or authSeqID < resFirst or authSeqID > resLast)
+			if (atom.get_auth_asym_id() != asymID or auth_seq_id < resFirst or auth_seq_id > resLast)
 				continue;
 		}
 		else
 		{
-			if (atom.labelAsymID() != asymID or atom.labelSeqID() < resFirst or atom.labelSeqID() > resLast)
+			if (atom.get_label_asym_id() != asymID or atom.get_label_seq_id() < resFirst or atom.get_label_seq_id() > resLast)
 				continue;
 		}
 
-		auto k = std::make_tuple(atom.labelAsymID(), atom.labelSeqID(), atom.labelCompID(), atom.authSeqID());
-		//		auto k = std::make_tuple(atom.authAsymID(), atom.property<std::string>("auth_seq_id"), atom.authCompID());
+		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_label_comp_id(), atom.get_auth_seq_id());
+		//		auto k = std::make_tuple(atom.get_auth_asym_id(), atom.property<std::string>("auth_seq_id"), atom.authCompID());
 
 		if (residues.empty() or residues.back() != k)
 		{
@@ -612,21 +612,21 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 	for (auto atom : mStructure.atoms())
 	{
-		if (atom.isWater())
+		if (atom.is_water())
 		{
 			if (not addWaters)
 				continue;
 		}
-		else if (not bbox.contains(atom.location()))
+		else if (not bbox.contains(atom.get_location()))
 			continue;
 
-		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
+		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering);
 
 		float radius = shape.radius();
 
 		if (cif::VERBOSE > 2)
 			std::cerr << (atomData.size() + 1) << '\t'
-					  << AtomTypeTraits(atom.type()).symbol() << '\t'
+					  << atom_type_traits(atom.get_type()).symbol() << '\t'
 					  << radius << std::endl;
 
 		atomData.emplace_back(atom, radius);
@@ -638,14 +638,14 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 	std::vector<ResidueStatistics> result;
 
 	// And now collect the per residue information
-	for (const auto &[asymID, seqID, compID, authSeqID] : residues)
+	for (const auto &[asymID, seqID, compID, auth_seq_id] : residues)
 	{
 		AtomDataSums sums;
 
 		std::vector<const AtomData *> resAtomData;
 		for (const auto &d : atomData)
 		{
-			if (d.asymID == asymID and d.seqID == seqID and d.authSeqID == authSeqID)
+			if (d.asymID == asymID and d.seqID == seqID and d.auth_seq_id == auth_seq_id)
 				resAtomData.push_back(&d);
 		}
 
@@ -664,7 +664,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 					for (auto d : resAtomData)
 					{
-						if (d->atom.labelAtomID() != compAtom)
+						if (d->atom.get_label_atom_id() != compAtom)
 							continue;
 
 						// We used to factor in the occupancy here, but that seems to be incorrect
@@ -677,12 +677,12 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 					resAtomData.erase(
 						std::remove_if(resAtomData.begin(), resAtomData.end(), [id = compAtom](const AtomData *d)
-							{ return d->atom.labelAtomID() == id; }),
+							{ return d->atom.get_label_atom_id() == id; }),
 						resAtomData.end());
 				}
 			}
 		}
-		catch (const mmcif::BondMapException &ex)
+		catch (const BondMapException &ex)
 		{
 			std::cerr << "Missing information for compound '" << compID << '\'' << std::endl
 					  << ex.what() << std::endl;
@@ -696,8 +696,8 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 		// EDIA
 
-		auto &res = mStructure.getResidue(asymID, compID, seqID, authSeqID);
-		auto alts = res.getAlternateIDs();
+		auto &res = mStructure.get_residue(asymID, compID, seqID, auth_seq_id);
+		auto alts = res.get_alternate_ids();
 
 		if (alts.empty())
 			alts.insert("");
@@ -711,7 +711,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 			for (const auto &d : atomData)
 			{
-				if (d.asymID != asymID or d.seqID != seqID or d.authSeqID != authSeqID)
+				if (d.asymID != asymID or d.seqID != seqID or d.auth_seq_id != auth_seq_id)
 					continue;
 
 				if (alt.empty())
@@ -720,7 +720,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 					continue;
 				}
 
-				auto altd = d.atom.labelAltID();
+				auto altd = d.atom.get_label_alt_id();
 				if (altd.empty() or altd == alt)
 					resAtomData.push_back(&d);
 			}
@@ -745,7 +745,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 					for (auto d : resAtomData)
 					{
-						if (d->atom.labelAtomID() != compAtom)
+						if (d->atom.get_label_atom_id() != compAtom)
 							continue;
 
 						occSum += d->occupancy;
@@ -778,7 +778,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 		}
 
 		result.emplace_back(ResidueStatistics{asymID, seqID, compID,
-			authSeqID,
+			auth_seq_id,
 			(sums.rfSums[0] / sums.rfSums[1]),           // rsr
 			sums.srg(),                                  // srsr
 			sums.cc(),                                   // rsccs
@@ -791,13 +791,13 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 	{
 		for (const auto &d : atomData)
 		{
-			const Atom &atom = d.atom;
+			const cif::mm::atom &atom = d.atom;
 
-			if (not atom.isWater())
+			if (not atom.is_water())
 				continue;
 
 			result.emplace_back(ResidueStatistics{d.asymID, d.seqID, "HOH",
-				atom.authSeqID(),
+				atom.get_auth_seq_id(),
 				(d.sums.rfSums[0] / d.sums.rfSums[1]),         // rsr
 				d.sums.srg(),                                  // srsr
 				d.sums.cc(),                                   // rsccs
@@ -810,9 +810,9 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 	return result;
 }
 
-ResidueStatistics StatsCollector::collect(std::initializer_list<const Residue *> residues) const
+ResidueStatistics StatsCollector::collect(std::initializer_list<const cif::mm::residue *> residues) const
 {
-	std::vector<Atom> atoms;
+	std::vector<cif::mm::atom> atoms;
 	for (auto &r : residues)
 		for (auto a : r->atoms())
 			atoms.push_back(a);
@@ -820,13 +820,13 @@ ResidueStatistics StatsCollector::collect(std::initializer_list<const Residue *>
 	return collect(atoms);
 }
 
-ResidueStatistics StatsCollector::collect(std::initializer_list<Atom> atoms) const
+ResidueStatistics StatsCollector::collect(std::initializer_list<cif::mm::atom> atoms) const
 {
-	std::vector<Atom> v(atoms);
+	std::vector<cif::mm::atom> v(atoms);
 	return collect(v);
 }
 
-ResidueStatistics StatsCollector::collect(const std::vector<Atom> &atoms) const
+ResidueStatistics StatsCollector::collect(const std::vector<cif::mm::atom> &atoms) const
 {
 	std::vector<AtomData> atomData;
 
@@ -834,16 +834,16 @@ ResidueStatistics StatsCollector::collect(const std::vector<Atom> &atoms) const
 
 	for (auto atom : mStructure.atoms())
 	{
-		if (not bb.contains(atom.location()))
+		if (not bb.contains(atom.get_location()))
 			continue;
 
-		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
+		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering);
 
 		float radius = shape.radius();
 
 		if (cif::VERBOSE > 2)
 			std::cerr << (atomData.size() + 1) << '\t'
-					  << AtomTypeTraits(atom.type()).symbol() << '\t'
+					  << atom_type_traits(atom.get_type()).symbol() << '\t'
 					  << radius << std::endl;
 
 		atomData.emplace_back(atom, radius);
@@ -861,7 +861,7 @@ ResidueStatistics StatsCollector::collect(const std::vector<Atom> &atoms) const
 
 		auto ci = find_if(atomData.begin(), atomData.end(),
 			[=](auto &d)
-			{ return d.asymID == atom.labelAsymID() and d.seqID == atom.labelSeqID() and d.atom.labelAtomID() == atom.labelAtomID(); });
+			{ return d.asymID == atom.get_label_asym_id() and d.seqID == atom.get_label_seq_id() and d.atom.get_label_atom_id() == atom.get_label_atom_id(); });
 
 		if (ci == atomData.end())
 			continue;
@@ -901,20 +901,20 @@ void StatsCollector::sumDensity(std::vector<AtomData> &atomData,
 	{
 		auto &atom = data.atom;
 
-		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
+		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering);
 
 		std::string asymID = data.asymID;
-		if (atom.isWater())
+		if (atom.is_water())
 			asymID = "0";
 
 		auto radius = data.radius;
 		double sumDensity = 0;
 
-		iterateGrid(toClipper(atom.location()), radius, Fb, [&](Xmap_base::Map_reference_coord &iw)
+		iterateGrid(toClipper(atom.get_location()), radius, Fb, [&](Xmap_base::Map_reference_coord &iw)
 			{
 			auto p = toPoint(iw.coord_orth());
 			
-			double d = Distance(p, atom.location());
+			double d = distance(p, atom.get_location());
 
 			if (d <= radius)
 			{
@@ -1007,7 +1007,7 @@ void StatsCollector::calculate(std::vector<AtomData> &atomData) const
 // --------------------------------------------------------------------
 
 EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
-	Structure &structure, bool electronScattering, const BondMap &bondMap)
+	cif::mm::structure &structure, bool electronScattering, const BondMap &bondMap)
 	: StatsCollector(mm, structure, electronScattering)
 	, mDistanceMap(structure, mm.spacegroup(), mm.cell(), 3.5f)
 	, mBondMap(bondMap)
@@ -1047,14 +1047,14 @@ EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
 
 	for (auto atom : mStructure.atoms())
 	{
-		if (mRadii.count(atom.type()))
+		if (mRadii.count(atom.get_type()))
 			continue;
 
-		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering, ediaBFactor);
-		mRadii[atom.type()] = shape.radius();
+		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering, ediaBFactor);
+		mRadii[atom.get_type()] = shape.radius();
 
 		if (cif::VERBOSE)
-			std::cerr << "Radius for atom with type " << AtomTypeTraits(atom.type()).symbol() << " is " << mRadii[atom.type()] << std::endl;
+			std::cerr << "Radius for atom with type " << atom_type_traits(atom.get_type()).symbol() << " is " << mRadii[atom.get_type()] << std::endl;
 	}
 }
 
@@ -1067,10 +1067,10 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 	struct lessAtom
 	{
-		bool operator()(const Atom &a, const Atom &b) const { return a.id().compare(b.id()) < 0; }
+		bool operator()(const cif::mm::atom &a, const cif::mm::atom &b) const { return a.id().compare(b.id()) < 0; }
 	};
 
-	typedef std::set<Atom, lessAtom> atomSet;
+	typedef std::set<cif::mm::atom, lessAtom> atomSet;
 
 	// Calculate EDIA scores
 
@@ -1079,26 +1079,26 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 	for (auto &data : atomData)
 	{
 		auto &atom = data.atom;
-		float radius = mRadii.at(atom.type());
+		float radius = mRadii.at(atom.get_type());
 
 		//		if (cif::VERBOSE > 2)
 		//			std::cerr << (atomData.size() + 1) << '\t'
-		//				 << AtomTypeTraits(atom.type()).symbol() << '\t'
+		//				 << atom_type_traits(atom.get_type()).symbol() << '\t'
 		//				 << radius << std::endl;
 		//
-		PointWeightFunction w(atom.location(), radius);
+		PointWeightFunction w(atom.get_location(), radius);
 
-		std::vector<Atom> atomsNearBy = mDistanceMap.near(atom, 3.5f);
+		std::vector<cif::mm::atom> atomsNearBy = mDistanceMap.near(atom, 3.5f);
 
 		std::vector<PointWeightFunction> wn;
 		for (auto a : atomsNearBy)
-			wn.emplace_back(a.location(), mRadii.at(a.type()));
+			wn.emplace_back(a.get_location(), mRadii.at(a.get_type()));
 
 		float ediaSum[2] = {};
 
-		iterateGrid(toClipper(atom.location()), radius, Fb, [&](auto iw)
+		iterateGrid(toClipper(atom.get_location()), radius, Fb, [&](auto iw)
 		{
-			Point p = toPoint(iw.coord_orth());
+			cif::point p = toPoint(iw.coord_orth());
 			
 			// EDIA calculations
 			auto fb = Fb[iw];
@@ -1152,12 +1152,12 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 				else
 				{
 					float sumpb = accumulate(I.begin(), I.end(), 0.f,
-						[p](float s, const Atom& b) -> float
+						[p](float s, const cif::mm::atom& b) -> float
 						{
-							return s + Distance(p, b.location());
+							return s + distance(p, b.get_location());
 						});
 
-					o = 1 - Distance(atom.location(), p) / sumpb;
+					o = 1 - distance(atom.get_location(), p) / sumpb;
 				}
 			}
 			else if (D.count(atom) and S.empty())
@@ -1167,12 +1167,12 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 				else
 				{
 					float sumpb = accumulate(D.begin(), D.end(), 0.f,
-						[p](float s, const Atom& b) -> float
+						[p](float s, const cif::mm::atom& b) -> float
 						{
-							return s + Distance(p, b.location());
+							return s + distance(p, b.get_location());
 						});
 
-					o = 1 - Distance(atom.location(), p) / sumpb;
+					o = 1 - distance(atom.get_location(), p) / sumpb;
 				}
 			}
 

@@ -28,20 +28,19 @@
 
 #include <cif++.hpp>
 #include <clipper/core/coords.h>
-#include <pdbx++/point.hpp>
 
 namespace pdb_redo
 {
 
-// clipper::Atom toClipper(const mmcif::Atom &atom);
+clipper::Atom toClipper(const cif::mm::atom &atom);
 clipper::Atom toClipper(cif::row_handle atom, cif::row_handle aniso_row);
 
-inline clipper::Coord_orth toClipper(const pdbx::Point &pt)
+inline clipper::Coord_orth toClipper(const cif::point &pt)
 {
-	return { pt.mX, pt.mY, pt.mZ };
+	return { pt.m_x, pt.m_y, pt.m_z };
 }
 
-inline pdbx::Point toPoint(const clipper::Coord_orth &pt)
+inline cif::point toPoint(const clipper::Coord_orth &pt)
 {
 	return { static_cast<float>(pt.x()), static_cast<float>(pt.y()), static_cast<float>(pt.z()) };
 }

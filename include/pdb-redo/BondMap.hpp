@@ -59,12 +59,22 @@ class BondMap
 		return isBonded(index.at(atom_1), index.at(atom_2));
 	}
 
+	bool operator()(const cif::mm::atom &atom_1, const cif::mm::atom &atom_2) const
+	{
+		return operator()(atom_1.id(), atom_2.id());
+	}
+
 	bool is1_4(const std::string &atom_1, const std::string &atom_2) const
 	{
 		uint32_t ixa = index.at(atom_1);
 		uint32_t ixb = index.at(atom_2);
 
 		return bond_1_4.count(key(ixa, ixb));
+	}
+
+	bool is1_4(const cif::mm::atom &atom_1, const cif::mm::atom &atom_2) const
+	{
+		return is1_4(atom_1.id(), atom_2.id());
 	}
 
 	// links coming from the struct_conn records:

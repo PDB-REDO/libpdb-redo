@@ -27,50 +27,50 @@
 #include <atomic>
 #include <mutex>
 
-#include "cif++/CifUtils.hpp"
-#include "cif++/Symmetry.hpp"
+#include "cif++.hpp"
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/Symmetry-2.hpp"
 
 namespace c = cif;
-namespace m = mmcif;
 
 namespace pdb_redo
 {
 
 // --------------------------------------------------------------------
 
-clipper::Coord_orth CalculateOffsetForCell(const m::Structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
+clipper::Coord_orth CalculateOffsetForCell(const cif::mm::structure &structure, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
 {
-	auto &atoms = p.atoms();
+	using namespace cif::literals;
+
+	auto &atoms = structure.atoms();
 	size_t dim = atoms.size();
 
 	std::vector<clipper::Coord_orth> locations;
 	locations.reserve(dim);
 
 	// bounding box
-	m::Point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
+	cif::point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
 		pMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
 
 	for (auto &atom : atoms)
 	{
-		auto pt = atom.location();
+		cif::point pt = atom.get_location();
 		locations.push_back(toClipper(pt));
 
-		if (pMin.mX > pt.mX)
-			pMin.mX = pt.mX;
-		if (pMin.mY > pt.mY)
-			pMin.mY = pt.mY;
-		if (pMin.mZ > pt.mZ)
-			pMin.mZ = pt.mZ;
+		if (pMin.m_x > pt.m_x)
+			pMin.m_x = pt.m_x;
+		if (pMin.m_y > pt.m_y)
+			pMin.m_y = pt.m_y;
+		if (pMin.m_z > pt.m_z)
+			pMin.m_z = pt.m_z;
 
-		if (pMax.mX < pt.mX)
-			pMax.mX = pt.mX;
-		if (pMax.mY < pt.mY)
-			pMax.mY = pt.mY;
-		if (pMax.mZ < pt.mZ)
-			pMax.mZ = pt.mZ;
+		if (pMax.m_x < pt.m_x)
+			pMax.m_x = pt.m_x;
+		if (pMax.m_y < pt.m_y)
+			pMax.m_y = pt.m_y;
+		if (pMax.m_z < pt.m_z)
+			pMax.m_z = pt.m_z;
 	};
 
 	// correct locations so that the median of x, y and z are inside the cell
@@ -98,7 +98,7 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure &p, const clipper:
 	float mz = median();
 
 	if (cif::VERBOSE > 1)
-		std::cerr << "median position of atoms: " << m::Point(mx, my, mz) << std::endl;
+		std::cerr << "median position of atoms: " << cif::point(mx, my, mz) << std::endl;
 
 	auto calculateD = [&](float m, float c)
 	{
@@ -117,16 +117,16 @@ clipper::Coord_orth CalculateOffsetForCell(const m::Structure &p, const clipper:
 	if (cell.a() == 0 or cell.b() == 0 or cell.c() == 0)
 		throw std::runtime_error("Invalid cell, contains a dimension that is zero");
 
-	m::Point D;
+	cif::point D;
 
-	D.mX = calculateD(mx, static_cast<float>(cell.a()));
-	D.mY = calculateD(my, static_cast<float>(cell.b()));
-	D.mZ = calculateD(mz, static_cast<float>(cell.c()));
+	D.m_x = calculateD(mx, static_cast<float>(cell.a()));
+	D.m_y = calculateD(my, static_cast<float>(cell.b()));
+	D.m_z = calculateD(mz, static_cast<float>(cell.c()));
 
-	if (D.mX != 0 or D.mY != 0 or D.mZ != 0)
+	if (D.m_x != 0 or D.m_y != 0 or D.m_z != 0)
 	{
 		if (cif::VERBOSE > 1)
-			std::cerr << "moving coorinates by " << D.mX << ", " << D.mY << " and " << D.mZ << std::endl;
+			std::cerr << "moving coorinates by " << D.m_x << ", " << D.m_y << " and " << D.m_z << std::endl;
 	}
 
 	return toClipper(D);
@@ -216,23 +216,23 @@ int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac &rt)
 		}
 	}
 
-	m::SymopData k(krt);
+	cif::symop_data k(krt);
 
-	const size_t N = m::kSymopNrTableSize;
+	const size_t N = cif::kSymopNrTableSize;
 	int32_t L = 0, R = static_cast<int32_t>(N - 1);
 	while (L <= R)
 	{
 		int32_t i = (L + R) / 2;
-		if (m::kSymopNrTable[i].spacegroup() < spacegroup)
+		if (cif::kSymopNrTable[i].spacegroup() < spacegroup)
 			L = i + 1;
 		else
 			R = i - 1;
 	}
 
-	for (size_t i = L; i < N and m::kSymopNrTable[i].spacegroup() == spacegroup; ++i)
+	for (size_t i = L; i < N and cif::kSymopNrTable[i].spacegroup() == spacegroup; ++i)
 	{
-		if (m::kSymopNrTable[i].symop() == k)
-			return m::kSymopNrTable[i].rotational_number();
+		if (cif::kSymopNrTable[i].symop() == k)
+			return cif::kSymopNrTable[i].rotational_number();
 	}
 
 	throw std::runtime_error("Symmetry operation was not found in table, cannot find rotational number");
@@ -242,13 +242,13 @@ int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac &rt)
 
 std::string SpacegroupToHall(std::string spacegroup)
 {
-	int nr = m::GetSpacegroupNumber(spacegroup);
+	int nr = cif::get_space_group_number(spacegroup);
 
 	// yeah, sucks, I know, might be looping three times this way
 	std::string result;
-	for (size_t i = 0; i < m::kNrOfSpaceGroups; ++i)
+	for (size_t i = 0; i < cif::kNrOfSpaceGroups; ++i)
 	{
-		auto &sp = m::kSpaceGroups[i];
+		auto &sp = cif::kSpaceGroups[i];
 		if (sp.nr == nr)
 		{
 			result = sp.Hall;
@@ -264,9 +264,9 @@ std::string SpacegroupToHall(std::string spacegroup)
 
 clipper::Spgr_descr GetCCP4SpacegroupDescr(int nr)
 {
-	for (size_t i = 0; i < m::kNrOfSpaceGroups; ++i)
+	for (size_t i = 0; i < cif::kNrOfSpaceGroups; ++i)
 	{
-		auto &sg = m::kSpaceGroups[i];
+		auto &sg = cif::kSpaceGroups[i];
 		if (sg.nr == nr)
 			return clipper::Spgr_descr(sg.Hall, clipper::Spgr_descr::Hall);
 	}
@@ -278,7 +278,7 @@ clipper::Spgr_descr GetCCP4SpacegroupDescr(int nr)
 
 std::string describeRToperation(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
-	auto spacegroup_nr = mmcif::GetSpacegroupNumber(spacegroup.symbol_xhm(), mmcif::SpacegroupName::xHM);
+	auto spacegroup_nr = cif::get_space_group_number(spacegroup.symbol_xhm(), cif::space_group_name::xHM);
 
 	if (not(rt.is_null() or rt.equals(clipper::RTop_orth::identity(), 0.0001f)))
 	{
@@ -324,22 +324,22 @@ std::string describeRToperation(const clipper::Spacegroup &spacegroup, const cli
 
 // --------------------------------------------------------------------
 
-mmcif::Atom symmetryCopy(const mmcif::Atom &atom, const mmcif::Point &d,
+cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const cif::point &d,
 	const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
-	auto loc = atom.location();
+	auto loc = atom.get_location();
 	loc += d;
 	loc = toPoint(toClipper(loc).transform(rt));
 	loc -= d;
 
 	std::string rt_operation = describeRToperation(spacegroup, cell, rt);
 
-	return mmcif::Atom(atom, loc, rt_operation);
+	return cif::mm::atom(atom, loc, rt_operation);
 }
 
 // -----------------------------------------------------------------------
 
-SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const m::Structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
+SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const cif::mm::structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
 	: mSpacegroup(spacegroup)
 	, mD(toPoint(CalculateOffsetForCell(p, mSpacegroup, cell)))
 	, mRtOrth(AlternativeSites(mSpacegroup, cell))
@@ -347,12 +347,12 @@ SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const m::Structure &p, 
 {
 }
 
-SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const mmcif::Structure &p, int spacegroupNr, const clipper::Cell &cell)
+SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const cif::mm::structure &p, int spacegroupNr, const clipper::Cell &cell)
 	: SymmetryAtomIteratorFactory(p, clipper::Spacegroup{GetCCP4SpacegroupDescr(spacegroupNr)}, cell)
 {
 }
 
-// string SymmetryAtomIteratorFactory::symop_mmcif(const m::Atom& a) const
+// string SymmetryAtomIteratorFactory::symop_mmcif(const cif::cif::mm::atom& a) const
 // {
 // 	string result;
 

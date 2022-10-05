@@ -33,7 +33,6 @@
 
 #include <boost/algorithm/string.hpp>
 
-#include "cif++/CifUtils.hpp"
 #include <cif++.hpp>
 
 #include "pdb-redo/ClipperWrapper.hpp"
@@ -45,13 +44,6 @@ namespace ba = boost::algorithm;
 namespace pdb_redo
 {
 
-using mmcif::Atom;
-using mmcif::Distance;
-using mmcif::DPoint;
-using mmcif::Monomer;
-using mmcif::Point;
-using mmcif::Structure;
-
 using clipper::Coord_frac;
 using clipper::Coord_grid;
 using clipper::Coord_map;
@@ -61,7 +53,7 @@ using clipper::Coord_orth;
 
 double BondRestraint::f(const AtomLocationProvider &atoms) const
 {
-	double d = mDist - Distance(atoms[mA], atoms[mB]);
+	double d = mDist - distance(atoms[mA], atoms[mB]);
 	double result = (d * d) / (mDistESD * mDistESD);
 
 	if (cif::VERBOSE > 2)
@@ -76,7 +68,7 @@ void BondRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
 	auto a1 = atoms[mA], a2 = atoms[mB];
 
-	auto bi = Distance(a1, a2);
+	auto bi = distance(a1, a2);
 	if (bi < 0.1)
 		bi = 0.1;
 
@@ -101,8 +93,8 @@ double AngleRestraint::f(const AtomLocationProvider &atoms) const
 {
 	DPoint p[3] = {atoms[mA], atoms[mB], atoms[mC]};
 
-	double c = CosinusAngle(p[1], p[0], p[1], p[2]);
-	double angle = std::atan2(std::sqrt(1 - c * c), c) * 180 / mmcif::kPI;
+	double c = cosinus_angle(p[1], p[0], p[1], p[2]);
+	double angle = std::atan2(std::sqrt(1 - c * c), c) * 180 / cif::kPI;
 
 	double d = mAngle - angle;
 	double result = (d * d) / (mESD * mESD);
@@ -115,7 +107,7 @@ double AngleRestraint::f(const AtomLocationProvider &atoms) const
 
 void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
-	const double kRadToDegree = 180.0 / mmcif::kPI, kDegreeToRad = 1 / kRadToDegree;
+	const double kRadToDegree = 180.0 / cif::kPI, kDegreeToRad = 1 / kRadToDegree;
 
 	if (cif::VERBOSE > 2)
 		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ": " << std::endl;
@@ -125,21 +117,21 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 	auto aVec = (k - l);
 	auto bVec = (m - l);
 
-	auto a = Distance(k, l);
+	auto a = distance(k, l);
 	if (a < 0.01)
 	{
 		a = 0.01;
 		aVec = DPoint{0.01, 0.01, 0.01};
 	};
 
-	auto b = Distance(m, l);
+	auto b = distance(m, l);
 	if (b < 0.01)
 	{
 		b = 0.01;
 		bVec = DPoint{0.01, 0.01, 0.01};
 	};
 
-	auto cosTheta = DotProduct(aVec, bVec) / (a * b);
+	auto cosTheta = dot_product(aVec, bVec) / (a * b);
 	if (cosTheta > 1.0)
 		cosTheta = 1.0;
 	if (cosTheta < -1.0)
@@ -174,7 +166,7 @@ TorsionRestraint::CalculateTorsionGradients(float theta, DPoint p[4]) const
 {
 	auto a = p[1] - p[0], b = p[2] - p[1], c = p[3] - p[2];
 
-	auto blensq = b.lengthsq();
+	auto blensq = b.length_sq();
 	auto blen = std::sqrt(blensq);
 
 	if (blen < 0.01)
@@ -183,12 +175,12 @@ TorsionRestraint::CalculateTorsionGradients(float theta, DPoint p[4]) const
 		blensq = 0.0001;
 	}
 
-	auto H = -DotProduct(a, c),
-		 J = DotProduct(a, b),
-		 K = DotProduct(b, c),
+	auto H = -dot_product(a, c),
+		 J = dot_product(a, b),
+		 K = dot_product(b, c),
 		 L = 1 / blensq;
 
-	auto E = DotProduct(a, CrossProduct(b, c)) / blen;
+	auto E = dot_product(a, cross_product(b, c)) / blen;
 	auto G = H + J * K * L;
 	auto F = 1 / G;
 
@@ -200,18 +192,18 @@ TorsionRestraint::CalculateTorsionGradients(float theta, DPoint p[4]) const
 	DPoint dJ[4] = {-b, b - a, a, {}};
 	DPoint dL[4] = {{}, 2.0 * (p[2] - p[1]) * L * L, -2.0 * (p[2] - p[1]) * L * L, {}};
 	DPoint dM[4] = {
-		{-(b.mY * c.mZ - b.mZ * c.mY),
-			-(b.mZ * c.mX - b.mX * c.mZ),
-			-(b.mX * c.mY - b.mY * c.mX)},
-		{(b.mY * c.mZ - b.mZ * c.mY) + (a.mY * c.mZ - a.mZ * c.mY),
-			(b.mZ * c.mX - b.mX * c.mZ) + (a.mZ * c.mX - a.mX * c.mZ),
-			(b.mX * c.mY - b.mY * c.mX) + (a.mX * c.mY - a.mY * c.mX)},
-		{(b.mY * a.mZ - b.mZ * a.mY) - (a.mY * c.mZ - a.mZ * c.mY),
-			-(a.mZ * c.mX - a.mX * c.mZ) + (b.mZ * a.mX - b.mX * a.mZ),
-			-(a.mX * c.mY - a.mY * c.mX) + (a.mY * b.mX - a.mX * b.mY)},
-		{-(b.mY * a.mZ - b.mZ * a.mY),
-			-(b.mZ * a.mX - b.mX * a.mZ),
-			-(a.mY * b.mX - a.mX * b.mY)}};
+		{-(b.m_y * c.m_z - b.m_z * c.m_y),
+			-(b.m_z * c.m_x - b.m_x * c.m_z),
+			-(b.m_x * c.m_y - b.m_y * c.m_x)},
+		{(b.m_y * c.m_z - b.m_z * c.m_y) + (a.m_y * c.m_z - a.m_z * c.m_y),
+			(b.m_z * c.m_x - b.m_x * c.m_z) + (a.m_z * c.m_x - a.m_x * c.m_z),
+			(b.m_x * c.m_y - b.m_y * c.m_x) + (a.m_x * c.m_y - a.m_y * c.m_x)},
+		{(b.m_y * a.m_z - b.m_z * a.m_y) - (a.m_y * c.m_z - a.m_z * c.m_y),
+			-(a.m_z * c.m_x - a.m_x * c.m_z) + (b.m_z * a.m_x - b.m_x * a.m_z),
+			-(a.m_x * c.m_y - a.m_y * c.m_x) + (a.m_y * b.m_x - a.m_x * b.m_y)},
+		{-(b.m_y * a.m_z - b.m_z * a.m_y),
+			-(b.m_z * a.m_x - b.m_x * a.m_z),
+			-(a.m_y * b.m_x - a.m_x * b.m_y)}};
 
 	DPoint dE[4]{
 		dM[0] / blen,
@@ -235,8 +227,8 @@ double TorsionRestraint::f(const AtomLocationProvider &atoms) const
 {
 	double result = 0;
 
-	double cos_a1 = CosinusAngle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
-	double cos_a2 = CosinusAngle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
+	double cos_a1 = cosinus_angle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
+	double cos_a2 = cosinus_angle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
 
 	if (cos_a1 <= 0.9 and cos_a2 <= 0.9)
 	{
@@ -244,7 +236,7 @@ double TorsionRestraint::f(const AtomLocationProvider &atoms) const
 		if (mPeriodicity > 0)
 			period /= mPeriodicity;
 
-		double theta = DihedralAngle(atoms[mA], atoms[mB], atoms[mC], atoms[mD]);
+		double theta = dihedral_angle(atoms[mA], atoms[mB], atoms[mC], atoms[mD]);
 		double diff = std::fmod(std::abs(theta - mTarget) + period / 2, period) - period / 2;
 
 		if (not std::isnan(diff))
@@ -266,8 +258,8 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 	if (cif::VERBOSE > 2)
 		std::cerr << "torsion::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << "/" << atoms.atom(mD) << ' ' << ": " << std::endl;
 
-	double cos_a1 = CosinusAngle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
-	double cos_a2 = CosinusAngle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
+	double cos_a1 = cosinus_angle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
+	double cos_a2 = cosinus_angle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
 
 	if (cos_a1 <= 0.9 and cos_a2 <= 0.9)
 	{
@@ -275,7 +267,7 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 		if (mPeriodicity > 0)
 			period /= mPeriodicity;
 
-		double theta = DihedralAngle(atoms[mA], atoms[mB], atoms[mC], atoms[mD]);
+		double theta = dihedral_angle(atoms[mA], atoms[mB], atoms[mC], atoms[mD]);
 		double diff = theta - mTarget;
 		if (diff > 180)
 			diff -= 360;
@@ -284,8 +276,8 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 		if (not std::isnan(diff))
 		{
-			auto tt = std::tan(mmcif::kPI * theta / 180);
-			double scale = 180.0 / ((1 + tt * tt) * mmcif::kPI);
+			auto tt = std::tan(cif::kPI * theta / 180);
+			double scale = 180.0 / ((1 + tt * tt) * cif::kPI);
 			auto w = 1 / (mESD * mESD);
 
 			DPoint p[4] = {atoms[mA], atoms[mB], atoms[mC], atoms[mD]};
@@ -312,8 +304,8 @@ const double kChiralVolumeESD = 0.2; // according to coot that's a reasonable va
 
 double ChiralVolumeRestraint::f(const AtomLocationProvider &atoms) const
 {
-	auto chiralVolume = DotProduct(atoms[mA1] - atoms[mCentre],
-		CrossProduct(atoms[mA2] - atoms[mCentre], atoms[mA3] - atoms[mCentre]));
+	auto chiralVolume = dot_product(atoms[mA1] - atoms[mCentre],
+		cross_product(atoms[mA2] - atoms[mCentre], atoms[mA3] - atoms[mCentre]));
 
 	double d = mVolume - chiralVolume;
 	double result = (d * d) / (kChiralVolumeESD * kChiralVolumeESD);
@@ -334,19 +326,19 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &d
 	DPoint b = atoms[mA2] - centre;
 	DPoint c = atoms[mA3] - centre;
 
-	auto chiralVolume = DotProduct(a, CrossProduct(b, c));
+	auto chiralVolume = dot_product(a, cross_product(b, c));
 
 	auto d = chiralVolume - mVolume;
 	auto s = 2 * d / (kChiralVolumeESD * kChiralVolumeESD);
 
 	df.add(mCentre, s * DPoint{
-							-(b.mY * c.mZ - b.mZ * c.mY) - (a.mZ * c.mY - a.mY * c.mZ) - (a.mY * b.mZ - a.mZ * b.mY),
-							-(b.mZ * c.mX - b.mX * c.mZ) - (a.mX * c.mZ - a.mZ * c.mX) - (a.mZ * b.mX - a.mX * b.mZ),
-							-(b.mX * c.mY - b.mY * c.mX) - (a.mY * c.mX - a.mX * c.mY) - (a.mX * b.mY - a.mY * b.mX)});
+							-(b.m_y * c.m_z - b.m_z * c.m_y) - (a.m_z * c.m_y - a.m_y * c.m_z) - (a.m_y * b.m_z - a.m_z * b.m_y),
+							-(b.m_z * c.m_x - b.m_x * c.m_z) - (a.m_x * c.m_z - a.m_z * c.m_x) - (a.m_z * b.m_x - a.m_x * b.m_z),
+							-(b.m_x * c.m_y - b.m_y * c.m_x) - (a.m_y * c.m_x - a.m_x * c.m_y) - (a.m_x * b.m_y - a.m_y * b.m_x)});
 
-	df.add(mA1, s * DPoint{b.mY * c.mZ - b.mZ * c.mY, b.mZ * c.mX - b.mX * c.mZ, b.mX * c.mY - b.mY * c.mX});
-	df.add(mA2, s * DPoint{a.mZ * c.mY - a.mY * c.mZ, a.mX * c.mZ - a.mZ * c.mX, a.mY * c.mX - a.mX * c.mY});
-	df.add(mA3, s * DPoint{a.mY * b.mZ - a.mZ * b.mY, a.mZ * b.mX - a.mX * b.mZ, a.mX * b.mY - a.mY * b.mX});
+	df.add(mA1, s * DPoint{b.m_y * c.m_z - b.m_z * c.m_y, b.m_z * c.m_x - b.m_x * c.m_z, b.m_x * c.m_y - b.m_y * c.m_x});
+	df.add(mA2, s * DPoint{a.m_z * c.m_y - a.m_y * c.m_z, a.m_x * c.m_z - a.m_z * c.m_x, a.m_y * c.m_x - a.m_x * c.m_y});
+	df.add(mA3, s * DPoint{a.m_y * b.m_z - a.m_z * b.m_y, a.m_z * b.m_x - a.m_x * b.m_z, a.m_x * b.m_y - a.m_y * b.m_x});
 }
 
 void ChiralVolumeRestraint::print(const AtomLocationProvider &atoms) const
@@ -367,12 +359,12 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 	clipper::Matrix<double> mat(3, 3);
 	for (auto &a : mAtoms)
 	{
-		mat(0, 0) += (atoms[a].mX - center.mX) * (atoms[a].mX - center.mX);
-		mat(1, 1) += (atoms[a].mY - center.mY) * (atoms[a].mY - center.mY);
-		mat(2, 2) += (atoms[a].mZ - center.mZ) * (atoms[a].mZ - center.mZ);
-		mat(0, 1) += (atoms[a].mX - center.mX) * (atoms[a].mY - center.mY);
-		mat(0, 2) += (atoms[a].mX - center.mX) * (atoms[a].mZ - center.mZ);
-		mat(1, 2) += (atoms[a].mY - center.mY) * (atoms[a].mZ - center.mZ);
+		mat(0, 0) += (atoms[a].m_x - center.m_x) * (atoms[a].m_x - center.m_x);
+		mat(1, 1) += (atoms[a].m_y - center.m_y) * (atoms[a].m_y - center.m_y);
+		mat(2, 2) += (atoms[a].m_z - center.m_z) * (atoms[a].m_z - center.m_z);
+		mat(0, 1) += (atoms[a].m_x - center.m_x) * (atoms[a].m_y - center.m_y);
+		mat(0, 2) += (atoms[a].m_x - center.m_x) * (atoms[a].m_z - center.m_z);
+		mat(1, 2) += (atoms[a].m_y - center.m_y) * (atoms[a].m_z - center.m_z);
 	}
 
 	mat(1, 0) = mat(0, 1);
@@ -391,7 +383,7 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 	abcd[1] /= sumSq;
 	abcd[2] /= sumSq;
 
-	abcd[3] = abcd[0] * center.mX + abcd[1] * center.mY + abcd[2] * center.mZ;
+	abcd[3] = abcd[0] * center.m_x + abcd[1] * center.m_y + abcd[2] * center.m_z;
 }
 
 double PlanarityRestraint::f(const AtomLocationProvider &atoms) const
@@ -403,9 +395,9 @@ double PlanarityRestraint::f(const AtomLocationProvider &atoms) const
 	double result = accumulate(mAtoms.begin(), mAtoms.end(), 0.,
 		[&atoms, &abcd, esd = mESD](double sum, AtomRef a)
 		{
-			double v = abcd[0] * atoms[a].mX +
-		               abcd[1] * atoms[a].mY +
-		               abcd[2] * atoms[a].mZ -
+			double v = abcd[0] * atoms[a].m_x +
+		               abcd[1] * atoms[a].m_y +
+		               abcd[2] * atoms[a].m_z -
 		               abcd[3];
 
 			double r = v / esd;
@@ -453,7 +445,7 @@ void PlanarityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) 
 	for (auto &a : mAtoms)
 	{
 		auto l = atoms[a];
-		auto deviLen = l.mX * abcd[0] + l.mY * abcd[1] + l.mZ * abcd[2] - abcd[3];
+		auto deviLen = l.m_x * abcd[0] + l.m_y * abcd[1] + l.m_z * abcd[2] - abcd[3];
 
 		df.add(a, 2 * deviLen * DPoint{abcd[0], abcd[1], abcd[2]} / (mESD * mESD));
 	}
@@ -475,7 +467,7 @@ double NonBondedContactRestraint::f(const AtomLocationProvider &atoms) const
 {
 	double result = 0;
 
-	double distance = DistanceSquared(atoms[mA], atoms[mB]);
+	double distance = distance_squared(atoms[mA], atoms[mB]);
 	if (distance < mMinDistSq)
 	{
 		double d = mMinDist - std::sqrt(distance);
@@ -494,7 +486,7 @@ void NonBondedContactRestraint::df(const AtomLocationProvider &atoms, DFCollecto
 {
 	auto a1 = atoms[mA], a2 = atoms[mB];
 
-	auto bi = DistanceSquared(a1, a2);
+	auto bi = distance_squared(a1, a2);
 	if (bi < mMinDistSq)
 	{
 		bi = std::sqrt(bi);
@@ -516,7 +508,7 @@ void NonBondedContactRestraint::df(const AtomLocationProvider &atoms, DFCollecto
 void NonBondedContactRestraint::print(const AtomLocationProvider &atoms) const
 {
 	std::cout << "nbc " << atoms.atom(mA) << " " << atoms.atom(mB)
-			  << " => " << Distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << std::endl;
+			  << " => " << distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << std::endl;
 }
 
 // --------------------------------------------------------------------

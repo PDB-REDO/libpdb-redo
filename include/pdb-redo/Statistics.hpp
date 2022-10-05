@@ -26,8 +26,7 @@
 
 #pragma once
 
-#include <pdbx++/BondMap.hpp>
-
+#include <pdb-redo/BondMap.hpp>
 #include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/MapMaker.hpp"
 
@@ -86,18 +85,18 @@ class StatsCollector
 	StatsCollector &operator=(const StatsCollector &) = delete;
 
 	StatsCollector(const MapMaker<float> &mm,
-		mmcif::Structure &structure, bool electronScattering);
+		cif::mm::structure &structure, bool electronScattering);
 
 	virtual std::vector<ResidueStatistics> collect() const;
 
 	virtual std::vector<ResidueStatistics> collect(const std::string &asymID,
 		int resFirst, int resLast, bool authNameSpace = true) const;
 
-	virtual ResidueStatistics collect(std::initializer_list<const mmcif::Residue *> residues) const;
+	virtual ResidueStatistics collect(std::initializer_list<const cif::mm::residue *> residues) const;
 
-	virtual ResidueStatistics collect(std::initializer_list<mmcif::Atom> atoms) const;
+	virtual ResidueStatistics collect(std::initializer_list<cif::mm::atom> atoms) const;
 
-	virtual ResidueStatistics collect(const std::vector<mmcif::Atom> &atoms) const;
+	virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
 
   protected:
 	// asym-seqid-compid
@@ -124,7 +123,7 @@ class StatsCollector
 
 	typedef std::map<clipper::Coord_grid, double, cmpGPt> GridPtDataMap;
 
-	mmcif::Structure &mStructure;
+	cif::mm::structure &mStructure;
 	const MapMaker<float> &mMapMaker;
 
 	clipper::Spacegroup mSpacegroup;
@@ -153,15 +152,15 @@ class EDIAStatsCollector : public StatsCollector
 {
   public:
 	EDIAStatsCollector(MapMaker<float> &mm,
-		mmcif::Structure &structure, bool electronScattering,
-		const mmcif::BondMap &bondMap);
+		cif::mm::structure &structure, bool electronScattering,
+		const BondMap &bondMap);
 
   protected:
 	virtual void calculate(std::vector<AtomData> &atomData) const;
 
 	DistanceMap mDistanceMap;
-	const mmcif::BondMap &mBondMap;
-	std::map<mmcif::AtomType, float> mRadii;
+	const BondMap &mBondMap;
+	std::map<cif::atom_type, float> mRadii;
 };
 
 } // namespace pdb_redo

@@ -38,10 +38,7 @@
 namespace pdb_redo
 {
 
-using mmcif::Structure;
-using mmcif::Atom;
-using mmcif::kPI;
-using mmcif::Gd;
+using cif::kPI;
 
 template <typename FTYPE = float>
 class Map
@@ -77,11 +74,11 @@ class Map
 	clipper::Spacegroup spacegroup() const { return mMap.spacegroup(); }
 	clipper::Cell cell() const { return mMap.cell(); }
 
-	/// \brief Create a masked map blotting out the density for all \a atoms in \a structure
-	Map masked(const Structure &structure, const std::vector<Atom> &atoms) const;
+	/// \brief Create a masked map blotting out the density for all \a atom_ids in the structure contained in \a db
+	Map masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const;
 
-	/// \brief Return the z-weighted density sum for the atoms in \a atoms
-	float z_weighted_density(const Structure &structure, const std::vector<Atom> &atoms) const;
+	/// \brief Return the z-weighted density sum for the atoms \a atom_ids in the structure contained in \a db
+	float z_weighted_density(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const;
 
   private:
 	Xmap mMap;
@@ -141,13 +138,13 @@ class MapMaker
 
 	// following works on both mtz files and structure factor files in CIF format
 	void calculate(const std::filesystem::path &hklin,
-		const Structure &structure,
+		const cif::mm::structure &structure,
 		bool noBulk, AnisoScalingFlag anisoScaling,
 		float samplingRate, bool electronScattering = false,
 		std::initializer_list<std::string> foLabels = {"FP", "SIGFP"},
 		std::initializer_list<std::string> freeLabels = {"FREE"});
 
-	void recalc(const Structure &structure,
+	void recalc(const cif::mm::structure &structure,
 		bool noBulk, AnisoScalingFlag anisoScaling,
 		float samplingRate, bool electronScattering = false);
 

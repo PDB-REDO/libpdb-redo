@@ -127,7 +127,6 @@ endif()
 # Libraries
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(cifpp 5.0.0 REQUIRED)
-find_package(pdbxpp 5.0.0 REQUIRED)
 find_package(zeep 5.1.7 REQUIRED)
 
 pkg_check_modules(GSL gsl)
@@ -145,6 +144,7 @@ write_version_header("LibPDBREDO")
 # Sources
 set(project_sources
 	${PROJECT_SOURCE_DIR}/src/AtomShape.cpp
+	${PROJECT_SOURCE_DIR}/src/BondMap.cpp
 	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
 	${PROJECT_SOURCE_DIR}/src/DistanceMap.cpp
 	${PROJECT_SOURCE_DIR}/src/MapMaker.cpp
@@ -157,6 +157,7 @@ set(project_sources
 
 set(project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/AtomShape.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/BondMap.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/ClipperWrapper.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/DistanceMap.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/MapMaker.hpp
@@ -170,13 +171,11 @@ set(project_headers
 if(GSL_FOUND)
 	set(project_sources
 		${project_sources}
-		${PROJECT_SOURCE_DIR}/src/Compound.cpp
 		${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
 		${PROJECT_SOURCE_DIR}/src/Restraints.cpp)
 
 	set(project_headers
 		${project_headers}
-		${PROJECT_SOURCE_DIR}/include/pdb-redo/Compound.hpp
 		${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
 		${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp)
 endif()
