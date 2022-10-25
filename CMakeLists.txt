@@ -193,7 +193,7 @@ target_include_directories(pdb-redo
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
 target_include_directories(pdb-redo PRIVATE ${CCP4_INCLUDE_DIRS} ${NEWUOA_INCLUDE_DIR})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} ${GSL_LIBRARIES})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep gxrio::gxrio ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} ${GSL_LIBRARIES})
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)

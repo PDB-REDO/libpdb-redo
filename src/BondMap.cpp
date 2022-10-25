@@ -334,7 +334,7 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 		{
 			std::vector<cif::row_handle> rAtoms;
 			copy_if(atoms.begin(), atoms.end(), back_inserter(rAtoms),
-				[&](cif::row_handle a)
+				[asymID=asymID,seqID=seqID](cif::row_handle a)
 				{ return a["label_asym_id"] == asymID and a["label_seq_id"] == seqID; });
 
 			for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
