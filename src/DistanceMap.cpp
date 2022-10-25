@@ -109,7 +109,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 
 	auto &db = p.get_datablock();
 
-	for (auto rh : db["atom_site"].find("pdbx_model_nr"_key == p.get_model_nr() or "pdbx_model_nr"_key == cif::null))
+	for (auto rh : db["atom_site"].find("pdbx_PDB_model_num"_key == p.get_model_nr() or "pdbx_PDB_model_num"_key == cif::null))
 		atoms.push_back(rh);
 
 	dim = uint32_t(atoms.size());
@@ -407,55 +407,59 @@ float DistanceMap::operator()(const std::string &a, const std::string &b) const
 	return 100.f;
 }
 
-// std::vector<std::string> DistanceMap::near(cif::row_handle atom, float maxDistance) const
-// {
-// 	using namespace cif::literals;
+std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float maxDistance) const
+{
+	using namespace cif::literals;
 
-// 	assert(maxDistance <= mMaxDistance);
-// 	if (maxDistance > mMaxDistance)
-// 		throw std::runtime_error("Invalid max distance in DistanceMap::near");
+	assert(maxDistance <= mMaxDistance);
+	if (maxDistance > mMaxDistance)
+		throw std::runtime_error("Invalid max distance in DistanceMap::near");
 
-// 	const auto &[a_id, alta] = atom.get<std::string, std::string>("id", "label_alt_id");
+	std::string a_id = atom.id();
+	std::string alta = atom.get_label_alt_id();
 
-// 	size_t ixa;
-// 	try
-// 	{
-// 		ixa = index.at(a_id);
-// 	}
-// 	catch (const std::out_of_range &ex)
-// 	{
-// 		throw std::runtime_error("atom " + a_id + " not found in distance map");
-// 	}
+	size_t ixa;
+	try
+	{
+		ixa = index.at(a_id);
+	}
+	catch (const std::out_of_range &ex)
+	{
+		throw std::runtime_error("atom " + a_id + " not found in distance map");
+	}
 
-// 	std::vector<std::string> result;
-// 	auto &atom_site = db["atom_site"];
+	std::vector<cif::mm::atom> result;
 
-// 	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
-// 	{
-// 		float d;
-// 		int32_t rti;
-// 		std::tie(d, rti) = mA[i];
+	auto &atom_site = atom.get_row().get_category();
 
-// 		if (d > maxDistance)
-// 			continue;
+	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
+	{
+		float d;
+		int32_t rti;
+		std::tie(d, rti) = mA[i];
 
-// 		size_t ixb = mJA[i];
+		if (d > maxDistance)
+			continue;
 
-// 		std::string b_id = rIndex.at(ixb);
-// 		auto altb = atom_site.find1<std::string>("id"_key == b_id, "label_alt_id");
+		size_t ixb = mJA[i];
 
-// 		if (altb != alta and not altb.empty() and not alta.empty())
-// 			continue;
+		std::string b_id = rIndex.at(ixb);
+		auto altb = atom_site.find1<std::string>("id"_key == b_id, "label_alt_id");
 
-// 		if (rti > 0)
-// 			result.emplace_back(symmetryCopy(b_id, mD, spacegroup, cell, mRtOrth.at(rti)));
-// 		else if (rti < 0)
-// 			result.emplace_back(symmetryCopy(b_id, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
-// 		else
-// 			result.emplace_back(b_id);
-// 	}
+		if (altb != alta and not altb.empty() and not alta.empty())
+			continue;
 
-// 	return result;
-// }
+		auto atom_b = mStructure.get_atom_by_id(b_id);
+
+		if (rti > 0)
+			result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(rti)));
+		else if (rti < 0)
+			result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
+		else
+			result.emplace_back(atom_b);
+	}
+
+	return result;
+}
 
 } // namespace pdb_redo

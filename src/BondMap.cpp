@@ -215,7 +215,7 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 	// First collect the atoms from the datablock
 	std::vector<cif::row_handle> atoms;
 
-	for (auto rh : db["atom_site"].find("pdbx_model_nr"_key == model_nr or "pdbx_model_nr"_key == cif::null))
+	for (auto rh : db["atom_site"].find("pdbx_PDB_model_num"_key == model_nr or "pdbx_PDB_model_num"_key == cif::null))
 		atoms.push_back(rh);
 
 	dim = uint32_t(atoms.size());

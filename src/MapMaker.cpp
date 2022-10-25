@@ -28,16 +28,11 @@
 #include <fstream>
 #include <iomanip>
 
-#include <boost/algorithm/string.hpp>
-#include <boost/format.hpp>
-#include <boost/iostreams/copy.hpp>
-#include <boost/iostreams/filter/gzip.hpp>
-#include <boost/iostreams/filtering_stream.hpp>
-
 #include <clipper/clipper-ccp4.h>
 #include <clipper/clipper-contrib.h>
 
 #include <cif++.hpp>
+#include <gxrio.hpp>
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"
@@ -50,8 +45,6 @@
 #define mkstemp _mktemp
 #endif
 
-namespace io = boost::iostreams;
-namespace ba = boost::algorithm;
 namespace fs = std::filesystem;
 
 namespace pdb_redo
@@ -361,13 +354,7 @@ void Map<FTYPE>::read(const std::filesystem::path &f)
 		fs::path p = mapFile.parent_path();
 		std::string s = mapFile.filename().string();
 
-		io::filtering_stream<io::input> in;
-
-		std::ifstream fi(mapFile);
-
-		in.push(io::gzip_decompressor());
-
-		in.push(fi);
+		gxrio::ifstream in(mapFile);
 
 		char tmpFileName[] = "/tmp/map-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
@@ -375,7 +362,11 @@ void Map<FTYPE>::read(const std::filesystem::path &f)
 
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
-		io::copy(in, out);
+
+		if (not in.is_open() or not out.is_open())
+			throw std::runtime_error("Could not handle compressed map file");
+
+		out << in.rdbuf();
 	}
 
 	if (not fs::exists(dataFile))
@@ -496,11 +487,11 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 
 	if (cif::VERBOSE)
 		std::cerr << "Reading map from " << hklin << std::endl
-				  << "  with labels: FB: " << ba::join(fbLabels, ",") << std::endl
-				  << "  with labels: FD: " << ba::join(fdLabels, ",") << std::endl
-				  << "  with labels: FA: " << ba::join(faLabels, ",") << std::endl
-				  << "  with labels: FO: " << ba::join(foLabels, ",") << std::endl
-				  << "  with labels: FC: " << ba::join(fcLabels, ",") << std::endl;
+				  << "  with labels: FB: " << cif::join(fbLabels, ",") << std::endl
+				  << "  with labels: FD: " << cif::join(fdLabels, ",") << std::endl
+				  << "  with labels: FA: " << cif::join(faLabels, ",") << std::endl
+				  << "  with labels: FO: " << cif::join(foLabels, ",") << std::endl
+				  << "  with labels: FC: " << cif::join(fcLabels, ",") << std::endl;
 
 	fs::path dataFile = hklin;
 
@@ -511,13 +502,7 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 		fs::path p = hklin.parent_path();
 		std::string s = hklin.filename().string();
 
-		io::filtering_stream<io::input> in;
-
-		std::ifstream fi(hklin);
-
-		in.push(io::gzip_decompressor());
-
-		in.push(fi);
+		gxrio::ifstream in(hklin);
 
 		char tmpFileName[] = "/tmp/mtz-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
@@ -525,13 +510,14 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
-		io::copy(in, out);
+		
+		out << in.rdbuf();
 	}
 
 	if (not fs::exists(dataFile))
 		throw std::runtime_error("Could not open mtz file " + hklin.string());
 
-	const std::string kBasePath("/%1%/%2%/[%3%]");
+	const std::string kBasePath("/%s/%s/[%s]");
 
 	using clipper::CCP4MTZfile;
 
@@ -563,23 +549,23 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	}
 
 	mtzin.import_hkl_data(mFbData,
-		(boost::format(kBasePath) % "*" % "*" % ba::join(fbLabels, ",")).str());
+		cif::format(kBasePath, "*", "*", cif::join(fbLabels, ",")).str());
 	mtzin.import_hkl_data(mFdData,
-		(boost::format(kBasePath) % "*" % "*" % ba::join(fdLabels, ",")).str());
+		cif::format(kBasePath, "*", "*", cif::join(fdLabels, ",")).str());
 	if (hasFAN)
 		mtzin.import_hkl_data(mFaData,
-			(boost::format(kBasePath) % "*" % "*" % ba::join(faLabels, ",")).str());
+			cif::format(kBasePath, "*", "*", cif::join(faLabels, ",")).str());
 	mtzin.import_hkl_data(mFoData,
-		(boost::format(kBasePath) % "*" % "*" % ba::join(foLabels, ",")).str());
+		cif::format(kBasePath, "*", "*", cif::join(foLabels, ",")).str());
 	mtzin.import_hkl_data(mFcData,
-		(boost::format(kBasePath) % "*" % "*" % ba::join(fcLabels, ",")).str());
+		cif::format(kBasePath, "*", "*", cif::join(fcLabels, ",")).str());
 
 	if (hasFREE)
 		mtzin.import_hkl_data(mFreeData,
-			(boost::format(kBasePath) % "*" % "*" % "FREE").str());
+			cif::format(kBasePath, "*", "*", "FREE").str());
 
 	mtzin.import_hkl_data(mPhiFomData,
-		(boost::format(kBasePath) % "*" % "*" % "PHWT,FOM").str());
+		cif::format(kBasePath, "*", "*", "PHWT,FOM").str());
 
 	mtzin.close_read();
 
@@ -818,7 +804,7 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 	if (cif::VERBOSE)
 		std::cerr << "Recalculating maps from " << hklin << std::endl;
 
-	const std::string kBasePath("/%1%/%2%/[%3%]");
+	const std::string kBasePath("/%s/%s/[%s]");
 
 	using clipper::CCP4MTZfile;
 
@@ -827,9 +813,9 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 
 	mtzin.import_hkl_info(mHKLInfo);
 	mtzin.import_hkl_data(mFoData,
-		(boost::format(kBasePath) % "*" % "*" % ba::join(foLabels, ",")).str());
+		cif::format(kBasePath, "*", "*", cif::join(foLabels, ",")).str());
 	mtzin.import_hkl_data(mFreeData,
-		(boost::format(kBasePath) % "*" % "*" % ba::join(freeLabels, ",")).str());
+		cif::format(kBasePath, "*", "*", cif::join(freeLabels, ",")).str());
 
 	mtzin.close_read();
 }

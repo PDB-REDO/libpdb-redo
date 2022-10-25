@@ -97,31 +97,31 @@ struct ResidueSpec
 	ResidueSpec(const ResidueSpec &rhs) = default;
 	ResidueSpec &operator=(const ResidueSpec &rhs) = default;
 
-	// ResidueSpec(const cif::mm::residue &res)
-	// 	: auth_asym_id(res.authAsymID())
-	// 	, auth_comp_id(res.get_compound_id())
-	// 	, auth_seq_id(res.get_auth_seq_id())
-	// 	, label_asym_id(res.get_asym_id())
-	// 	, label_comp_id(res.get_compound_id())
-	// 	, label_seq_id(res.get_seq_id())
-	// {
-	// 	char ins_code = res.authInsCode().c_str()[0];
-	// 	if (ins_code != 0 and ins_code != ' ')
-	// 		pdbx_PDB_ins_code = ins_code;
-	// }
+	ResidueSpec(const cif::mm::residue &res)
+		: auth_asym_id(res.get_auth_asym_id())
+		, auth_comp_id(res.get_compound_id())
+		, auth_seq_id(res.get_auth_seq_id())
+		, label_asym_id(res.get_asym_id())
+		, label_comp_id(res.get_compound_id())
+		, label_seq_id(res.get_seq_id())
+	{
+		char ins_code = res.get_pdb_ins_code().c_str()[0];
+		if (ins_code != 0 and ins_code != ' ')
+			pdbx_PDB_ins_code = ins_code;
+	}
 
-	// ResidueSpec(const cif::mm::atom &atom)
-	// 	: auth_asym_id(atom.authAsymID())
-	// 	, auth_comp_id(atom.authCompID())
-	// 	, auth_seq_id(atom.get_auth_seq_id())
-	// 	, label_asym_id(atom.get_label_asym_id())
-	// 	, label_comp_id(atom.get_label_comp_id())
-	// 	, label_seq_id(atom.get_label_seq_id())
-	// {
-	// 	char ins_code = atom.pdbxAuthInsCode().c_str()[0];
-	// 	if (ins_code != 0 and ins_code != ' ')
-	// 		pdbx_PDB_ins_code = ins_code;
-	// }
+	ResidueSpec(const cif::mm::atom &atom)
+		: auth_asym_id(atom.get_auth_asym_id())
+		, auth_comp_id(atom.get_label_comp_id())
+		, auth_seq_id(atom.get_auth_seq_id())
+		, label_asym_id(atom.get_label_asym_id())
+		, label_comp_id(atom.get_label_comp_id())
+		, label_seq_id(atom.get_label_seq_id())
+	{
+		char ins_code = atom.get_pdb_ins_code().c_str()[0];
+		if (ins_code != 0 and ins_code != ' ')
+			pdbx_PDB_ins_code = ins_code;
+	}
 
 	bool operator==(const ResidueSpec &rhs) const
 	{

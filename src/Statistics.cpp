@@ -553,7 +553,7 @@ std::vector<ResidueStatistics> StatsCollector::collect() const
 			continue;
 
 		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_label_comp_id(), atom.get_auth_seq_id());
-		//		auto k = std::make_tuple(atom.get_auth_asym_id(), atom.property<std::string>("auth_seq_id"), atom.authCompID());
+		//		auto k = std::make_tuple(atom.get_auth_asym_id(), atom.property<std::string>("auth_seq_id"), atom.get_label_comp_id());
 
 		if (residues.empty() or residues.back() != k)
 		{
@@ -590,7 +590,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 		}
 
 		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_label_comp_id(), atom.get_auth_seq_id());
-		//		auto k = std::make_tuple(atom.get_auth_asym_id(), atom.property<std::string>("auth_seq_id"), atom.authCompID());
+		//		auto k = std::make_tuple(atom.get_auth_asym_id(), atom.property<std::string>("auth_seq_id"), atom.get_label_comp_id());
 
 		if (residues.empty() or residues.back() != k)
 		{
