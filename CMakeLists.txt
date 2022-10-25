@@ -277,7 +277,7 @@ if(ENABLE_TESTING)
 
 	if(USE_RSRC)
 		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj
-			COMMAND ${MRC} -o ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj ${CIFPP_SHARE_DIR}/mmcif_pdbx_v50.dic ${COFF_SPEC}
+			COMMAND ${MRC} -o ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj ${CIFPP_SHARE_DIR}/mmcif_pdbx.dic ${COFF_SPEC}
 		)
 		set(PDB_REDO_TEST_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj)
 	endif()
