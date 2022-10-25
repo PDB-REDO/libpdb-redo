@@ -128,7 +128,8 @@ endif()
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(cifpp 5.0.0 REQUIRED)
 find_package(zeep 5.1.7 REQUIRED)
-find_package(gxrio REQUIRED)
+
+add_git_submodule(gxrio EXCLUDE_FROM_ALL)
 
 pkg_check_modules(GSL gsl)
 
