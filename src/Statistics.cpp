@@ -696,8 +696,13 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 
 		// EDIA
 
-		auto &res = mStructure.get_residue(asymID, compID, seqID, auth_seq_id);
-		auto alts = res.get_alternate_ids();
+		std::set<std::string> alts;
+
+		if (not missing.count(compID))
+		{
+			auto &res = mStructure.get_residue(asymID, compID, seqID, auth_seq_id);
+			alts = res.get_alternate_ids();
+		}
 
 		if (alts.empty())
 			alts.insert("");

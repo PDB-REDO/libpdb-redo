@@ -49,6 +49,12 @@ class BondMapException : public std::runtime_error
 class BondMap
 {
   public:
+	BondMap(const cif::mm::structure &structure)
+		: BondMap(structure.get_datablock(), structure.get_model_nr())
+	{
+
+	}
+
 	BondMap(const cif::datablock &db, int model_nr = 1);
 
 	BondMap(const BondMap &) = delete;

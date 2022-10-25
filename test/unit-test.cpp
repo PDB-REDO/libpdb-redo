@@ -50,7 +50,7 @@ using namespace pdb_redo;
 
 fs::path gTestDir = fs::current_path();
 
-BOOST_AUTO_TEST_CASE(init)
+bool init_unit_test()
 {
 	// not a test, just initialize test dir
 
@@ -59,8 +59,10 @@ BOOST_AUTO_TEST_CASE(init)
 		gTestDir = boost::unit_test::framework::master_test_suite().argv[1];
 
 		if (fs::exists(gTestDir / "minimal-components.cif"))
-			mmcif::CompoundFactory::instance().pushDictionary(gTestDir / "minimal-components.cif");
+			cif::compound_factory::instance().push_dictionary(gTestDir / "minimal-components.cif");
 	}
+
+	return true;
 }
 
 // --------------------------------------------------------------------
@@ -68,12 +70,10 @@ BOOST_AUTO_TEST_CASE(init)
 
 BOOST_AUTO_TEST_CASE(skip_1)
 {
-	namespace c = mmcif;
-
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	mmcif::File file(example.string());
+	cif::file file(example.string());
 
-	c::Structure structure(file);
+	cif::mm::structure structure(file);
 
 	auto& chain = structure.polymers().front();
 
@@ -175,7 +175,7 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 
-	mmcif::File file(example.string());
+	cif::file file(example.string());
 	cif::mm::structure structure(file);
 
 	const float kResHi = 1.80009, kResLo = 7.99918; 
@@ -188,9 +188,9 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 		if (i >= N)
 			break;
 
-		AtomShape shape(atom, kResHi, kResLo, false);
+		pdb_redo::AtomShape shape(atom, kResHi, kResLo, false);
 
-		BOOST_CHECK_EQUAL(cif::mm::atomTypeTraits(atom.type()).symbol(), kTestRadii[i].type);
+		BOOST_CHECK_EQUAL(cif::atom_type_traits(atom.get_type()).symbol(), kTestRadii[i].type);
 
 		float radius = shape.radius();
 		float test = kTestRadii[i].radius;
@@ -203,7 +203,7 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 
 // --------------------------------------------------------------------
 
-cif::File operator""_cf(const char* text, size_t length)
+cif::file operator""_cf(const char* text, size_t length)
 {
     struct membuf : public std::streambuf
     {
@@ -214,16 +214,14 @@ cif::File operator""_cf(const char* text, size_t length)
     } buffer(const_cast<char*>(text), length);
 
     std::istream is(&buffer);
-    return cif::File(is);
+    return cif::file(is);
 }
 
 // --------------------------------------------------------------------
 
 BOOST_AUTO_TEST_CASE(map_maker_1)
 {
-	namespace c = mmcif;
-
-	MapMaker<float> mm;
+	pdb_redo::MapMaker<float> mm;
 	
 	float samplingRate = 0.75;
 
@@ -235,11 +233,9 @@ BOOST_AUTO_TEST_CASE(map_maker_1)
 
 BOOST_AUTO_TEST_CASE(map_maker_2)
 {
-	namespace c = mmcif;
-
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 
-	mmcif::File file(example.string());
+	cif::file file(example.string());
 	cif::mm::structure structure(file);
 
 	MapMaker<float> mm;
@@ -277,8 +273,6 @@ struct TestResidue
 
 BOOST_AUTO_TEST_CASE(stats_1)
 {
-	namespace c = mmcif;
-
 	cif::VERBOSE = 2;
 
 	// read test data first (output from previous stats version)
@@ -317,7 +311,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	}
 
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	mmcif::File file(example.string());
+	cif::file file(example.string());
 	cif::mm::structure structure(file);
 
 	MapMaker<float> mm;
@@ -373,16 +367,14 @@ BOOST_AUTO_TEST_CASE(stats_1)
 
 BOOST_AUTO_TEST_CASE(stats_2)
 {
-	namespace c = mmcif;
-
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	mmcif::File file(example.string());
+	cif::file file(example.string());
 
-	BOOST_CHECK(file.isValid());
+	BOOST_CHECK(file.is_valid());
 	
 	// Rename a compound to an unknown ID
 
-	for (auto r: file.data()["chem_comp"].find(cif::key("id") == "ALA"))
+	for (auto r: file.front()["chem_comp"].find(cif::key("id") == "ALA"))
 	{
 		r["id"] = "U_K";
 		break;

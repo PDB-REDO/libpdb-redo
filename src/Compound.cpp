@@ -877,9 +877,9 @@ class CompoundFactoryImpl
 	{
 		std::string result = resName;
 
-		auto &e = const_cast<cif::File &>(mFile)["comp_synonym_list"];
+		auto &e = const_cast<cif::file &>(mFile)["comp_synonym_list"];
 
-		for (auto &synonym : e["chem_comp_synonyms"])
+		for (auto synonym : e["chem_comp_synonyms"])
 		{
 			if (ba::iequals(synonym["comp_alternative_id"].as<std::string>(), resName) == false)
 				continue;
@@ -916,7 +916,7 @@ class CompoundFactoryImpl
 	std::set<std::string> mKnownPeptides;
 	std::set<std::string> mKnownBases;
 	std::set<std::string> mMissing;
-	cif::File mFile;
+	cif::file mFile;
 	CompoundFactoryImpl *mNext = nullptr;
 };
 
@@ -940,7 +940,7 @@ CompoundFactoryImpl::CompoundFactoryImpl(const std::string &file, CompoundFactor
 
 	auto &cat = mFile["comp_list"]["chem_comp"];
 
-	for (auto &chemComp : cat)
+	for (auto chemComp : cat)
 	{
 		std::string group, threeLetterCode;
 
@@ -1001,7 +1001,7 @@ Compound *CompoundFactoryImpl::create(std::string id)
 			ba::trim(name);
 			ba::trim(group);
 
-			if (mFile.get("comp_" + id) == nullptr)
+			if (not mFile.contains("comp_" + id))
 			{
 				auto clibd_mon = fs::path(getenv("CLIBD_MON"));
 
@@ -1065,10 +1065,9 @@ const Link *CompoundFactoryImpl::createLink(std::string id)
 	{
 		std::unique_lock lock(mMutex);
 
-		auto db = mFile.get("link_" + id);
-		if (db != nullptr)
+		if (not mFile.contains("link_" + id))
 		{
-			result = new Link(*db);
+			result = new Link(mFile["link_" + id]);
 			mLinks.push_back(result);
 		}
 

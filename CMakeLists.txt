@@ -147,6 +147,7 @@ set(project_sources
 	${PROJECT_SOURCE_DIR}/src/AtomShape.cpp
 	${PROJECT_SOURCE_DIR}/src/BondMap.cpp
 	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
+	${PROJECT_SOURCE_DIR}/src/Compound.cpp
 	${PROJECT_SOURCE_DIR}/src/DistanceMap.cpp
 	${PROJECT_SOURCE_DIR}/src/MapMaker.cpp
 	${PROJECT_SOURCE_DIR}/src/Ramachandran.cpp
@@ -160,6 +161,7 @@ set(project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/AtomShape.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/BondMap.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/ClipperWrapper.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/Compound.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/DistanceMap.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/MapMaker.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Ramachandran.hpp

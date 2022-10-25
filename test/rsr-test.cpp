@@ -6,8 +6,7 @@
 #include <stdexcept>
 #include <filesystem>
 
-#include <cif++/Structure.hpp>
-#include <cif++/CifUtils.hpp>
+#include <cif++.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/MapMaker.hpp"
@@ -19,7 +18,6 @@ namespace fs = std::filesystem;
 namespace tt = boost::test_tools;
 namespace utf = boost::unit_test;
 namespace ba = boost::algorithm;
-namespace c = mmcif;
 
 // --------------------------------------------------------------------
 
@@ -34,7 +32,7 @@ BOOST_AUTO_TEST_CASE(init)
 		gTestDir = boost::unit_test::framework::master_test_suite().argv[1];
 
 		if (fs::exists(gTestDir / "minimal-components.cif"))
-			mmcif::CompoundFactory::instance().pushDictionary(gTestDir / "minimal-components.cif");
+			cif::compound_factory::instance().push_dictionary(gTestDir / "minimal-components.cif");
 	}
 }
 
@@ -43,9 +41,9 @@ BOOST_AUTO_TEST_CASE(init)
 BOOST_AUTO_TEST_CASE(refine_0)
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	mmcif::File file(example.string());
+	cif::file file(example.string());
 
-	c::Structure structure(file);
+	cif::mm::structure structure(file);
 
 	auto &chain = structure.polymers().front();
 
@@ -53,7 +51,7 @@ BOOST_AUTO_TEST_CASE(refine_0)
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	c::BondMap bonds(structure);
+	pdb_redo::BondMap bonds(structure);
 
 	auto minimizer = pdb_redo::Minimizer::create(chain, 3, 3, bonds, mm.fb());
 
@@ -67,8 +65,8 @@ BOOST_AUTO_TEST_CASE(refine_0)
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
 
-	mmcif::File refFile(example.string());
-	c::Structure reference(refFile);
+	cif::file refFile(example.string());
+	cif::mm::structure reference(refFile);
 
 	auto &refChain = reference.polymers().front();
 
@@ -91,11 +89,11 @@ BOOST_AUTO_TEST_CASE(refine_0)
 BOOST_AUTO_TEST_CASE(refine_1)
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	mmcif::File file(example.string());
+	cif::file file(example.string());
 
-	c::Structure structure(file);
+	cif::mm::structure structure(file);
 
-	c::BondMap bonds(structure);
+	pdb_redo::BondMap bonds(structure);
 
 	pdb_redo::MapMaker<float> mm;
 	float samplingRate = 0.75;
@@ -112,10 +110,10 @@ BOOST_AUTO_TEST_CASE(refine_1)
 
 	auto &res3 = chain.at(2);
 	for (auto a : res3.atoms())
-		structure.moveAtom(a, Nudge(a.get_location(), 0.5f));
+		structure.move_atom(a, cif::nudge(a.get_location(), 0.5f));
 
-	mmcif::File refFile(example.string());
-	c::Structure reference(refFile);
+	cif::file refFile(example.string());
+	cif::mm::structure reference(refFile);
 
 	auto &refChain = reference.polymers().front();
 
@@ -157,9 +155,9 @@ BOOST_AUTO_TEST_CASE(refine_1)
 BOOST_AUTO_TEST_CASE(refine_2)
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	mmcif::File file(example.string());
+	cif::file file(example.string());
 
-	c::Structure structure(file);
+	cif::mm::structure structure(file);
 
 	const float kNearBy = 3;
 
@@ -184,16 +182,16 @@ BOOST_AUTO_TEST_CASE(refine_2)
 	// translate by { 0.1, 0.1, 0.1 } and then
 	// rotate around 1, 0, 0 for 5 degrees
 
-	const float angle = 5 * (c::kPI / 180); // 5 degrees
-	c::Quaternion q(
+	const float angle = 5 * (cif::kPI / 180); // 5 degrees
+	cif::quaternion q(
 		std::cos(angle / 2), std::sin(angle / 2), 0, 0
 	);
 
 	for (auto a : rea.atoms())
-		a.translateAndRotate({ 0.1, 0.1, 0.1 }, q);
+		a.translate_and_rotate({ 0.1, 0.1, 0.1 }, q);
 
-	mmcif::File refFile(example.string());
-	c::Structure reference(refFile);
+	cif::file refFile(example.string());
+	cif::mm::structure reference(refFile);
 
 	auto &atomsRea = rea.atoms();
 	auto &refAtomsRea = reference.get_residue("B").atoms();
@@ -214,7 +212,7 @@ BOOST_AUTO_TEST_CASE(refine_2)
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	c::BondMap bonds(structure);
+	pdb_redo::BondMap bonds(structure);
 
 	auto minimizer = pdb_redo::Minimizer::create(structure, atoms, bonds, mm.fb());
 

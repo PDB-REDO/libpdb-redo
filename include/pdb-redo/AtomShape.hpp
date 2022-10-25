@@ -56,6 +56,11 @@ class AtomShape
 	AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow,
 		bool electronScattering, std::optional<float> bFactor = {});
 
+	AtomShape(const cif::mm::atom &atom, float resHigh, float resLow, bool electronScattering, std::optional<float> bFactor = {})
+		: AtomShape(atom.get_row(), atom.get_row_aniso(), resHigh, resLow, electronScattering, bFactor)
+	{
+	}
+
 	~AtomShape();
 
 	AtomShape(const AtomShape &) = delete;
