@@ -1,3 +1,6 @@
+Version 3.0.3
+- Based on new libcifpp
+
 Version 3.0.2
 - Fix error in statistics calculation for atoms
   with an occupancy lower than 1.
