@@ -241,11 +241,11 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 
 	// collect all compounds first
 	std::set<std::string> compounds;
-	for (const auto &[comp_id] : db["chem_comp"].rows<std::string>("id"))
+	for (const auto &comp_id : db["chem_comp"].rows<std::string>("id"))
 		compounds.insert(comp_id);
 
 	// make sure we also have all residues in the polyseq
-	for (const auto &[mon_id] : db["entity_poly_seq"].rows<std::string>("mon_id"))
+	for (const auto &mon_id : db["entity_poly_seq"].rows<std::string>("mon_id"))
 	{
 		if (compounds.count(mon_id))
 			continue;

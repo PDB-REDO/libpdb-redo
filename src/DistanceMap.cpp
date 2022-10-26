@@ -224,7 +224,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 	}
 
 	// loop over pdbx_nonpoly_scheme
-	for (const auto& [ asymID ] : db["pdbx_nonpoly_scheme"].rows<std::string>("asym_id"))
+	for (const auto &asymID : db["pdbx_nonpoly_scheme"].rows<std::string>("asym_id"))
 	{
 		std::vector<std::tuple<size_t,point>> rAtoms;
 		for (size_t i = 0; i < dim; ++i)
