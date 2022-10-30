@@ -129,11 +129,7 @@ find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(cifpp 5.0.0 REQUIRED)
 find_package(zeep 5.1.7 REQUIRED)
 
-add_git_submodule(gxrio EXCLUDE_FROM_ALL)
-
 pkg_check_modules(GSL gsl)
-
-# add_git_submodule(newuoa-cpp)
 
 find_library(NEWUOA_LIBRARY newuoa REQUIRED)
 find_path(NEWUOA_INCLUDE_DIR newuoa.h)
@@ -282,7 +278,7 @@ if(ENABLE_TESTING)
 		set(PDB_REDO_TEST_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj)
 	endif()
 
-	list(APPEND PDB_REDO_tests unit)
+	list(APPEND PDB_REDO_tests pr-unit)
 
 	if(GSL_FOUND)
 		list(APPEND PDB_REDO_tests rsr)
