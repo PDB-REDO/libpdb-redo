@@ -6,10 +6,10 @@
 # modification, are permitted provided that the following conditions are met:
 
 # 1. Redistributions of source code must retain the above copyright notice, this
-# list of conditions and the following disclaimer
+#    list of conditions and the following disclaimer
 # 2. Redistributions in binary form must reproduce the above copyright notice,
-# this list of conditions and the following disclaimer in the documentation
-# and/or other materials provided with the distribution.
+#    this list of conditions and the following disclaimer in the documentation
+#    and/or other materials provided with the distribution.
 
 # THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
 # ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
@@ -126,8 +126,11 @@ endif()
 
 # Libraries
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
-find_package(cifpp 5.0.0 REQUIRED)
-find_package(zeep 5.1.7 REQUIRED)
+
+if(NOT PDB_REDO_META)
+	find_package(cifpp 5.0.0 REQUIRED)
+	find_package(zeep 5.1.7 REQUIRED)
+endif()
 
 pkg_check_modules(GSL gsl)
 
@@ -181,6 +184,7 @@ if(GSL_FOUND)
 endif()
 
 add_library(pdb-redo ${project_sources} ${project_headers})
+add_library(pdb-redo::pdb-redo ALIAS pdb-redo)
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(pdb-redo
