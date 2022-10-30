@@ -278,7 +278,7 @@ if(ENABLE_TESTING)
 		set(PDB_REDO_TEST_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj)
 	endif()
 
-	list(APPEND PDB_REDO_tests pr-unit)
+	list(APPEND PDB_REDO_tests pdb-redo-unit)
 
 	if(GSL_FOUND)
 		list(APPEND PDB_REDO_tests rsr)
