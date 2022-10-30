@@ -60,4 +60,4 @@ enable_testing()
 
 add_test(NAME pdb-redo-example
 	COMMAND $<TARGET_FILE:pdb-redo-example>
-	WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
+	WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
