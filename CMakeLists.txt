@@ -128,15 +128,12 @@ endif()
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 
 if(NOT PDB_REDO_META)
+	find_package(newuoa REQUIRED)
 	find_package(cifpp 5.0.0 REQUIRED)
 	find_package(zeep 5.1.7 REQUIRED)
 endif()
 
 pkg_check_modules(GSL gsl)
-
-find_library(NEWUOA_LIBRARY newuoa REQUIRED)
-find_path(NEWUOA_INCLUDE_DIR newuoa.h)
-check_include_file("newuoa.h" HAVE_NEWUOA)
 
 # Create a revision file, containing the current git version info
 include(VersionString)
@@ -192,8 +189,8 @@ target_include_directories(pdb-redo
 	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 )
-target_include_directories(pdb-redo PRIVATE ${CCP4_INCLUDE_DIRS} ${NEWUOA_INCLUDE_DIR})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep gxrio::gxrio ${CCP4_LIBRARIES} ${NEWUOA_LIBRARY} ${GSL_LIBRARIES})
+target_include_directories(pdb-redo PRIVATE ${CCP4_INCLUDE_DIRS})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp zeep::zeep gxrio::gxrio newuoa::newuoa ${CCP4_LIBRARIES} ${GSL_LIBRARIES})
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
