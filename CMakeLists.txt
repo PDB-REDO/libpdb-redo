@@ -128,6 +128,7 @@ endif()
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 
 if(NOT PDB_REDO_META)
+	find_package(gxrio REQUIRED)
 	find_package(newuoa REQUIRED)
 	find_package(cifpp 5.0.0 REQUIRED)
 	find_package(zeep 5.1.7 REQUIRED)
