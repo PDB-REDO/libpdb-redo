@@ -99,10 +99,10 @@ class StatsCollector
 	virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
 
   protected:
+	using residue_list = std::vector<std::tuple<std::string, int, std::string>>;
+
 	// asym-seqid-compid
-	std::vector<ResidueStatistics> collect(
-		const std::vector<std::tuple<std::string, int, std::string, std::string>> &residues,
-		BoundingBox &bbox, bool addWaters) const;
+	std::vector<ResidueStatistics> collect(const residue_list &residues, BoundingBox &bbox, bool addWaters) const;
 
 	void initialize();
 

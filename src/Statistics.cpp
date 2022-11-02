@@ -544,7 +544,7 @@ void StatsCollector::initialize()
 
 std::vector<ResidueStatistics> StatsCollector::collect() const
 {
-	std::vector<std::tuple<std::string, int, std::string, std::string>> residues;
+	std::vector<std::tuple<std::string, int, std::string>> residues;
 	std::vector<cif::mm::atom> atoms;
 
 	for (auto atom : mStructure.atoms())
@@ -552,8 +552,7 @@ std::vector<ResidueStatistics> StatsCollector::collect() const
 		if (atom.is_water())
 			continue;
 
-		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_label_comp_id(), atom.get_auth_seq_id());
-		//		auto k = std::make_tuple(atom.get_auth_asym_id(), atom.property<std::string>("auth_seq_id"), atom.get_label_comp_id());
+		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id());
 
 		if (residues.empty() or residues.back() != k)
 		{
@@ -568,8 +567,35 @@ std::vector<ResidueStatistics> StatsCollector::collect() const
 
 std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID, int resFirst, int resLast, bool authNameSpace) const
 {
-	std::vector<std::tuple<std::string, int, std::string, std::string>> residues;
+	residue_list residues;
 	std::vector<cif::mm::atom> atoms;
+
+	// for (auto atom : mStructure.atoms())
+	// {
+	// 	if (atom.is_water())
+	// 		continue;
+
+	// 	if (authNameSpace)
+	// 	{
+	// 		int auth_seq_id = stoi(atom.get_auth_seq_id());
+
+	// 		if (atom.get_auth_asym_id() != asymID or auth_seq_id < resFirst or auth_seq_id > resLast)
+	// 			continue;
+	// 	}
+	// 	else
+	// 	{
+	// 		if (atom.get_label_asym_id() != asymID or atom.get_label_seq_id() < resFirst or atom.get_label_seq_id() > resLast)
+	// 			continue;
+	// 	}
+
+	// 	auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id());
+
+	// 	if (residues.empty() or residues.back() != k)
+	// 	{
+	// 		residues.emplace_back(move(k));
+	// 		atoms.emplace_back(std::move(atom));
+	// 	}
+	// }
 
 	for (auto atom : mStructure.atoms())
 	{
@@ -589,22 +615,25 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 				continue;
 		}
 
-		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_label_comp_id(), atom.get_auth_seq_id());
-		//		auto k = std::make_tuple(atom.get_auth_asym_id(), atom.property<std::string>("auth_seq_id"), atom.get_label_comp_id());
+		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id());
 
 		if (residues.empty() or residues.back() != k)
-		{
 			residues.emplace_back(move(k));
-			atoms.emplace_back(std::move(atom));
-		}
+	}
+
+	for (const auto &[asymID, seqID, authSeqID] : residues)
+	{
+		auto &res = mStructure.get_residue(asymID, seqID, authSeqID);
+
+		for (auto atom : res.unique_atoms())
+			atoms.push_back(atom);
 	}
 
 	BoundingBox bbox(mStructure, atoms, 5.0f);
 	return collect(residues, bbox, false);
 }
 
-std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tuple<std::string, int, std::string, std::string>> &residues,
-	BoundingBox &bbox, bool addWaters) const
+std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &residues, BoundingBox &bbox, bool addWaters) const
 {
 	std::vector<AtomData> atomData;
 
@@ -638,8 +667,12 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 	std::vector<ResidueStatistics> result;
 
 	// And now collect the per residue information
-	for (const auto &[asymID, seqID, compID, auth_seq_id] : residues)
+	for (const auto &[asymID, seqID, auth_seq_id] : residues)
 	{
+		// TODO: Need to do something with hetero residues (alternate compound types)
+		auto &res = mStructure.get_residue(asymID, seqID, auth_seq_id);
+		auto compID = res.get_compound_id();
+
 		AtomDataSums sums;
 
 		std::vector<const AtomData *> resAtomData;
@@ -699,10 +732,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::vector<std::tu
 		std::set<std::string> alts;
 
 		if (not missing.count(compID))
-		{
-			auto &res = mStructure.get_residue(asymID, compID, seqID, auth_seq_id);
 			alts = res.get_alternate_ids();
-		}
 
 		if (alts.empty())
 			alts.insert("");
@@ -957,7 +987,11 @@ void StatsCollector::collectSums(std::vector<AtomData> &atomData, GridPtDataMap 
 		{
 			++d.sums.ngrid;
 
-			double e = gp.density / gridPointDensity[gp.p];
+			auto gpd = gridPointDensity[gp.p];
+			if (gpd == 0)
+				continue;
+
+			double e = gp.density / gpd;
 			double t = e * mSZ / rmsScaledF.second;
 
 			Xmap_base::Map_reference_coord ix(Fb, gp.p);

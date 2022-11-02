@@ -298,8 +298,8 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 
 	for (auto l : db["struct_conn"])
 	{
-		atom_map_key_type ka = l.get("ptnr1_label_asym_id", "ptnr1_label_atom_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id");
-		atom_map_key_type kb = l.get("ptnr2_label_asym_id", "ptnr2_label_atom_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id");
+		atom_map_key_type ka = l.get("ptnr1_label_asym_id", "ptnr1_label_seq_id", "ptnr1_label_atom_id", "ptnr1_auth_seq_id");
+		atom_map_key_type kb = l.get("ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_label_atom_id", "ptnr2_auth_seq_id");
 
 		if (atomMapByAsymSeqAndAtom.count(ka) and atomMapByAsymSeqAndAtom.count(kb))
 		{

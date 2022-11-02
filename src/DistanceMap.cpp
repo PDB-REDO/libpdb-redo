@@ -109,8 +109,8 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 
 	auto &db = p.get_datablock();
 
-	for (auto rh : db["atom_site"].find("pdbx_PDB_model_num"_key == p.get_model_nr() or "pdbx_PDB_model_num"_key == cif::null))
-		atoms.push_back(rh);
+	for (auto a : p.atoms())
+		atoms.push_back(a.get_row());
 
 	dim = uint32_t(atoms.size());
 
