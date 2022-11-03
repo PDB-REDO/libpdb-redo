@@ -34,6 +34,9 @@
 
 #include <pdb-redo/BondMap.hpp>
 
+namespace pdb_redo
+{
+
 // --------------------------------------------------------------------
 
 struct CompoundBondInfo
