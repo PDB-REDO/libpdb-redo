@@ -125,4 +125,133 @@ clipper::Cell getCell(const cif::datablock &db)
 	return clipper::Cell{ clipper::Cell_descr(a, b, c, alpha, beta, gamma) };
 }
 
+// --------------------------------------------------------------------
+
+cif::symop_data GetSymOpDataForRTop_frac(const clipper::RTop_frac &rt)
+{
+	auto &rot = rt.rot();
+	auto &trn = rt.trn();
+
+	auto rte = [&rot](int i, int j)
+	{ return static_cast<int8_t>(lrint(rot(i, j))); };
+
+	std::array<int, 15> krt{
+		rte(0, 0), rte(0, 1), rte(0, 2),
+		rte(1, 0), rte(1, 1), rte(1, 2),
+		rte(2, 0), rte(2, 1), rte(2, 2)};
+
+	for (int i = 0; i < 3; ++i)
+	{
+		int n = lrint(trn[i] * 24);
+		int d = 24;
+
+		if (n == 0 or std::abs(n) == 24)
+			continue; // is 0, 0 in our table
+
+		for (int j = 5; j > 1; --j)
+			if (n % j == 0 and d % j == 0)
+			{
+				n /= j;
+				d /= j;
+			}
+
+		n = (n + d) % d;
+
+		switch (i)
+		{
+			case 0:
+				krt[9] = n;
+				krt[10] = d;
+				break;
+			case 1:
+				krt[11] = n;
+				krt[12] = d;
+				break;
+			case 2:
+				krt[13] = n;
+				krt[14] = d;
+				break;
+		}
+	}
+
+	return cif::symop_data{ krt };
+}
+
+// --------------------------------------------------------------------
+
+// std::ostream &operator<<(std::ostream &os, const cif::symop_data &s)
+// {
+// 	os << '[';
+
+// 	bool first = true;
+// 	for (auto i : s.data())
+// 	{
+// 		if (not std::exchange(first, false))
+// 			os << ", ";
+// 		os << i;
+// 	}
+	
+// 	os << ']';
+
+// 	return os;
+// }
+
+int getSpacegroupNumber(const clipper::Spacegroup &sg)
+{
+	std::set<cif::symop_data> sg_ops;
+
+	for (int i = 0; i < sg.num_symops(); ++i)
+	{
+		const auto &symop = sg.symop(i);
+
+		for (int u : {-1, 0, 1})
+			for (int v : {-1, 0, 1})
+				for (int w : {-1, 0, 1})
+				{
+					if (i == 0 and u == 0 and v == 0 and w == 0)
+						continue;
+
+					auto rtop = clipper::RTop_frac(
+						symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w));
+					
+					sg_ops.insert(GetSymOpDataForRTop_frac(rtop));
+				}
+	}
+
+	auto s = cif::kSymopNrTable, e = s + cif::kSymopNrTableSize;
+	int result = 0;
+
+	while (s != e)
+	{
+		auto t = s + 1;
+		while (t->spacegroup() == s->spacegroup())
+			++t;
+		
+		if (t - s != sg_ops.size())
+		{
+			s = t;
+			continue;
+		}
+
+		size_t seen = 0;
+
+		for (auto &k : sg_ops)
+		{
+			if (std::find_if(s, t, [&k](const cif::symop_datablock &b) { return b.symop() == k; }) != t)
+				++seen;
+		}
+
+		if (seen != sg_ops.size())
+		{
+			s = t;
+			continue;
+		}
+
+		result = s->spacegroup();
+		break;
+	}
+
+	return result;
+}
+
 } // namespace pdb_redo

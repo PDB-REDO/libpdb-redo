@@ -454,6 +454,8 @@ double DensityIntegration::integrateRadius(float perc, float occupancy, double y
 
 struct AtomShapeImpl
 {
+	virtual ~AtomShapeImpl() = default;
+
 	AtomShapeImpl(point location, atom_type symbol, int charge, float uIso, float occupancy, float resHigh, float resLow, bool electronScattering)
 		: mSymbol(symbol)
 		, mCharge(charge)
@@ -475,6 +477,9 @@ struct AtomShapeImpl
 		auto &D =
 			mElectronScattering ? atom_type_traits(symbol).elsf() : atom_type_traits(symbol).wksf(charge);
 		auto bIso = clipper::Util::u2b(uIso);
+
+		if (bIso == 0 and cif::VERBOSE >= 0)
+			std::cerr << "Zero b-factor?" << std::endl;
 
 		float as = mIntegrator.a() * mIntegrator.a();
 		float bs = mIntegrator.b() * mIntegrator.b();
@@ -504,8 +509,6 @@ struct AtomShapeImpl
 		}
 	}
 
-	virtual ~AtomShapeImpl() {}
-
 	atom_type mSymbol;
 	int mCharge;
 	float mUIso, mOccupancy;
@@ -518,7 +521,7 @@ struct AtomShapeImpl
 	std::vector<double> mFst;
 	float mAW[6], mBW[6];
 
-	float integratedRadius(float perc) const
+	virtual float integratedRadius(float perc) const
 	{
 		float result = static_cast<float>(mIntegrator.integrateRadius(perc, mOccupancy, mYi, mFst));
 
@@ -572,7 +575,7 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 		}
 	}
 
-	virtual float calculatedDensity(point p) const
+	float calculatedDensity(point p) const override
 	{
 		const point l = p - mLocation;
 		const clipper::Coord_orth dxyz(l.m_x, l.m_y, l.m_z);
@@ -609,7 +612,7 @@ AtomShape::AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float res
 			formal_charge = compound->atoms().front().charge;
 	}
 
-	if (bFactor.has_value())
+	if (bFactor.has_value() and *bFactor != 0)
 		mImpl = new AtomShapeImpl({ x, y, z }, type, formal_charge, static_cast<float>(clipper::Util::b2u(*bFactor)), 1.0, resHigh, resLow, electronScattering);
 	else if (not atom_aniso.empty())
 	{
@@ -625,16 +628,17 @@ AtomShape::AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float res
 	}
 	else
 	{
-		const auto &[u_iso, b_iso] = atom.get<std::optional<float>,std::optional<float>>("U_iso_or_equiv", "B_iso_or_equiv");
+		const auto &[u_iso, b_iso] = atom.get<std::optional<float>, std::optional<float>>("U_iso_or_equiv", "B_iso_or_equiv");
 
-		float iso;
+		float iso = 0;
 
 		if (u_iso.has_value())
 			iso = *u_iso;
 		else if (b_iso.has_value())
 			iso = *b_iso / static_cast<float>(8 * kPI * kPI);
-		else
-			throw std::runtime_error("Missing B_iso or U_iso");
+
+		if (iso == 0)
+			iso = 2.0 / static_cast<float>(8 * kPI * kPI);;
 
 		mImpl = new AtomShapeImpl({ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering);
 	}

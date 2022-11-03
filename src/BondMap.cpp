@@ -34,79 +34,11 @@
 
 #include <pdb-redo/BondMap.hpp>
 
-namespace pdb_redo
-{
-
-namespace
-{
-
-	union IDType
-	{
-		IDType()
-			: id_n(0)
-		{
-		}
-		IDType(const IDType &rhs)
-			: id_n(rhs.id_n)
-		{
-		}
-		IDType(const std::string &s)
-			: IDType()
-		{
-			assert(s.length() <= 4);
-			if (s.length() > 4)
-				throw BondMapException("cif::mm::atom ID '" + s + "' is too long");
-			std::copy(s.begin(), s.end(), id_s);
-		}
-
-		IDType &operator=(const IDType &rhs)
-		{
-			id_n = rhs.id_n;
-			return *this;
-		}
-
-		IDType &operator=(const std::string &s)
-		{
-			id_n = 0;
-			assert(s.length() <= 4);
-			if (s.length() > 4)
-				throw BondMapException("cif::mm::atom ID '" + s + "' is too long");
-			std::copy(s.begin(), s.end(), id_s);
-			return *this;
-		}
-
-		bool operator<(const IDType &rhs) const
-		{
-			return id_n < rhs.id_n;
-		}
-
-		bool operator<=(const IDType &rhs) const
-		{
-			return id_n <= rhs.id_n;
-		}
-
-		bool operator==(const IDType &rhs) const
-		{
-			return id_n == rhs.id_n;
-		}
-
-		bool operator!=(const IDType &rhs) const
-		{
-			return id_n != rhs.id_n;
-		}
-
-		char id_s[4];
-		uint32_t id_n;
-	};
-
-	static_assert(sizeof(IDType) == 4, "atom_id_type should be 4 bytes");
-} // namespace
-
 // --------------------------------------------------------------------
 
 struct CompoundBondInfo
 {
-	IDType mID;
+	std::string mID;
 	std::set<std::tuple<uint32_t, uint32_t>> mBonded;
 
 	bool bonded(uint32_t a1, uint32_t a2) const
@@ -133,7 +65,7 @@ class CompoundBondMap
 
 	uint32_t getAtomID(const std::string &atomID)
 	{
-		IDType id(atomID);
+		std::string id(atomID);
 
 		uint32_t result;
 
@@ -149,7 +81,7 @@ class CompoundBondMap
 		return result;
 	}
 
-	std::map<IDType, uint32_t> mAtomIDIndex;
+	std::map<std::string, uint32_t> mAtomIDIndex;
 	std::vector<CompoundBondInfo> mCompounds;
 	std::mutex mMutex;
 };
@@ -160,7 +92,7 @@ bool CompoundBondMap::bonded(const std::string &compoundID, const std::string &a
 
 	using namespace std::literals;
 
-	IDType id(compoundID);
+	std::string id(compoundID);
 	uint32_t a1 = getAtomID(atomID1);
 	uint32_t a2 = getAtomID(atomID2);
 	if (a1 > a2)

@@ -171,52 +171,7 @@ std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup &spac
 
 int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac &rt)
 {
-	auto &rot = rt.rot();
-	auto &trn = rt.trn();
-
-	auto rte = [&rot](int i, int j)
-	{ return static_cast<int8_t>(lrint(rot(i, j))); };
-
-	std::array<int, 15> krt{
-		rte(0, 0), rte(0, 1), rte(0, 2),
-		rte(1, 0), rte(1, 1), rte(1, 2),
-		rte(2, 0), rte(2, 1), rte(2, 2)};
-
-	for (int i = 0; i < 3; ++i)
-	{
-		int n = lrint(trn[i] * 24);
-		int d = 24;
-
-		if (n == 0 or std::abs(n) == 24)
-			continue; // is 0, 0 in our table
-
-		for (int j = 5; j > 1; --j)
-			if (n % j == 0 and d % j == 0)
-			{
-				n /= j;
-				d /= j;
-			}
-
-		n = (n + d) % d;
-
-		switch (i)
-		{
-			case 0:
-				krt[9] = n;
-				krt[10] = d;
-				break;
-			case 1:
-				krt[11] = n;
-				krt[12] = d;
-				break;
-			case 2:
-				krt[13] = n;
-				krt[14] = d;
-				break;
-		}
-	}
-
-	cif::symop_data k(krt);
+	auto k = GetSymOpDataForRTop_frac(rt);
 
 	const size_t N = cif::kSymopNrTableSize;
 	int32_t L = 0, R = static_cast<int32_t>(N - 1);
@@ -278,7 +233,7 @@ clipper::Spgr_descr GetCCP4SpacegroupDescr(int nr)
 
 std::string describeRToperation(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
-	auto spacegroup_nr = cif::get_space_group_number(spacegroup.symbol_xhm(), cif::space_group_name::xHM);
+	auto spacegroup_nr = getSpacegroupNumber(spacegroup);
 
 	if (not(rt.is_null() or rt.equals(clipper::RTop_orth::identity(), 0.0001f)))
 	{

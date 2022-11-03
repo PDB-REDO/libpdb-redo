@@ -397,6 +397,10 @@ StatsCollector::StatsCollector(const MapMaker<float> &mm, cif::mm::structure &st
 
 void StatsCollector::initialize()
 {
+	// easiest way to prime this map:
+	for (auto &asym_id : mStructure.get_datablock()["struct_asym"].rows<std::string>("id"))
+		mRmsScaled[asym_id] = { 1, 1 };
+
 	mMeanDensityFb = mMapMaker.fb().meanDensity();
 	mRMSDensityFb = mMapMaker.fb().rmsDensity();
 	mRMSDensityFd = mMapMaker.fd().rmsDensity();
@@ -451,7 +455,7 @@ void StatsCollector::initialize()
 
 	for (auto atom : mStructure.atoms())
 	{
-		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering);
+		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
 
 		float radius = shape.radius();
 
@@ -649,7 +653,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 		else if (not bbox.contains(atom.get_location()))
 			continue;
 
-		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering);
+		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
 
 		float radius = shape.radius();
 
@@ -872,7 +876,7 @@ ResidueStatistics StatsCollector::collect(const std::vector<cif::mm::atom> &atom
 		if (not bb.contains(atom.get_location()))
 			continue;
 
-		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering);
+		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
 
 		float radius = shape.radius();
 
@@ -936,12 +940,15 @@ void StatsCollector::sumDensity(std::vector<AtomData> &atomData,
 	{
 		auto &atom = data.atom;
 
-		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering);
+		if (atom.get_occupancy() == 0)
+			continue;
+		
+		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
 
 		std::string asymID = data.asymID;
 		if (atom.is_water())
 			asymID = "0";
-
+		
 		auto radius = data.radius;
 		double sumDensity = 0;
 
@@ -955,8 +962,9 @@ void StatsCollector::sumDensity(std::vector<AtomData> &atomData,
 			{
 				double density = shape.calculatedDensity(p);
 				
-				assert(not std::isnan(density));
-	
+				if (std::isnan(density))
+					return;
+
 				gridPointDensity[iw.coord()] += density;
 				data.points.emplace_back(iw.coord(), density);
 				
@@ -1089,7 +1097,7 @@ EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
 		if (mRadii.count(atom.get_type()))
 			continue;
 
-		AtomShape shape(mStructure.get_datablock(), atom.id(), mResHigh, mResLow, mElectronScattering, ediaBFactor);
+		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering, ediaBFactor);
 		mRadii[atom.get_type()] = shape.radius();
 
 		if (cif::VERBOSE)

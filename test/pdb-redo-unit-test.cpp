@@ -66,6 +66,30 @@ bool init_unit_test()
 }
 
 // --------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(symm_1)
+{
+	const std::string spacegroup = "I 1 21 1";
+
+	int nr = cif::get_space_group_number(spacegroup);
+	BOOST_TEST(nr == 5005);
+
+	// clipper::Spacegroup sgr(clipper::Spgr_descr{ spacegroup, clipper::Spgr_descr::HM });
+
+	// BOOST_TEST(sgr.symbol_hm() == spacegroup);
+
+	pdb_redo::MapMaker<float> mm;
+	mm.loadMTZ(gTestDir / "1mdn.mtz", 1.5);
+
+	nr = pdb_redo::getSpacegroupNumber(mm.spacegroup());
+
+	BOOST_TEST(nr == 5005);
+
+
+
+}
+
+// --------------------------------------------------------------------
 // skip list test
 
 BOOST_AUTO_TEST_CASE(skip_1)
@@ -368,17 +392,24 @@ BOOST_AUTO_TEST_CASE(stats_1)
 BOOST_AUTO_TEST_CASE(stats_2)
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	cif::file file(example.string());
-
+	cif::file file = cif::pdb::read(example.string());
+	
 	BOOST_CHECK(file.is_valid());
+
+	auto &db = file.front();
 	
 	// Rename a compound to an unknown ID
 
-	for (auto r: file.front()["chem_comp"].find(cif::key("id") == "ALA"))
+	for (auto r: db["chem_comp"].find(cif::key("id") == "ALA"))
 	{
 		r["id"] = "U_K";
 		break;
 	}
+
+	for (auto r: db["pdbx_poly_seq_scheme"].find(cif::key("mon_id") == "ALA"))
+		r["mon_id"] = "U_K";
+
+	file.save("/tmp/1cbs-test.cif");
 
 	// and load this into a structure (note, structure caches data from the file, so order is important)
 
@@ -408,3 +439,4 @@ BOOST_AUTO_TEST_CASE(stats_2)
 		BOOST_CHECK(std::isnan(ri.OPIA));
 	}
 }
+

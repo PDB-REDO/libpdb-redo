@@ -39,20 +39,6 @@ namespace pdb_redo
 class AtomShape
 {
   public:
-	AtomShape(const cif::datablock &db, std::string_view atom_id, float resHigh, float resLow,
-		bool electronScattering)
-		: AtomShape(db["atom_site"].find1(cif::key("id") == atom_id), db["atom_site_anisotrop"].find1(cif::key("id") == atom_id),
-			  resHigh, resLow, electronScattering)
-	{
-	}
-
-	AtomShape(const cif::datablock &db, std::string_view atom_id, float resHigh, float resLow,
-		bool electronScattering, float bFactor)
-		: AtomShape(db["atom_site"].find1(cif::key("id") == atom_id), db["atom_site_anisotrop"].find1(cif::key("id") == atom_id),
-			  resHigh, resLow, electronScattering, bFactor)
-	{
-	}
-
 	AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow,
 		bool electronScattering, std::optional<float> bFactor = {});
 

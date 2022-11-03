@@ -50,4 +50,9 @@ inline cif::point toPoint(const clipper::Coord_orth &pt)
 clipper::Spacegroup getSpacegroup(const cif::datablock &db);
 clipper::Cell getCell(const cif::datablock &db);
 
+// --------------------------------------------------------------------
+
+cif::symop_data GetSymOpDataForRTop_frac(const clipper::RTop_frac &rt);
+int getSpacegroupNumber(const clipper::Spacegroup &sg);
+
 } // namespace pdb_redo
