@@ -25,7 +25,6 @@ Other requirements are:
   code to read and manipulate macro molecular models in mmCIF and PDB format.
 - [cmake](https://cmake.org)
 
-
 Building
 --------
 
@@ -33,12 +32,11 @@ This recipe assumes you're building on a Unix like operating system and will bui
 
 To set the path correctly, add the following line to your .bashrc file.
 
-```
+```bash
 export PATH="$HOME/.local/bin:$PATH"
 ```
 
 This tutorial is building on Ubuntu 18.04 LTS which comes with a very old build environment. We therefore `apt-get install g++-8` to make sure we have a usable compiler. If you have a different compiler you should replace the `g++-8` string with the appropriate compiler name.
-
 
 cmake
 -----
@@ -47,7 +45,7 @@ Building the libraries and tools is done using [CMake](https://cmake.org/). Plea
 
 Building and installing cmake is done as follows:
 
-```
+```bash
 wget https://github.com/Kitware/CMake/releases/download/v3.21.3/cmake-3.21.3.tar.gz
 tar xf cmake-3.21.3.tar.gz
 cd cmake-3.21.3
@@ -55,9 +53,10 @@ cd cmake-3.21.3
 make
 make install
 ```
+
 After installing cmake, make sure it is found and works correctly. In the terminal type `cmake --version` and the result should be:
 
-```
+```bash
 $ cmake --version
 cmake version 3.21.3
 
@@ -71,7 +70,7 @@ So assuming you have a good compiler, we start by making sure you have the corre
 
 (In this example I'm leaving out the python module of boost since it takes a long time to build and is not needed by any of my code.)
 
-```
+```bash
 wget https://boostorg.jfrog.io/artifactory/main/release/1.77.0/source/boost_1_77_0.tar.bz2
 tar xf boost_1_77_0.tar.bz2
 cd boost_1_77
@@ -89,7 +88,7 @@ mrc
 
 Although not strictly required, and not supported at all on MacOS, the tool [`mrc`](https://github.com/mhekkel/mrc.git) is highly recommended. It can be used to bundle data files into an executable making the executable more easily deployable. If you decide not to use this tool, you must make sure you have the data files for libcifpp available at run time.
 
-```
+```bash
 git clone https://github.com/mhekkel/mrc.git
 cd mrc
 mkdir build
@@ -101,28 +100,32 @@ cmake --install .
 ```
 
 zeep
------
+----
 
 Next step is making [`libzeep`](https://github.com/mhekkel/libzeep). Fetch the code from github, configure, build and install. To make sure everything works as expected, we will also build the tests.
 
 Note that we specify the install location for libzeep. This is not required for the rest of the code, but libzeep is special.
 
-```
+```bash
 git clone https://github.com/mhekkel/libzeep.git
 cd libzeep
 mkdir build
 cd build
 cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DZEEP_BUILD_TESTS=ON -DCMAKE_INSTALL_PREFIX=$HOME/.local
 ```
+
 Now run the tests:
-```
+
+```bash
 ctest .
 ```
+
 There should be no errors and all tests should pass.
 
-```
+```bash
 cmake --install .
 ```
+
 And that should also work without errors, installing libzeep in your .local.
 
 libcifpp
@@ -130,7 +133,7 @@ libcifpp
 
 We will build libcifpp with cmake as well. Every dependency should be up to date by now, so we can simply fetch, extract, configure and build the lib:
 
-```
+```bash
 git clone https://github.com/PDB-REDO/libcifpp.git
 cd libcifpp
 mkdir build
@@ -138,18 +141,22 @@ cd build
 cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DCIFPP_BUILD_TESTS=ON
 cmake --build .
 ```
+
 Again, we've opted to build tests. Make sure they work without errors:
-```
+
+```bash
 ctest .
 ```
+
 If all is OK, install:
-```
+
+```bash
 cmake --install .
 ```
 
 An optional step here is to install the update script for CCD and pdbx dictionary files. To do this, you can add the -DINSTALL_UPDATE_SCRIPT=ON flag to the configure step:
 
-```
+```bash
 cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DCIFPP_BUILD_TESTS=ON -DINSTALL_UPDATE_SCRIPT=ON
 ```
 
@@ -166,19 +173,19 @@ But we're using Ubuntu 18.04 here, so we need to build clipper ourselves.
 
 Note that clipper depends on _ccp4_ and _fftw_. These libraries are hopefully supported by your operating system. On Ubuntu 18.04 I had to install
 
-* fftw-dev
-* sfftw-dev
-* libccp4-dev
+- fftw-dev
+- sfftw-dev
+- libccp4-dev
 
-Unfortunately, this is the only step where I'm using `sudo`. If you cannot use sudo, you'll have to build the packages yourself installing them in `.local`.
+Unfortunately, this is the only step where I'm using `sudo`. If you cannot use sudo, you'll have to build the packages yourself installing them in `$(HOME)/.local`.
 
-```
+```bash
 sudo apt-get install fftw-dev sfftw-dev libccp4-dev
 ```
 
 Then the steps required were:
 
-```
+```bash
 wget ftp://ftp.ccp4.ac.uk/opensource/clipper-2.1.20201109.tar.gz
 tar xf clipper-2.1.20201109.tar.gz
 cd clipper-2.1/
@@ -194,7 +201,7 @@ This library contains a C++ implementation of the NEWUOA algorithm. This is requ
 
 The default package will build a shared library, but we prefer a static one:
 
-```
+```bash
 git clone https://github.com/elsid/newuoa-cpp.git
 cd newuoa-cpp
 mkdir build
@@ -210,7 +217,7 @@ libpdb-redo
 
 Finally, we've arrived at building [`libpdb-redo`](https://github.com/PDB-REDO/libpdb-redo.git). The steps required now are perhaps familiar:
 
-```
+```bash
 git clone https://github.com/PDB-REDO/libpdb-redo.git
 cd libpdb-redo
 mkdir build
@@ -221,5 +228,4 @@ ctest .
 cmake --install .
 ```
 
-Again, errors should not happen here. 
-
+Again, errors should not happen here.

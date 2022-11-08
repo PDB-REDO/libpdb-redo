@@ -1,6 +1,3 @@
 [submodule "newuoa-cpp"]
-	path = newuoa-cpp
+	path = newuoa
 	url = https://github.com/elsid/newuoa-cpp.git
-[submodule "gxrio"]
-	path = gxrio
-	url = https://github.com/mhekkel/gxrio.git

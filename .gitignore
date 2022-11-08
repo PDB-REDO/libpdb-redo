@@ -3,3 +3,4 @@
 data/
 .gitignore
 **/build/
+src/revision.hpp
