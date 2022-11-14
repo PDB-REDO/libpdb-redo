@@ -32,10 +32,6 @@
 #include <clipper/clipper-contrib.h>
 
 #include <cif++.hpp>
-#if __has_include(<gxrio.hpp>)
-#include <gxrio.hpp>
-#define HAVE_GXRIO 1
-#endif
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"
@@ -350,7 +346,6 @@ void Map<FTYPE>::read(const std::filesystem::path &f)
 	if (cif::VERBOSE)
 		std::cout << "Reading map from " << mapFile << std::endl;
 
-#if HAVE_GXRIO
 	if (mapFile.extension() == ".gz")
 	{
 		// file is compressed
@@ -358,7 +353,7 @@ void Map<FTYPE>::read(const std::filesystem::path &f)
 		fs::path p = mapFile.parent_path();
 		std::string s = mapFile.filename().string();
 
-		gxrio::ifstream in(mapFile);
+		cif::gzio::ifstream in(mapFile);
 
 		char tmpFileName[] = "/tmp/map-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
@@ -372,7 +367,6 @@ void Map<FTYPE>::read(const std::filesystem::path &f)
 
 		out << in.rdbuf();
 	}
-#endif
 
 	if (not fs::exists(dataFile))
 		throw std::runtime_error("Could not open map file " + mapFile.string());
@@ -500,7 +494,6 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 
 	fs::path dataFile = hklin;
 
-#if HAVE_GXRIO
 	if (hklin.extension() == ".gz")
 	{
 		// file is compressed
@@ -508,7 +501,7 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 		fs::path p = hklin.parent_path();
 		std::string s = hklin.filename().string();
 
-		gxrio::ifstream in(hklin);
+		cif::gzio::ifstream in(hklin);
 
 		char tmpFileName[] = "/tmp/mtz-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
@@ -519,7 +512,6 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 		
 		out << in.rdbuf();
 	}
-#endif
 
 	if (not fs::exists(dataFile))
 		throw std::runtime_error("Could not open mtz file " + hklin.string());

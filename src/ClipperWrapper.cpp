@@ -227,7 +227,7 @@ int getSpacegroupNumber(const clipper::Spacegroup &sg)
 		while (t->spacegroup() == s->spacegroup())
 			++t;
 		
-		if (t - s != sg_ops.size())
+		if (static_cast<size_t>(t - s) != sg_ops.size())
 		{
 			s = t;
 			continue;
