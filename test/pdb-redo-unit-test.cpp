@@ -69,6 +69,9 @@ bool init_unit_test()
 
 BOOST_AUTO_TEST_CASE(symm_1)
 {
+	if (not fs::exists(gTestDir / "1mdn.mtz"))
+		return;
+
 	const std::string spacegroup = "I 1 21 1";
 
 	int nr = cif::get_space_group_number(spacegroup);
@@ -84,9 +87,6 @@ BOOST_AUTO_TEST_CASE(symm_1)
 	nr = pdb_redo::getSpacegroupNumber(mm.spacegroup());
 
 	BOOST_TEST(nr == 5005);
-
-
-
 }
 
 // --------------------------------------------------------------------

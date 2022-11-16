@@ -116,10 +116,7 @@ else()
 	endif()
 
 	if(USE_RSRC STREQUAL "ON")
-		set(USE_RSRC 1)
-
 		message("Using resources compiled with ${MRC}")
-		add_compile_definitions(USE_RSRC)
 	endif()
 endif()
 
