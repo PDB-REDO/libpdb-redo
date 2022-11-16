@@ -508,7 +508,7 @@ void Minimizer::Finish()
 					}
 					catch (const std::exception &ex)
 					{
-						if (cif::VERBOSE)
+						if (cif::VERBOSE > 0)
 							std::cerr << "err calculating nbc distance: " << ex.what() << std::endl;
 						minDist = 2.8;
 					}
@@ -619,7 +619,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 		catch (const std::exception &ex)
 		{
-			if (cif::VERBOSE)
+			if (cif::VERBOSE > 0)
 				std::cerr << "While processing bond restraints: " << ex.what() << std::endl;
 			continue;
 		}
@@ -674,7 +674,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 	//		}
 	//		catch (const exception& ex)
 	//		{
-	//			if (cif::VERBOSE)
+	//			if (cif::VERBOSE > 0)
 	//				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
 	//			continue;
 	//		}
@@ -702,7 +702,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 		catch (const std::exception &ex)
 		{
-			if (cif::VERBOSE)
+			if (cif::VERBOSE > 0)
 				std::cerr << "While processing chiral volume restraints: " << ex.what() << std::endl;
 			continue;
 		}
@@ -727,7 +727,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 		catch (const std::exception &ex)
 		{
-			if (cif::VERBOSE)
+			if (cif::VERBOSE > 0)
 				std::cerr << "While processing planarity restraints: " << ex.what() << std::endl;
 			continue;
 		}
@@ -1035,7 +1035,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 		{
 			if (status != GSL_ENOPROG)
 				std::cerr << "Unexpected result from gsl_multimin_fdfminimizer_iterate: " << status << std::endl;
-			else if (cif::VERBOSE)
+			else if (cif::VERBOSE > 0)
 				std::cerr << "Minimizer stopped at iteration " << i << " at " << m_s->f << std::endl;
 			break;
 		}
@@ -1052,7 +1052,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 
 		if (status == GSL_SUCCESS)
 		{
-			if (cif::VERBOSE)
+			if (cif::VERBOSE > 0)
 				std::cerr << "Minimum found at iteration " << i << " at " << m_s->f << std::endl;
 			break;
 		}

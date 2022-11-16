@@ -1089,7 +1089,7 @@ EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
 	else
 		ediaBFactor = kAverageBFactors[i];
 
-	if (cif::VERBOSE)
+	if (cif::VERBOSE > 0)
 		std::cerr << "Calculating radii with B Factor " << ediaBFactor << std::endl;
 
 	for (auto atom : mStructure.atoms())
@@ -1100,7 +1100,7 @@ EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
 		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering, ediaBFactor);
 		mRadii[atom.get_type()] = shape.radius();
 
-		if (cif::VERBOSE)
+		if (cif::VERBOSE > 0)
 			std::cerr << "Radius for atom with type " << atom_type_traits(atom.get_type()).symbol() << " is " << mRadii[atom.get_type()] << std::endl;
 	}
 }
