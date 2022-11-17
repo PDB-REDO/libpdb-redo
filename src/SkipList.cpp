@@ -196,7 +196,7 @@ SkipList readSkipList(std::istream &is)
 	}
 	catch (const std::exception &e)
 	{
-		if (cif::VERBOSE)
+		if (cif::VERBOSE > 0)
 			std::cerr << e.what() << std::endl;
 		is.rdbuf()->pubseekpos(0);
 	}
@@ -207,7 +207,7 @@ SkipList readSkipList(std::istream &is)
 	}
 	catch (const std::exception &e)
 	{
-		if (cif::VERBOSE)
+		if (cif::VERBOSE > 0)
 			std::cerr << e.what() << std::endl;
 		is.rdbuf()->pubseekpos(0);
 	}

@@ -147,7 +147,7 @@ Compound::Compound(const std::string &file, const std::string &id,
 				b.type = delocalizedBond;
 			else
 			{
-				if (cif::VERBOSE)
+				if (cif::VERBOSE > 0)
 					std::cerr << "Unimplemented chem_comp_bond.type " << type << " in " << id << std::endl;
 				b.type = singleBond;
 			}
@@ -197,7 +197,7 @@ Compound::Compound(const std::string &file, const std::string &id,
 				cc.volumeSign = both;
 			else
 			{
-				if (cif::VERBOSE)
+				if (cif::VERBOSE > 0)
 					std::cerr << "Unimplemented chem_comp_chir.volume_sign " << volumeSign << " in " << id << std::endl;
 				continue;
 			}
@@ -593,7 +593,7 @@ Link::Link(cif::datablock &db)
 			b.type = delocalizedBond;
 		else
 		{
-			if (cif::VERBOSE)
+			if (cif::VERBOSE > 0)
 				std::cerr << "Unimplemented chem_link_bond.type " << type << " in " << mID << std::endl;
 			b.type = singleBond;
 		}
@@ -655,7 +655,7 @@ Link::Link(cif::datablock &db)
 			cc.volumeSign = both;
 		else
 		{
-			if (cif::VERBOSE)
+			if (cif::VERBOSE > 0)
 				std::cerr << "Unimplemented chem_link_chir.volume_sign " << volumeSign << " in " << mID << std::endl;
 			continue;
 		}
@@ -1093,7 +1093,7 @@ CompoundFactory::CompoundFactory()
 
 	if (mImpl == nullptr)
 	{
-		if (cif::VERBOSE)
+		if (cif::VERBOSE > 0)
 			std::cerr << "Could not load the mon_lib_list.cif file from CCP4, please make sure you have installed CCP4 and sourced the environment." << std::endl;
 
 		mImpl = new CompoundFactoryImpl();
