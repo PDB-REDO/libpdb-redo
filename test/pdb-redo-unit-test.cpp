@@ -29,6 +29,9 @@
 
 #include <boost/algorithm/string.hpp>
 
+#include <clipper/clipper-ccp4.h>
+#include <clipper/clipper-contrib.h>
+
 #include <stdexcept>
 #include <filesystem>
 
@@ -81,10 +84,15 @@ BOOST_AUTO_TEST_CASE(symm_1)
 
 	// BOOST_TEST(sgr.symbol_hm() == spacegroup);
 
-	pdb_redo::MapMaker<float> mm;
-	mm.loadMTZ(gTestDir / "1mdn.mtz", 1.5);
+	using clipper::CCP4MTZfile;
 
-	nr = pdb_redo::getSpacegroupNumber(mm.spacegroup());
+	CCP4MTZfile mtzin;
+	mtzin.open_read((gTestDir / "1mdn.mtz").string());
+
+	HKL_info mHKLInfo;
+	mtzin.import_hkl_info(mHKLInfo);
+
+	nr = pdb_redo::getSpacegroupNumber(mHKLInfo.spacegroup());
 
 	BOOST_TEST(nr == 5005);
 }
