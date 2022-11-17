@@ -29,14 +29,11 @@
 #include <numeric>
 #include <shared_mutex>
 
-#include <boost/algorithm/string.hpp>
-
 #include <filesystem>
 #include <fstream>
 
 #include "pdb-redo/Compound.hpp"
 
-namespace ba = boost::algorithm;
 namespace fs = std::filesystem;
 
 namespace pdb_redo
@@ -881,11 +878,11 @@ class CompoundFactoryImpl
 
 		for (auto synonym : e["chem_comp_synonyms"])
 		{
-			if (ba::iequals(synonym["comp_alternative_id"].as<std::string>(), resName) == false)
+			if (cif::iequals(synonym["comp_alternative_id"].as<std::string>(), resName) == false)
 				continue;
 
 			result = synonym["comp_id"].as<std::string>();
-			ba::trim(result);
+			cif::trim(result);
 			break;
 		}
 
@@ -948,7 +945,7 @@ CompoundFactoryImpl::CompoundFactoryImpl(const std::string &file, CompoundFactor
 
 		if (std::regex_match(group, peptideRx))
 			mKnownPeptides.insert(threeLetterCode);
-		else if (ba::iequals(group, "DNA") or ba::iequals(group, "RNA"))
+		else if (cif::iequals(group, "DNA") or cif::iequals(group, "RNA"))
 			mKnownBases.insert(threeLetterCode);
 	}
 }
@@ -957,7 +954,7 @@ Compound *CompoundFactoryImpl::get(std::string id)
 {
 	std::shared_lock lock(mMutex);
 
-	ba::to_upper(id);
+	cif::to_upper(id);
 
 	Compound *result = nullptr;
 
@@ -978,7 +975,7 @@ Compound *CompoundFactoryImpl::get(std::string id)
 
 Compound *CompoundFactoryImpl::create(std::string id)
 {
-	ba::to_upper(id);
+	cif::to_upper(id);
 
 	Compound *result = get(id);
 	if (result == nullptr and mMissing.count(id) == 0 and not mFile.empty())
@@ -998,17 +995,17 @@ Compound *CompoundFactoryImpl::create(std::string id)
 			cif::tie(name, group, numberAtomsAll, numberAtomsNh) =
 				row.get("name", "group", "number_atoms_all", "number_atoms_nh");
 
-			ba::trim(name);
-			ba::trim(group);
+			cif::trim(name);
+			cif::trim(group);
 
 			if (not mFile.contains("comp_" + id))
 			{
 				auto clibd_mon = fs::path(getenv("CLIBD_MON"));
 
-				fs::path resFile = clibd_mon / ba::to_lower_copy(id.substr(0, 1)) / (id + ".cif");
+				fs::path resFile = clibd_mon / cif::to_lower_copy(id.substr(0, 1)) / (id + ".cif");
 
 				if (not fs::exists(resFile) and (id == "COM" or id == "CON" or "PRN")) // seriously...
-					resFile = clibd_mon / ba::to_lower_copy(id.substr(0, 1)) / (id + '_' + id + ".cif");
+					resFile = clibd_mon / cif::to_lower_copy(id.substr(0, 1)) / (id + '_' + id + ".cif");
 
 				if (not fs::exists(resFile))
 					mMissing.insert(id);
@@ -1036,7 +1033,7 @@ const Link *CompoundFactoryImpl::getLink(std::string id)
 {
 	std::shared_lock lock(mMutex);
 
-	ba::to_upper(id);
+	cif::to_upper(id);
 
 	const Link *result = nullptr;
 
@@ -1057,7 +1054,7 @@ const Link *CompoundFactoryImpl::getLink(std::string id)
 
 const Link *CompoundFactoryImpl::createLink(std::string id)
 {
-	ba::to_upper(id);
+	cif::to_upper(id);
 
 	const Link *result = getLink(id);
 

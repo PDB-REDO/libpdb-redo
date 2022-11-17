@@ -31,15 +31,11 @@
 
 #include <numeric>
 
-#include <boost/algorithm/string.hpp>
-
 #include <cif++.hpp>
 
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/Minimizer.hpp"
 #include "pdb-redo/Restraints.hpp"
-
-namespace ba = boost::algorithm;
 
 namespace pdb_redo
 {
@@ -416,7 +412,7 @@ double PlanarityRestraint::f(const AtomLocationProvider &atoms) const
 				return s.str();
 			});
 
-		std::cerr << "plane::f() = " << result << " for " << mAtoms.size() << " atoms " << ba::join(as, ", ") << std::endl;
+		std::cerr << "plane::f() = " << result << " for " << mAtoms.size() << " atoms " << cif::join(as, ", ") << std::endl;
 	}
 
 	return result;
@@ -435,7 +431,7 @@ void PlanarityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) 
 				return s.str();
 			});
 
-		std::cerr << "plane::df() for " << mAtoms.size() << " atoms " << ba::join(as, ", ") << std::endl;
+		std::cerr << "plane::df() for " << mAtoms.size() << " atoms " << cif::join(as, ", ") << std::endl;
 	}
 
 	double abcd[4];
