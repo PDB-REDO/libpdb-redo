@@ -140,7 +140,6 @@ using SkipList = std::vector<ResidueSpec>;
 enum class SkipListFormat
 {
 	OLD,
-	JSON,
 	CIF
 };
 

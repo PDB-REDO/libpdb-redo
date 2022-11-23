@@ -45,7 +45,6 @@
 namespace fs = std::filesystem;
 namespace tt = boost::test_tools;
 namespace utf = boost::unit_test;
-namespace ba = boost::algorithm;
 
 using namespace pdb_redo;
 
@@ -321,12 +320,12 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	while (std::getline(testFile, line))
 	{
 		std::vector<std::string> fields;
-		ba::split(fields, line, ba::is_any_of("\t"));
+		cif::split(fields, line, cif::is_any_of("\t"));
 
 		BOOST_ASSERT(fields.size() == 7);
 
 		std::vector<std::string> id;
-		ba::split(id, fields[0], ba::is_any_of("_"));
+		cif::split(id, fields[0], cif::is_any_of("_"));
 		BOOST_ASSERT(id.size() == 3);
 
 		test.push_back({

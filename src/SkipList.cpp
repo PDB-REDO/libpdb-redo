@@ -32,17 +32,9 @@
 #include <filesystem>
 #include <fstream>
 
-#include <zeep/xml/document.hpp>
-#include <zeep/xml/serialize.hpp>
-
-#include <zeep/json/element.hpp>
-#include <zeep/json/parser.hpp>
-#include <zeep/json/serializer.hpp>
-
 #include "pdb-redo/SkipList.hpp"
 
 namespace fs = std::filesystem;
-namespace zx = zeep::xml;
 
 namespace pdb_redo
 {
@@ -54,13 +46,6 @@ void writeOLDSkipList(std::ostream &os, const SkipList &list)
 	os << ':';
 	for (auto &res : list)
 		os << res.auth_asym_id << res.auth_seq_id << (res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : ' ') << ':';
-}
-
-void writeJSONSkipList(std::ostream &os, const SkipList &list)
-{
-	zeep::json::element e;
-	zeep::json::to_element(e, list);
-	os << e;
 }
 
 void writeCIFSkipList(std::ostream &os, const SkipList &list)
@@ -90,10 +75,6 @@ void writeSkipList(std::ostream &os, const SkipList &list, SkipListFormat format
 	{
 		case SkipListFormat::OLD:
 			writeOLDSkipList(os, list);
-			break;
-
-		case SkipListFormat::JSON:
-			writeJSONSkipList(os, list);
 			break;
 
 		case SkipListFormat::CIF:
@@ -157,18 +138,6 @@ SkipList readOLDSkipList(std::istream &is)
 	return result;
 }
 
-SkipList readJSONSkipList(std::istream &is)
-{
-	SkipList result;
-
-	zeep::json::element e;
-	zeep::json::parse_json(is, e);
-
-	from_element(e, result);
-
-	return result;
-}
-
 SkipList readCIFSkipList(std::istream &is)
 {
 	SkipList result;
@@ -193,17 +162,6 @@ SkipList readSkipList(std::istream &is)
 	try
 	{
 		return readCIFSkipList(is);
-	}
-	catch (const std::exception &e)
-	{
-		if (cif::VERBOSE > 0)
-			std::cerr << e.what() << std::endl;
-		is.rdbuf()->pubseekpos(0);
-	}
-
-	try
-	{
-		return readJSONSkipList(is);
 	}
 	catch (const std::exception &e)
 	{

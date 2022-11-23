@@ -1,8 +1,6 @@
 #define BOOST_TEST_MODULE Libpdb_redo_Test
 #include <boost/test/included/unit_test.hpp>
 
-#include <boost/algorithm/string.hpp>
-
 #include <stdexcept>
 #include <filesystem>
 
@@ -17,7 +15,6 @@
 namespace fs = std::filesystem;
 namespace tt = boost::test_tools;
 namespace utf = boost::unit_test;
-namespace ba = boost::algorithm;
 
 // --------------------------------------------------------------------
 
