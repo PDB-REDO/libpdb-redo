@@ -205,7 +205,7 @@ install(
 	COMPONENT Devel
 )
 
-configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/libpdb-redoConfig.cmake.in
+configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/pdb-redoConfig.cmake.in
 	${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfig.cmake
 	INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pdb-redo
 	PATH_VARS INCLUDE_INSTALL_DIR LIBRARY_INSTALL_DIR
