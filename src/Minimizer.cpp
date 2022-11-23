@@ -35,8 +35,6 @@
 #include <random>
 #include <regex>
 
-#include <boost/format.hpp>
-
 #include "pdb-redo/Minimizer.hpp"
 #include "pdb-redo/Symmetry-2.hpp"
 

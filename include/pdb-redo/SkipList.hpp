@@ -35,8 +35,6 @@
 
 #include <filesystem>
 
-#include <zeep/nvp.hpp>
-
 #include <cif++.hpp>
 
 #if __has_include(<experimental/optional>)
@@ -59,18 +57,6 @@ struct ResidueSpec
 	std::string label_asym_id;
 	std::string label_comp_id;
 	int label_seq_id;
-
-	template <typename Archive>
-	void serialize(Archive &ar, unsigned long version)
-	{
-		ar	& ZEEP_SERIALIZATION_NVP(auth_asym_id)
-		  	& ZEEP_SERIALIZATION_NVP(auth_comp_id)
-		   	& ZEEP_SERIALIZATION_NVP(auth_seq_id)
-		   	& ZEEP_SERIALIZATION_NVP(pdbx_PDB_ins_code)
-		   	& ZEEP_SERIALIZATION_NVP(label_asym_id)
-		   	& ZEEP_SERIALIZATION_NVP(label_comp_id)
-		   	& ZEEP_SERIALIZATION_NVP(label_seq_id);
-	}
 
 	ResidueSpec() {}
 	ResidueSpec(const std::string &auth_asym_id,

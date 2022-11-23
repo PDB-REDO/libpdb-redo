@@ -18,9 +18,6 @@ Other requirements are:
 - The clipper library, either the latest from CCP4 or version 2020-11-09
 - [newuoa-cpp](https://github.com/elsid/newuoa-cpp), required to
   calculate atom radii
-- [libzeep](https://github.com/mhekkel/libzeep), a library that
-  contains a full validating XML parser as well as a complete HTTP,
-  SOAP and REST server implementation
 - [libcifpp](https://github.com/PDB-REDO/libcifpp.git), a library containing
   code to read and manipulate macro molecular models in mmCIF and PDB format.
 - [cmake](https://cmake.org)
@@ -99,21 +96,6 @@ ctest .
 cmake --install .
 ```
 
-zeep
-----
-
-Next step is making [`libzeep`](https://github.com/mhekkel/libzeep). Fetch the code from github, configure, build and install. To make sure everything works as expected, we will also build the tests.
-
-Note that we specify the install location for libzeep. This is not required for the rest of the code, but libzeep is special.
-
-```bash
-git clone https://github.com/mhekkel/libzeep.git
-cd libzeep
-mkdir build
-cd build
-cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DZEEP_BUILD_TESTS=ON -DCMAKE_INSTALL_PREFIX=$HOME/.local
-```
-
 Now run the tests:
 
 ```bash
@@ -125,8 +107,6 @@ There should be no errors and all tests should pass.
 ```bash
 cmake --install .
 ```
-
-And that should also work without errors, installing libzeep in your .local.
 
 libcifpp
 --------

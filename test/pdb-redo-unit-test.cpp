@@ -27,8 +27,6 @@
 #define BOOST_TEST_ALTERNATIVE_INIT_API
 #include <boost/test/included/unit_test.hpp>
 
-#include <boost/algorithm/string.hpp>
-
 #include <clipper/clipper-ccp4.h>
 #include <clipper/clipper-contrib.h>
 
@@ -36,6 +34,7 @@
 #include <filesystem>
 
 #include <cif++.hpp>
+#include <cif++/text.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/MapMaker.hpp"
@@ -118,7 +117,7 @@ BOOST_AUTO_TEST_CASE(skip_1)
 			break;
 	}
 
-	for (const auto fmt: { SkipListFormat::OLD, SkipListFormat::JSON, SkipListFormat::CIF })
+	for (const auto fmt: { SkipListFormat::OLD, SkipListFormat::CIF })
 	{
 		std::stringstream ss;
 		writeSkipList(ss, skiplist, fmt);
@@ -319,13 +318,11 @@ BOOST_AUTO_TEST_CASE(stats_1)
 
 	while (std::getline(testFile, line))
 	{
-		std::vector<std::string> fields;
-		cif::split(fields, line, cif::is_any_of("\t"));
+		auto fields = cif::split<std::string>(line, "\t");
 
 		BOOST_ASSERT(fields.size() == 7);
 
-		std::vector<std::string> id;
-		cif::split(id, fields[0], cif::is_any_of("_"));
+		auto id = cif::split<std::string>(fields[0], "_");
 		BOOST_ASSERT(id.size() == 3);
 
 		test.push_back({
