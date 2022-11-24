@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(pdb-redo-example VERSION 3.0.0 LANGUAGES CXX C)
+project(pdb-redo-example VERSION 3.0.4 LANGUAGES CXX C)
 
 set(CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 17)
@@ -51,7 +51,7 @@ endif()
 
 # Libraries
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
-find_package(pdb-redo 2.0.0 REQUIRED)
+find_package(pdb-redo 3.0.4 REQUIRED)
 
 add_executable(pdb-redo-example example.cpp)
 target_link_libraries(pdb-redo-example pdb-redo::pdb-redo)

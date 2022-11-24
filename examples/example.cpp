@@ -3,10 +3,10 @@
 #include <filesystem>
 
 #include <pdb-redo/Statistics.hpp>
-#include "cif++/BondMap.hpp"
+#include <pdb-redo/BondMap.hpp>
+#include <cif++.hpp>
 
 namespace fs = std::filesystem;
-
 
 int main()
 {
@@ -14,7 +14,7 @@ int main()
 	const fs::path example("1cbs.cif.gz");
 
 	// load the mmCIF
-	mmcif::File file(example);
+	cif::file file(example);
 
 	// and load this into a structure (note, structure caches data from the file, so order is important)
 	cif::mm::structure structure(file);
@@ -25,7 +25,7 @@ int main()
 	mm.loadMTZ("1cbs_map.mtz", samplingRate);
 
 	// create a map for the bonds in this structure
-	BondMap bm(structure);
+	pdb_redo::BondMap bm(structure);
 
 	// and finally collect the statistics
 	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
