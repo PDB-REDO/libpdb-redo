@@ -1062,7 +1062,7 @@ const Link *CompoundFactoryImpl::createLink(std::string id)
 	{
 		std::unique_lock lock(mMutex);
 
-		if (not mFile.contains("link_" + id))
+		if (mFile.contains("link_" + id))
 		{
 			result = new Link(mFile["link_" + id]);
 			mLinks.push_back(result);
