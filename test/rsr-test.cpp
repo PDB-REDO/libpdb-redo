@@ -22,6 +22,8 @@ fs::path gTestDir = fs::current_path();
 
 BOOST_AUTO_TEST_CASE(init)
 {
+	cif::VERBOSE = 1;
+
 	// not a test, just initialize test dir
 
 	if (boost::unit_test::framework::master_test_suite().argc == 2)
@@ -72,13 +74,22 @@ BOOST_AUTO_TEST_CASE(refine_0)
 
 	BOOST_ASSERT(atoms3.size() == refAtoms3.size());
 
+	double d_sum = 0;
+
 	for (size_t i = 0; i < atoms3.size(); ++i)
 	{
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
+		auto d = distance(a1, a2);
+		d_sum += d * d;
+
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << std::endl;
 	}
+
+	auto rmsd = std::sqrt(d_sum / atoms3.size());
+	std::cout << "RMSd: " << rmsd << std::endl;
+	BOOST_CHECK(rmsd < 0.2);
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
 }
@@ -136,6 +147,8 @@ BOOST_AUTO_TEST_CASE(refine_1)
 
 	minimizer->printStats();
 
+	double d_sum = 0;
+
 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
 
 	for (size_t i = 0; i < atoms3.size(); ++i)
@@ -143,8 +156,15 @@ BOOST_AUTO_TEST_CASE(refine_1)
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
+		auto d = distance(a1, a2);
+		d_sum += d * d;
+
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << std::endl;
 	}
+
+	auto rmsd = std::sqrt(d_sum / atoms3.size());
+	std::cout << "RMSd: " << rmsd << std::endl;
+	BOOST_CHECK(rmsd < 0.2);
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
 }
@@ -223,13 +243,24 @@ BOOST_AUTO_TEST_CASE(refine_2)
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
 
+	double d_sum = 0;
+
 	for (size_t i = 0; i < atomsRea.size(); ++i)
 	{
 		auto a1 = atomsRea.at(i);
 		auto a2 = refAtomsRea.at(i);
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
+		auto d = distance(a1, a2);
+		d_sum += d * d;
+
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << std::endl;
 	}
+
+	file.save("/tmp/rsr-test-3.cif");
+
+	auto rmsd = std::sqrt(d_sum / atomsRea.size());
+	std::cout << "RMSd: " << rmsd << std::endl;
+	BOOST_CHECK(rmsd < 0.2);
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
 }
