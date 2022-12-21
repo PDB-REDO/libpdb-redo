@@ -264,11 +264,7 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 			period /= mPeriodicity;
 
 		double theta = dihedral_angle(atoms[mA], atoms[mB], atoms[mC], atoms[mD]);
-		double diff = theta - mTarget;
-		if (diff > 180)
-			diff -= 360;
-		if (diff < -180)
-			diff += 360;
+		double diff = std::fmod(std::abs(theta - mTarget) + period / 2, period) - period / 2;
 
 		if (not std::isnan(diff))
 		{

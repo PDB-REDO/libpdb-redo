@@ -43,30 +43,6 @@ using cif::kPI;
 using cif::atom_type_traits;
 
 // --------------------------------------------------------------------
-// Factory class for Compound and Link objects
-
-class CompoundFactory
-{
-  public:
-	static CompoundFactory &instance();
-
-	const Compound *get(std::string id);
-	const Compound *create(std::string id);
-
-	const Link *getLink(std::string id);
-	const Link *createLink(std::string id);
-
-	~CompoundFactory();
-
-	void pushDictionary(const std::filesystem::path &inDictFile);
-
-  private:
-	CompoundFactory();
-
-	class CompoundFactoryImpl *mImpl;
-};
-
-// --------------------------------------------------------------------
 // Compound helper classes
 
 struct CompoundAtomLess
@@ -849,7 +825,8 @@ class CompoundFactoryImpl
   public:
 	CompoundFactoryImpl();
 
-	CompoundFactoryImpl(const std::string &file, CompoundFactoryImpl *next);
+	CompoundFactoryImpl(const std::filesystem::path &file, CompoundFactoryImpl *next);
+	CompoundFactoryImpl(std::istream &data, CompoundFactoryImpl *next);
 
 	~CompoundFactoryImpl()
 	{
@@ -928,9 +905,30 @@ CompoundFactoryImpl::CompoundFactoryImpl()
 		mKnownBases.insert(key);
 }
 
-CompoundFactoryImpl::CompoundFactoryImpl(const std::string &file, CompoundFactoryImpl *next)
+CompoundFactoryImpl::CompoundFactoryImpl(const std::filesystem::path &file, CompoundFactoryImpl *next)
 	: mPath(file)
 	, mFile(file)
+	, mNext(next)
+{
+	const std::regex peptideRx("(?:[lmp]-)?peptide", std::regex::icase);
+
+	auto &cat = mFile["comp_list"]["chem_comp"];
+
+	for (auto chemComp : cat)
+	{
+		std::string group, threeLetterCode;
+
+		cif::tie(group, threeLetterCode) = chemComp.get("group", "three_letter_code");
+
+		if (std::regex_match(group, peptideRx))
+			mKnownPeptides.insert(threeLetterCode);
+		else if (cif::iequals(group, "DNA") or cif::iequals(group, "RNA"))
+			mKnownBases.insert(threeLetterCode);
+	}
+}
+
+CompoundFactoryImpl::CompoundFactoryImpl(std::istream &data, CompoundFactoryImpl *next)
+	: mFile(data)
 	, mNext(next)
 {
 	const std::regex peptideRx("(?:[lmp]-)?peptide", std::regex::icase);
@@ -1122,6 +1120,21 @@ void CompoundFactory::pushDictionary(const fs::path &inDictFile)
 		std::cerr << "Error loading dictionary " << inDictFile << std::endl;
 		throw;
 	}
+}
+
+void CompoundFactory::pushDictionary(std::istream &is)
+{
+	mImpl = new CompoundFactoryImpl(is, mImpl);
+}
+
+void CompoundFactory::popDictionary()
+{
+	assert(mImpl != nullptr);
+	if (mImpl != nullptr)
+		mImpl = mImpl->pop();
+
+	// should not pop the last one!
+	assert(mImpl != nullptr);
 }
 
 // id is the three letter code

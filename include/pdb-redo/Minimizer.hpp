@@ -131,12 +131,14 @@ class Minimizer
 
 	double score(const AtomLocationProvider &loc);
 
-	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b, const std::string &linkName)
+	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b,
+		const std::string &atom_id_a, const std::string &atom_id_b, const std::string &linkName)
 	{
-		addLinkRestraints(a, b, Link::create(linkName));
+		addLinkRestraints(a, b, atom_id_a, atom_id_b, Link::create(linkName));
 	}
 
-	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b, const Link &link);
+	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b,
+		const std::string &atom_id_a, const std::string &atom_id_b, const Link &link);
 
 	template <typename R>
 	double rmsz(const AtomLocationProvider &atoms, const std::vector<R> &a) const

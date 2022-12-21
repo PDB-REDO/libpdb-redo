@@ -312,4 +312,30 @@ class Link
 	std::vector<LinkPlane> mPlanes;
 };
 
+// --------------------------------------------------------------------
+// Factory class for Compound and Link objects
+
+class CompoundFactory
+{
+  public:
+	static CompoundFactory &instance();
+
+	const Compound *get(std::string id);
+	const Compound *create(std::string id);
+
+	const Link *getLink(std::string id);
+	const Link *createLink(std::string id);
+
+	~CompoundFactory();
+
+	void pushDictionary(const std::filesystem::path &inDictFile);
+	void pushDictionary(std::istream &inDictionary);
+	void popDictionary();
+
+  private:
+	CompoundFactory();
+
+	class CompoundFactoryImpl *mImpl;
+};
+
 } // namespace pdb_redo

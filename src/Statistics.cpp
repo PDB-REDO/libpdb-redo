@@ -1132,7 +1132,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 		//			std::cerr << (atomData.size() + 1) << '\t'
 		//				 << atom_type_traits(atom.get_type()).symbol() << '\t'
 		//				 << radius << std::endl;
-		//
+
 		PointWeightFunction w(atom.get_location(), radius);
 
 		std::vector<cif::mm::atom> atomsNearBy = mDistanceMap.near(atom, 3.5f);

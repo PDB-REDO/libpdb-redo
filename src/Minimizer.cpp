@@ -32,7 +32,6 @@
 #include <filesystem>
 #include <future>
 #include <iomanip>
-#include <random>
 #include <regex>
 
 #include "pdb-redo/Minimizer.hpp"
@@ -153,35 +152,35 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 		}
 	}
 
-	// for (auto &a : compound->torsions())
-	// {
-	// 	if (a.esd == 0)
-	// 		continue;
+	for (auto &a : compound->torsions())
+	{
+		if (a.esd == 0)
+			continue;
 
-	// 	try
-	// 	{
-	// 		if (compound->get_atom_by_atom_id(a.atomID[0]).typeSymbol == cif::H or
-	// 			compound->get_atom_by_atom_id(a.atomID[1]).typeSymbol == cif::H or
-	// 			compound->get_atom_by_atom_id(a.atomID[2]).typeSymbol == cif::H or
-	// 			compound->get_atom_by_atom_id(a.atomID[3]).typeSymbol == cif::H)
-	// 		{
-	// 			continue;
-	// 		}
+		try
+		{
+			if (compound->get_atom_by_atom_id(a.atomID[0]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(a.atomID[1]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(a.atomID[2]).typeSymbol == cif::H or
+				compound->get_atom_by_atom_id(a.atomID[3]).typeSymbol == cif::H)
+			{
+				continue;
+			}
 
-	// 		cif::mm::atom a1 = res.get_atom_by_atom_id(a.atomID[0]);
-	// 		cif::mm::atom a2 = res.get_atom_by_atom_id(a.atomID[1]);
-	// 		cif::mm::atom a3 = res.get_atom_by_atom_id(a.atomID[2]);
-	// 		cif::mm::atom a4 = res.get_atom_by_atom_id(a.atomID[3]);
+			cif::mm::atom a1 = res.get_atom_by_atom_id(a.atomID[0]);
+			cif::mm::atom a2 = res.get_atom_by_atom_id(a.atomID[1]);
+			cif::mm::atom a3 = res.get_atom_by_atom_id(a.atomID[2]);
+			cif::mm::atom a4 = res.get_atom_by_atom_id(a.atomID[3]);
 
-	// 		mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), a.angle, a.esd, a.period);
-	// 	}
-	// 	catch (const std::exception &ex)
-	// 	{
-	// 		if (cif::VERBOSE > 1)
-	// 			std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
-	// 		continue;
-	// 	}
-	// }
+			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), a.angle, a.esd, a.period);
+		}
+		catch (const std::exception &ex)
+		{
+			if (cif::VERBOSE > 1)
+				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
+			continue;
+		}
+	}
 
 	for (auto &cv : compound->chiralCentres())
 	{
@@ -270,9 +269,9 @@ void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last
 					bool trans = not cif::mm::monomer::is_cis(*prev, r);
 
 					if (trans)
-						addLinkRestraints(*prev, r, r.get_compound_id() == "PRO" ? "PTRANS" : "TRANS");
+						addLinkRestraints(*prev, r, "C", "N", r.get_compound_id() == "PRO" ? "PTRANS" : "TRANS");
 					else
-						addLinkRestraints(*prev, r, r.get_compound_id() == "PRO" ? "PCIS" : "CIS");
+						addLinkRestraints(*prev, r, "C", "N", r.get_compound_id() == "PRO" ? "PCIS" : "CIS");
 
 					if (trans)
 					{
@@ -510,9 +509,9 @@ void Minimizer::Finish()
 		{
 			if (a1 == a2 or mBonds(a1, a2))
 				continue;
-			
+
 			for (auto s_a2 : saif(a2, [l = a1.get_location()](const cif::point &p)
-					{ return distance_squared(p, l) <= kNonBondedContactDistanceSq; }))
+					 { return distance_squared(p, l) <= kNonBondedContactDistanceSq; }))
 			{
 				add_nbc(a1, a2);
 			}
@@ -561,7 +560,7 @@ void Minimizer::Finish()
 
 	AtomLocationProvider loc(mReferencedAtoms);
 
-	if (cif::VERBOSE > 1)
+	if (cif::VERBOSE >= 2)
 		for (auto r : mRestraints)
 			r->print(loc);
 }
@@ -584,7 +583,8 @@ AtomRef Minimizer::ref(const cif::mm::atom &atom)
 	return result;
 }
 
-void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b, const Link &link)
+void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b,
+		const std::string &atom_id_a, const std::string &atom_id_b, const Link &link)
 {
 	auto c1 = cif::compound_factory::instance().create(a.get_compound_id());
 	auto c2 = cif::compound_factory::instance().create(b.get_compound_id());
@@ -594,26 +594,33 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		return la.compID == 1 ? c1->get_atom_by_atom_id(la.atomID) : c2->get_atom_by_atom_id(la.atomID);
 	};
 
+	assert(link.bonds().size() == 1);
+	bool a_is_1 = link.bonds().front().atom[0].compID == 1 ?
+		link.bonds().front().atom[0].atomID == atom_id_a :
+		link.bonds().front().atom[1].atomID == atom_id_a;
+
 	auto getAtom = [&](const LinkAtom &la)
 	{
-		const cif::mm::residue &r = la.compID == 1 ? a : b;
-		return r.get_atom_by_atom_id(la.atomID);
+		if (la.compID == 1)
+			return a_is_1 ? a.get_atom_by_atom_id(la.atomID) : b.get_atom_by_atom_id(la.atomID);
+		else
+			return a_is_1 ? b.get_atom_by_atom_id(la.atomID) : a.get_atom_by_atom_id(la.atomID);
 	};
 
-	for (auto &b : link.bonds())
+	for (auto &bond : link.bonds())
 	{
 		try
 		{
-			if (getCompoundAtom(b.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(b.atom[1]).type_symbol == cif::H)
+			if (getCompoundAtom(bond.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(bond.atom[1]).type_symbol == cif::H)
 			{
 				continue;
 			}
 
-			cif::mm::atom a1 = getAtom(b.atom[0]);
-			cif::mm::atom a2 = getAtom(b.atom[1]);
+			cif::mm::atom a1 = getAtom(bond.atom[0]);
+			cif::mm::atom a2 = getAtom(bond.atom[1]);
 
-			mBondRestraints.emplace_back(ref(a1), ref(a2), b.distance, b.esd);
+			mBondRestraints.emplace_back(ref(a1), ref(a2), bond.distance, bond.esd);
 		}
 		catch (const std::exception &ex)
 		{
@@ -623,22 +630,22 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 	}
 
-	for (auto &a : link.angles())
+	for (auto &angle : link.angles())
 	{
 		try
 		{
-			if (getCompoundAtom(a.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(a.atom[1]).type_symbol == cif::H or
-				getCompoundAtom(a.atom[2]).type_symbol == cif::H)
+			if (getCompoundAtom(angle.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(angle.atom[1]).type_symbol == cif::H or
+				getCompoundAtom(angle.atom[2]).type_symbol == cif::H)
 			{
 				continue;
 			}
 
-			cif::mm::atom a1 = getAtom(a.atom[0]);
-			cif::mm::atom a2 = getAtom(a.atom[1]);
-			cif::mm::atom a3 = getAtom(a.atom[2]);
+			cif::mm::atom a1 = getAtom(angle.atom[0]);
+			cif::mm::atom a2 = getAtom(angle.atom[1]);
+			cif::mm::atom a3 = getAtom(angle.atom[2]);
 
-			mAngleRestraints.emplace_back(ref(a1), ref(a2), ref(a3), a.angle, a.esd);
+			mAngleRestraints.emplace_back(ref(a1), ref(a2), ref(a3), angle.angle, angle.esd);
 		}
 		catch (const std::exception &ex)
 		{
@@ -648,53 +655,53 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 	}
 
-	//	for (auto& a: link.torsions())
-	//	{
-	//		if (a.esd == 0)
-	//			continue;
-	//
-	//		try
-	//		{
-	//			if (getCompoundAtom(a.atom[0]).type_symbol == cif::H or
-	//				getCompoundAtom(a.atom[1]).type_symbol == cif::H or
-	//				getCompoundAtom(a.atom[2]).type_symbol == cif::H or
-	//				getCompoundAtom(a.atom[3]).type_symbol == cif::H)
-	//			{
-	//				continue;
-	//			}
-	//
-	//			cif::mm::atom a1 = getAtom(a.atom[0]);
-	//			cif::mm::atom a2 = getAtom(a.atom[1]);
-	//			cif::mm::atom a3 = getAtom(a.atom[2]);
-	//			cif::mm::atom a4 = getAtom(a.atom[3]);
-	//
-	//			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), a.angle, a.esd, a.period);
-	//		}
-	//		catch (const exception& ex)
-	//		{
-	//			if (cif::VERBOSE > 0)
-	//				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
-	//			continue;
-	//		}
-	//	}
-
-	for (auto &cv : link.chiralCentres())
+	for (auto &torsion : link.torsions())
 	{
+		if (torsion.esd == 0)
+			continue;
+
 		try
 		{
-			if (getCompoundAtom(cv.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(cv.atom[1]).type_symbol == cif::H or
-				getCompoundAtom(cv.atom[2]).type_symbol == cif::H)
+			if (getCompoundAtom(torsion.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(torsion.atom[1]).type_symbol == cif::H or
+				getCompoundAtom(torsion.atom[2]).type_symbol == cif::H or
+				getCompoundAtom(torsion.atom[3]).type_symbol == cif::H)
 			{
 				continue;
 			}
 
-			cif::mm::atom cc = getAtom(cv.atomCentre);
-			cif::mm::atom a1 = getAtom(cv.atom[0]);
-			cif::mm::atom a2 = getAtom(cv.atom[1]);
-			cif::mm::atom a3 = getAtom(cv.atom[2]);
+			cif::mm::atom a1 = getAtom(torsion.atom[0]);
+			cif::mm::atom a2 = getAtom(torsion.atom[1]);
+			cif::mm::atom a3 = getAtom(torsion.atom[2]);
+			cif::mm::atom a4 = getAtom(torsion.atom[3]);
 
-			auto volume = link.chiralVolume(cv.id, a.get_compound_id(), b.get_compound_id());
+			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), torsion.angle, torsion.esd, torsion.period);
+		}
+		catch (const std::exception &ex)
+		{
+			if (cif::VERBOSE > 0)
+				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
+			continue;
+		}
+	}
+
+	for (auto &center : link.chiralCentres())
+	{
+		try
+		{
+			if (getCompoundAtom(center.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(center.atom[1]).type_symbol == cif::H or
+				getCompoundAtom(center.atom[2]).type_symbol == cif::H)
+			{
+				continue;
+			}
+
+			cif::mm::atom cc = getAtom(center.atomCentre);
+			cif::mm::atom a1 = getAtom(center.atom[0]);
+			cif::mm::atom a2 = getAtom(center.atom[1]);
+			cif::mm::atom a3 = getAtom(center.atom[2]);
+
+			auto volume = link.chiralVolume(center.id, a.get_compound_id(), b.get_compound_id());
 
 			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1), ref(a2), ref(a3), volume);
 		}
@@ -706,13 +713,13 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 	}
 
-	for (auto &p : link.planes())
+	for (auto &plane : link.planes())
 	{
 		try
 		{
 			std::vector<AtomRef> atoms;
 
-			for (auto a : p.atoms)
+			for (auto a : plane.atoms)
 			{
 				if (getCompoundAtom(a).type_symbol == cif::H)
 					continue;
@@ -721,7 +728,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			}
 
 			if (atoms.size() > 3)
-				mPlanarityRestraints.emplace_back(PlanarityRestraint{ move(atoms), p.esd });
+				mPlanarityRestraints.emplace_back(PlanarityRestraint{ move(atoms), plane.esd });
 		}
 		catch (const std::exception &ex)
 		{
@@ -768,7 +775,12 @@ double Minimizer::score(const AtomLocationProvider &loc)
 {
 	double result = 0;
 	for (auto r : mRestraints)
+	{
+		if (cif::VERBOSE >= 2)
+			r->print(loc);
+		
 		result += r->f(loc);
+	}
 
 	if (cif::VERBOSE > 3)
 		std::cout << "score: " << result << std::endl;
@@ -1227,17 +1239,20 @@ Minimizer *Minimizer::create(cif::mm::structure &structure, const std::vector<ci
 
 	auto &db = structure.get_datablock();
 	auto &struct_conn = db["struct_conn"];
-	std::vector<std::tuple<const cif::mm::residue *, const cif::mm::residue *, std::string>> linked;
+	std::vector<std::tuple<const cif::mm::residue *, const cif::mm::residue *, std::string, std::string, std::string>> linked;
 
-	for (const auto &[ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id, ptnr1_auth_seq_id,
-			 ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id, ptnr2_auth_seq_id,
-			 link_id] : struct_conn.rows<std::string, std::string, int, std::string, std::string, std::string, int, std::string, std::string>("ptnr1_label_asym_id", "ptnr1_label_comp_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id",
-			 "ptnr2_label_asym_id", "ptnr2_label_comp_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id",
-			 "ccp4_link_id"))
+	for (auto r : struct_conn)
 	{
+		const auto &[ptnr1_label_asym_id, ptnr1_label_seq_id, ptnr1_auth_seq_id] =
+			r.get<std::string,int,std::string>("ptnr1_label_asym_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id");
+
+		const auto &[ptnr2_label_asym_id, ptnr2_label_seq_id, ptnr2_auth_seq_id] =
+			r.get<std::string,int,std::string>("ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id");
+
 		auto ai = find_if(residues.begin(), residues.end(),
 			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, auth_seq_id = ptnr1_auth_seq_id](const cif::mm::residue *res)
 			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_auth_seq_id() == auth_seq_id; });
+
 		auto bi = find_if(residues.begin(), residues.end(),
 			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id, auth_seq_id = ptnr2_auth_seq_id](const cif::mm::residue *res)
 			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_auth_seq_id() == auth_seq_id; });
@@ -1248,40 +1263,43 @@ Minimizer *Minimizer::create(cif::mm::structure &structure, const std::vector<ci
 		const cif::mm::residue *ra = *ai;
 		const cif::mm::residue *rb = *bi;
 
+		const auto &[ptnr1_label_atom_id, ptnr2_label_atom_id, link_id] =
+			r.get<std::string,std::string,std::string>("ptnr1_label_atom_id", "ptnr2_label_atom_id", "ccp4_link_id");
+
 		if (ai != residues.end() and bi != residues.end())
 		{
-			linked.emplace_back(ra, rb, link_id);
+			linked.emplace_back(ra, rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 			continue;
 		}
 
 		if (ai != residues.end())
 		{
-			residues.emplace_back(&structure.get_residue(ptnr2_label_asym_id, ptnr2_label_comp_id, ptnr2_label_seq_id, ptnr2_auth_seq_id));
-			linked.emplace_back(ra, residues.back(), link_id);
+			residues.emplace_back(&structure.get_residue(ptnr2_label_asym_id, ptnr2_label_seq_id, ptnr2_auth_seq_id));
+			linked.emplace_back(ra, residues.back(), ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 		}
 		else
 		{
-			residues.emplace_back(&structure.get_residue(ptnr1_label_asym_id, ptnr1_label_comp_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
-			linked.emplace_back(rb, residues.back(), link_id);
+			residues.emplace_back(&structure.get_residue(ptnr1_label_asym_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
+			linked.emplace_back(rb, residues.back(), ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 		}
 	}
 
 	// The struct conn records
-	for (const auto &[a, b, link_id] : linked)
+	for (const auto &[a, b, atom_a, atom_b, link_id] : linked)
 	{
 		if (not link_id.empty())
 		{
-			result->addLinkRestraints(*a, *b, link_id);
+			result->addLinkRestraints(*a, *b, atom_a, atom_b, link_id);
 			continue;
 		}
 
 		try
 		{
-			result->addLinkRestraints(*a, *b, a->get_compound_id() + "-" + b->get_compound_id());
+			result->addLinkRestraints(*a, *b, atom_a, atom_b, a->get_compound_id() + "-" + b->get_compound_id());
 		}
 		catch (const std::exception &e)
 		{
-			result->addLinkRestraints(*b, *a, b->get_compound_id() + "-" + a->get_compound_id());
+			result->addLinkRestraints(*b, *a, atom_a, atom_b, b->get_compound_id() + "-" + a->get_compound_id());
 		}
 	}
 

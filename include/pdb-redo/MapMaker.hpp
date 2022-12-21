@@ -103,7 +103,7 @@ bool IsMTZFile(const std::string &p);
 
 // --------------------------------------------------------------------
 
-template <typename FTYPE>
+template <typename FTYPE = float>
 class MapMaker
 {
   public:
