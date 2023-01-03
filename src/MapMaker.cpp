@@ -418,6 +418,10 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 	for (auto &atom : atoms)
 	{
 		float radius = cif::atom_type_traits(atom.get_type()).radius(cif::radius_type::van_der_waals);
+		if (std::isnan(radius))
+			radius = cif::atom_type_traits(atom.get_type()).radius(cif::radius_type::calculated);
+		if (std::isnan(radius))	// TODO: now what?
+			radius = 200;
 
 		auto cloc = toClipper(atom.get_location());
 

@@ -172,7 +172,8 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 			cif::mm::atom a3 = res.get_atom_by_atom_id(a.atomID[2]);
 			cif::mm::atom a4 = res.get_atom_by_atom_id(a.atomID[3]);
 
-			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), a.angle, a.esd, a.period);
+			if (a1 and a2 and a3 and a4)
+				mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), a.angle, a.esd, a.period);
 		}
 		catch (const std::exception &ex)
 		{
@@ -560,9 +561,17 @@ void Minimizer::Finish()
 
 	AtomLocationProvider loc(mReferencedAtoms);
 
-	if (cif::VERBOSE >= 2)
+	if (cif::VERBOSE > 2)
 		for (auto r : mRestraints)
 			r->print(loc);
+}
+
+void Minimizer::dropTorsionRestraints()
+{
+	for (auto &r : mTorsionRestraints)
+		mRestraints.erase(std::remove(mRestraints.begin(), mRestraints.end(), &r), mRestraints.end());
+	
+	mTorsionRestraints.clear();
 }
 
 AtomRef Minimizer::ref(const cif::mm::atom &atom)
@@ -776,7 +785,7 @@ double Minimizer::score(const AtomLocationProvider &loc)
 	double result = 0;
 	for (auto r : mRestraints)
 	{
-		if (cif::VERBOSE >= 2)
+		if (cif::VERBOSE > 2)
 			r->print(loc);
 		
 		result += r->f(loc);
@@ -908,7 +917,7 @@ class GSLDFCollector : public DFCollector
 
 GSLDFCollector::~GSLDFCollector()
 {
-	if (cif::VERBOSE > 1)
+	if (cif::VERBOSE > 2)
 	{
 		std::cerr << std::string(cif::get_terminal_width(), '-') << std::endl
 				  << "Collected gradient: " << std::endl;
@@ -1025,7 +1034,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 	{
 		int status = gsl_multimin_fdfminimizer_iterate(m_s);
 
-		if (cif::VERBOSE > 1)
+		if (cif::VERBOSE > 2)
 		{
 			size_t ix = 0;
 			for (auto &a : mAtoms)
@@ -1127,7 +1136,7 @@ void GSLMinimizer::Fdf(const gsl_vector *v, void *params, double *f, gsl_vector 
 	GSLMinimizer *self = reinterpret_cast<GSLMinimizer *>(params);
 	self->Fdf(v, f, df);
 
-	if (cif::VERBOSE > 1)
+	if (cif::VERBOSE > 2)
 		std::cout << "FDF => " << std::setprecision(10) << *f << std::endl;
 }
 
@@ -1137,7 +1146,7 @@ double GSLMinimizer::F(const gsl_vector *v)
 
 	//	return score(loc);
 	auto F = score(loc);
-	if (cif::VERBOSE > 1)
+	if (cif::VERBOSE > 2)
 		std::cout << "F => " << std::setprecision(10) << F << std::endl;
 	return F;
 }

@@ -111,6 +111,8 @@ class Minimizer
 		return create(structure, atoms, bm, plane5AtomsESD, nullptr, 0);
 	}
 
+	void dropTorsionRestraints();
+
 	void printStats();
 
 	virtual double refine(bool storeAtoms) = 0;

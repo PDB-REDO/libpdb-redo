@@ -196,16 +196,23 @@ BOOST_AUTO_TEST_CASE(refine_2)
 		}
 	}
 
-	// translate by { 0.1, 0.1, 0.1 } and then
-	// rotate around 1, 0, 0 for 5 degrees
+	// // translate by { 0.1, 0.1, 0.1 } and then
+	// // rotate around 1, 0, 0 for 5 degrees
 
-	const float angle = 5 * (cif::kPI / 180); // 5 degrees
-	cif::quaternion q(
-		std::cos(angle / 2), std::sin(angle / 2), 0, 0
-	);
+	// const float angle = 5 * (cif::kPI / 180);
+	// cif::quaternion q(
+	// 	std::cos(angle / 2), std::sin(angle / 2), 0, 0
+	// );
+
+	// for (auto a : rea.atoms())
+	// 	a.translate_and_rotate({ 0.1, 0.1, 0.1 }, q);
 
 	for (auto a : rea.atoms())
-		a.translate_and_rotate({ 0.1, 0.1, 0.1 }, q);
+	{
+		auto l = a.get_location();
+		l = nudge(l, 0.5);
+		a.set_location(l);
+	}
 
 	cif::file refFile(example.string());
 	cif::mm::structure reference(refFile);

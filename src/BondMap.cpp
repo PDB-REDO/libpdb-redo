@@ -251,7 +251,7 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 	{
 		if (c == "HOH" or c == "H2O" or c == "WAT")
 		{
-			if (cif::VERBOSE > 0)
+			if (cif::VERBOSE > 1)
 				std::cerr << "skipping water in bond map calculation" << std::endl;
 			continue;
 		}

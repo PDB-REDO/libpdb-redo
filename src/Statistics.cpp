@@ -291,7 +291,7 @@ struct AtomData
 		: atom(atom)
 		, asymID(atom.get_label_asym_id())
 		, seqID(atom.get_label_seq_id())
-		, auth_seq_id(atom.get_auth_seq_id())
+		, authSeqID(atom.get_auth_seq_id())
 		, radius(radius)
 		, occupancy(atom.get_occupancy())
 	{
@@ -300,7 +300,7 @@ struct AtomData
 	cif::mm::atom atom;
 	std::string asymID;
 	int seqID;
-	std::string auth_seq_id; // required for waters
+	std::string authSeqID; // required for waters
 	float radius;
 	float occupancy;
 	std::vector<AtomGridData> points;
@@ -671,10 +671,10 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 	std::vector<ResidueStatistics> result;
 
 	// And now collect the per residue information
-	for (const auto &[asymID, seqID, auth_seq_id] : residues)
+	for (const auto &[asymID, seqID, authSeqID] : residues)
 	{
 		// TODO: Need to do something with hetero residues (alternate compound types)
-		auto &res = mStructure.get_residue(asymID, seqID, auth_seq_id);
+		auto &res = mStructure.get_residue(asymID, seqID, authSeqID);
 		auto compID = res.get_compound_id();
 
 		AtomDataSums sums;
@@ -682,7 +682,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 		std::vector<const AtomData *> resAtomData;
 		for (const auto &d : atomData)
 		{
-			if (d.asymID == asymID and d.seqID == seqID and d.auth_seq_id == auth_seq_id)
+			if (d.asymID == asymID and d.seqID == seqID and d.authSeqID == authSeqID)
 				resAtomData.push_back(&d);
 		}
 
@@ -750,7 +750,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 
 			for (const auto &d : atomData)
 			{
-				if (d.asymID != asymID or d.seqID != seqID or d.auth_seq_id != auth_seq_id)
+				if (d.asymID != asymID or d.seqID != seqID or d.authSeqID != authSeqID)
 					continue;
 
 				if (alt.empty())
@@ -817,7 +817,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 		}
 
 		result.emplace_back(ResidueStatistics{asymID, seqID, compID,
-			auth_seq_id,
+			authSeqID,
 			(sums.rfSums[0] / sums.rfSums[1]),           // rsr
 			sums.srg(),                                  // srsr
 			sums.cc(),                                   // rsccs
@@ -835,8 +835,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 			if (not atom.is_water())
 				continue;
 
-			result.emplace_back(ResidueStatistics{d.asymID, d.seqID, "HOH",
-				atom.get_auth_seq_id(),
+			result.emplace_back(ResidueStatistics{d.asymID, d.seqID, "HOH", d.authSeqID,
 				(d.sums.rfSums[0] / d.sums.rfSums[1]),         // rsr
 				d.sums.srg(),                                  // srsr
 				d.sums.cc(),                                   // rsccs
@@ -1089,7 +1088,7 @@ EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
 	else
 		ediaBFactor = kAverageBFactors[i];
 
-	if (cif::VERBOSE > 0)
+	if (cif::VERBOSE > 1)
 		std::cerr << "Calculating radii with B Factor " << ediaBFactor << std::endl;
 
 	for (auto atom : mStructure.atoms())
@@ -1100,7 +1099,7 @@ EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
 		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering, ediaBFactor);
 		mRadii[atom.get_type()] = shape.radius();
 
-		if (cif::VERBOSE > 0)
+		if (cif::VERBOSE > 1)
 			std::cerr << "Radius for atom with type " << atom_type_traits(atom.get_type()).symbol() << " is " << mRadii[atom.get_type()] << std::endl;
 	}
 }
