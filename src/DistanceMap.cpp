@@ -260,7 +260,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 		std::vector<std::tuple<size_t,point>> rAtoms;
 		for (size_t i = 0; i < dim; ++i)
 		{
-			if (atoms[i]["label_asym_id"] == asym_id and atoms[i]["label_seq_id"] == pdb_seq_num)
+			if (atoms[i]["label_asym_id"] == asym_id and atoms[i]["auth_seq_id"] == pdb_seq_num)
 				rAtoms.emplace_back(i, locations[i]);
 		}
 		
