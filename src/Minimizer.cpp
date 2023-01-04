@@ -73,7 +73,10 @@ std::string AtomLocationProvider::atom(AtomRef atomID) const
 	if (atomID >= mAtoms.size())
 		throw std::range_error("Unknown atom " + std::to_string(atomID));
 	auto &a = mAtoms[atomID];
-	return std::to_string(a.get_label_seq_id()) + ' ' + a.get_label_atom_id();
+
+	auto seq_id = a.get_label_seq_id();
+
+	return (seq_id ? std::to_string(seq_id) : a.get_auth_seq_id()) + ' ' + a.get_label_atom_id();
 }
 
 // --------------------------------------------------------------------
@@ -598,15 +601,18 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 	auto c1 = cif::compound_factory::instance().create(a.get_compound_id());
 	auto c2 = cif::compound_factory::instance().create(b.get_compound_id());
 
-	auto getCompoundAtom = [&](const LinkAtom &la)
-	{
-		return la.compID == 1 ? c1->get_atom_by_atom_id(la.atomID) : c2->get_atom_by_atom_id(la.atomID);
-	};
-
 	assert(link.bonds().size() == 1);
 	bool a_is_1 = link.bonds().front().atom[0].compID == 1 ?
 		link.bonds().front().atom[0].atomID == atom_id_a :
 		link.bonds().front().atom[1].atomID == atom_id_a;
+
+	auto getCompoundAtom = [&](const LinkAtom &la)
+	{
+		if (la.compID == 1)
+			return a_is_1 ? c1->get_atom_by_atom_id(la.atomID) : c2->get_atom_by_atom_id(la.atomID);
+		else
+			return a_is_1 ? c2->get_atom_by_atom_id(la.atomID) : c1->get_atom_by_atom_id(la.atomID);
+	};
 
 	auto getAtom = [&](const LinkAtom &la)
 	{

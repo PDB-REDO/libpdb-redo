@@ -255,7 +255,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 	}
 
 	// loop over pdbx_branch_scheme
-	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].rows<std::string, std::string>("asym_id", "pdb_seq_num"))
+	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].rows<std::string, std::string>("asym_id", "num"))
 	{
 		std::vector<std::tuple<size_t,point>> rAtoms;
 		for (size_t i = 0; i < dim; ++i)
