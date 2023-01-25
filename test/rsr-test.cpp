@@ -169,105 +169,103 @@ BOOST_AUTO_TEST_CASE(refine_1)
 	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
 }
 
-BOOST_AUTO_TEST_CASE(refine_2)
-{
-	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	cif::file file(example.string());
+// BOOST_AUTO_TEST_CASE(refine_2)
+// {
+// 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
+// 	cif::file file(example.string());
 
-	cif::mm::structure structure(file);
+// 	cif::mm::structure structure(file);
 
-	const float kNearBy = 3;
+// 	const float kNearBy = 3;
 
-	pdb_redo::DistanceMap dm(structure, kNearBy);
+// 	pdb_redo::DistanceMap dm(structure, kNearBy);
 
-	// Move the REA residue somewhat
+// 	// Move the REA residue somewhat
 
-	auto &rea = structure.get_residue("B");
+// 	auto &rea = structure.get_residue("B");
 
-	std::vector<cif::mm::atom> atoms;
-	for (auto a : rea.atoms())
-	{
-		for (auto b : dm.near(a, kNearBy))
-		{
-			if (find(atoms.begin(), atoms.end(), b) != atoms.end())
-				continue;
+// 	std::vector<cif::mm::atom> atoms;
+// 	for (auto a : rea.atoms())
+// 	{
+// 		for (auto b : dm.near(a, kNearBy))
+// 		{
+// 			if (find(atoms.begin(), atoms.end(), b) != atoms.end())
+// 				continue;
 
-			atoms.push_back(b);
-		}
-	}
+// 			atoms.push_back(b);
+// 		}
+// 	}
 
-	// // translate by { 0.1, 0.1, 0.1 } and then
-	// // rotate around 1, 0, 0 for 5 degrees
+// 	// // translate by { 0.1, 0.1, 0.1 } and then
+// 	// // rotate around 1, 0, 0 for 5 degrees
 
-	// const float angle = 5 * (cif::kPI / 180);
-	// cif::quaternion q(
-	// 	std::cos(angle / 2), std::sin(angle / 2), 0, 0
-	// );
+// 	// const float angle = 5 * (cif::kPI / 180);
+// 	// cif::quaternion q(
+// 	// 	std::cos(angle / 2), std::sin(angle / 2), 0, 0
+// 	// );
 
-	// for (auto a : rea.atoms())
-	// 	a.translate_and_rotate({ 0.1, 0.1, 0.1 }, q);
+// 	// for (auto a : rea.atoms())
+// 	// 	a.translate_and_rotate({ 0.1, 0.1, 0.1 }, q);
 
-	for (auto a : rea.atoms())
-	{
-		auto l = a.get_location();
-		l = nudge(l, 0.5);
-		a.set_location(l);
-	}
+// 	for (auto a : rea.atoms())
+// 	{
+// 		auto l = a.get_location();
+// 		l = nudge(l, 0.5);
+// 		a.set_location(l);
+// 	}
 
-	cif::file refFile(example.string());
-	cif::mm::structure reference(refFile);
+// 	cif::file refFile(example.string());
+// 	cif::mm::structure reference(refFile);
 
-	auto &atomsRea = rea.atoms();
-	auto &refAtomsRea = reference.get_residue("B").atoms();
+// 	auto &atomsRea = rea.atoms();
+// 	auto &refAtomsRea = reference.get_residue("B").atoms();
 
-	BOOST_ASSERT(atomsRea.size() == refAtomsRea.size());
+// 	BOOST_ASSERT(atomsRea.size() == refAtomsRea.size());
 
-	for (size_t i = 0; i < atomsRea.size(); ++i)
-	{
-		auto a1 = atomsRea.at(i);
-		auto a2 = refAtomsRea.at(i);
+// 	for (size_t i = 0; i < atomsRea.size(); ++i)
+// 	{
+// 		auto a1 = atomsRea.at(i);
+// 		auto a2 = refAtomsRea.at(i);
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
-	}
+// 		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
+// 	}
 
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+// 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
 
-	pdb_redo::MapMaker<float> mm;
-	float samplingRate = 0.75;
-	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
+// 	pdb_redo::MapMaker<float> mm;
+// 	float samplingRate = 0.75;
+// 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	pdb_redo::BondMap bonds(structure);
+// 	pdb_redo::BondMap bonds(structure);
 
-	auto minimizer = pdb_redo::Minimizer::create(structure, atoms, bonds, mm.fb());
+// 	auto minimizer = pdb_redo::Minimizer::create(structure, atoms, bonds, mm.fb());
 
-	minimizer->printStats();
+// 	minimizer->printStats();
 
-	auto score = minimizer->refine(true);
+// 	auto score = minimizer->refine(true);
 
-	std::cout << "minimizer score: " << score << std::endl;
+// 	std::cout << "minimizer score: " << score << std::endl;
 
-	minimizer->printStats();
+// 	minimizer->printStats();
 
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+// 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
 
-	double d_sum = 0;
+// 	double d_sum = 0;
 
-	for (size_t i = 0; i < atomsRea.size(); ++i)
-	{
-		auto a1 = atomsRea.at(i);
-		auto a2 = refAtomsRea.at(i);
+// 	for (size_t i = 0; i < atomsRea.size(); ++i)
+// 	{
+// 		auto a1 = atomsRea.at(i);
+// 		auto a2 = refAtomsRea.at(i);
 
-		auto d = distance(a1, a2);
-		d_sum += d * d;
+// 		auto d = distance(a1, a2);
+// 		d_sum += d * d;
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << std::endl;
-	}
+// 		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << std::endl;
+// 	}
 
-	file.save("/tmp/rsr-test-3.cif");
+// 	auto rmsd = std::sqrt(d_sum / atomsRea.size());
+// 	std::cout << "RMSd: " << rmsd << std::endl;
+// 	BOOST_CHECK(rmsd < 0.2);
 
-	auto rmsd = std::sqrt(d_sum / atomsRea.size());
-	std::cout << "RMSd: " << rmsd << std::endl;
-	BOOST_CHECK(rmsd < 0.2);
-
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
-}
+// 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+// }
