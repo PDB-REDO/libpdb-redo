@@ -638,7 +638,7 @@ AtomShape::AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float res
 			iso = *b_iso / static_cast<float>(8 * kPI * kPI);
 
 		if (iso == 0)
-			iso = 2.0 / static_cast<float>(8 * kPI * kPI);;
+			iso = 2.0f / static_cast<float>(8 * kPI * kPI);;
 
 		mImpl = new AtomShapeImpl({ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering);
 	}

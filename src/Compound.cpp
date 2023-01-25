@@ -89,12 +89,12 @@ Compound::Compound(const std::string &file, const std::string &id,
 
 		for (auto row : compoundAtoms)
 		{
-			std::string id, symbol, energy;
+			std::string atom_id, symbol, energy;
 			float charge;
 
-			cif::tie(id, symbol, energy, charge) = row.get("atom_id", "type_symbol", "type_energy", "partial_charge");
+			cif::tie(atom_id, symbol, energy, charge) = row.get("atom_id", "type_symbol", "type_energy", "partial_charge");
 
-			mAtoms.push_back({id, atom_type_traits(symbol).type(), energy, charge});
+			mAtoms.push_back({atom_id, atom_type_traits(symbol).type(), energy, charge});
 		}
 		sort(mAtoms.begin(), mAtoms.end(), CompoundAtomLess());
 
@@ -521,9 +521,9 @@ float Compound::chiralVolume(const std::string &centreID) const
 		float beta = bondAngle(cv.atomID[1], cv.atomIDCentre, cv.atomID[2]);
 		float gamma = bondAngle(cv.atomID[2], cv.atomIDCentre, cv.atomID[0]);
 
-		float cosa = std::cos(alpha * kPI / 180);
-		float cosb = std::cos(beta * kPI / 180);
-		float cosc = std::cos(gamma * kPI / 180);
+		float cosa = static_cast<float>(std::cos(alpha * kPI / 180));
+		float cosb = static_cast<float>(std::cos(beta * kPI / 180));
+		float cosc = static_cast<float>(std::cos(gamma * kPI / 180));
 
 		result = (a * b * c * std::sqrt(1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc))) / 6;
 
@@ -765,9 +765,9 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 		float beta = angle(cv.atom[1], cv.atomCentre, cv.atom[2]);
 		float gamma = angle(cv.atom[2], cv.atomCentre, cv.atom[0]);
 
-		float cosa = std::cos(alpha * kPI / 180);
-		float cosb = std::cos(beta * kPI / 180);
-		float cosc = std::cos(gamma * kPI / 180);
+		float cosa = static_cast<float>(std::cos(alpha * kPI / 180));
+		float cosb = static_cast<float>(std::cos(beta * kPI / 180));
+		float cosc = static_cast<float>(std::cos(gamma * kPI / 180));
 
 		result = (a * b * c * std::sqrt(1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc))) / 6;
 
@@ -1113,7 +1113,7 @@ void CompoundFactory::pushDictionary(const fs::path &inDictFile)
 
 	try
 	{
-		mImpl = new CompoundFactoryImpl(inDictFile, mImpl);
+		mImpl = new CompoundFactoryImpl(inDictFile.string(), mImpl);
 	}
 	catch (const std::exception &ex)
 	{

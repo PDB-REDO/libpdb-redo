@@ -584,7 +584,7 @@ AtomRef Minimizer::ref(const cif::mm::atom &atom)
 		result = k->second;
 	else
 	{
-		result = mReferencedAtoms.size();
+		result = static_cast<AtomRef>(mReferencedAtoms.size());
 		mReferencedAtoms.push_back(atom);
 		mRefIndex[atomID] = result;
 	}
@@ -728,12 +728,12 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		{
 			std::vector<AtomRef> atoms;
 
-			for (auto a : plane.atoms)
+			for (auto atom : plane.atoms)
 			{
-				if (getCompoundAtom(a).type_symbol == cif::H)
+				if (getCompoundAtom(atom).type_symbol == cif::H)
 					continue;
 
-				atoms.push_back(ref(getAtom(a)));
+				atoms.push_back(ref(getAtom(atom)));
 			}
 
 			if (atoms.size() > 3)
@@ -1036,7 +1036,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 
 		if (cif::VERBOSE > 2)
 		{
-			size_t ix = 0;
+			ix = 0;
 			for (auto &a : mAtoms)
 			{
 				auto l = a.get_location();
