@@ -576,7 +576,7 @@ AtomRef Minimizer::ref(const cif::mm::atom &atom)
 		result = k->second;
 	else
 	{
-		result = mReferencedAtoms.size();
+		result = static_cast<AtomRef>(mReferencedAtoms.size());
 		mReferencedAtoms.push_back(atom);
 		mRefIndex[atomID] = result;
 	}
@@ -600,20 +600,20 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		return r.get_atom_by_atom_id(la.atomID);
 	};
 
-	for (auto &b : link.bonds())
+	for (auto &bond : link.bonds())
 	{
 		try
 		{
-			if (getCompoundAtom(b.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(b.atom[1]).type_symbol == cif::H)
+			if (getCompoundAtom(bond.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(bond.atom[1]).type_symbol == cif::H)
 			{
 				continue;
 			}
 
-			cif::mm::atom a1 = getAtom(b.atom[0]);
-			cif::mm::atom a2 = getAtom(b.atom[1]);
+			cif::mm::atom a1 = getAtom(bond.atom[0]);
+			cif::mm::atom a2 = getAtom(bond.atom[1]);
 
-			mBondRestraints.emplace_back(ref(a1), ref(a2), b.distance, b.esd);
+			mBondRestraints.emplace_back(ref(a1), ref(a2), bond.distance, bond.esd);
 		}
 		catch (const std::exception &ex)
 		{
@@ -623,22 +623,22 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 	}
 
-	for (auto &a : link.angles())
+	for (auto &angle : link.angles())
 	{
 		try
 		{
-			if (getCompoundAtom(a.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(a.atom[1]).type_symbol == cif::H or
-				getCompoundAtom(a.atom[2]).type_symbol == cif::H)
+			if (getCompoundAtom(angle.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(angle.atom[1]).type_symbol == cif::H or
+				getCompoundAtom(angle.atom[2]).type_symbol == cif::H)
 			{
 				continue;
 			}
 
-			cif::mm::atom a1 = getAtom(a.atom[0]);
-			cif::mm::atom a2 = getAtom(a.atom[1]);
-			cif::mm::atom a3 = getAtom(a.atom[2]);
+			cif::mm::atom a1 = getAtom(angle.atom[0]);
+			cif::mm::atom a2 = getAtom(angle.atom[1]);
+			cif::mm::atom a3 = getAtom(angle.atom[2]);
 
-			mAngleRestraints.emplace_back(ref(a1), ref(a2), ref(a3), a.angle, a.esd);
+			mAngleRestraints.emplace_back(ref(a1), ref(a2), ref(a3), angle.angle, angle.esd);
 		}
 		catch (const std::exception &ex)
 		{
@@ -712,12 +712,12 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		{
 			std::vector<AtomRef> atoms;
 
-			for (auto a : p.atoms)
+			for (auto atom : p.atoms)
 			{
-				if (getCompoundAtom(a).type_symbol == cif::H)
+				if (getCompoundAtom(atom).type_symbol == cif::H)
 					continue;
 
-				atoms.push_back(ref(getAtom(a)));
+				atoms.push_back(ref(getAtom(atom)));
 			}
 
 			if (atoms.size() > 3)
@@ -1013,7 +1013,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 
 		if (cif::VERBOSE > 1)
 		{
-			size_t ix = 0;
+			ix = 0;
 			for (auto &a : mAtoms)
 			{
 				auto l = a.get_location();

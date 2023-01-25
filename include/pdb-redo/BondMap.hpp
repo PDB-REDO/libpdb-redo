@@ -55,7 +55,7 @@ class BondMap
 
 	}
 
-	BondMap(const cif::datablock &db, int model_nr = 1);
+	BondMap(const cif::datablock &db, size_t model_nr = 1);
 
 	BondMap(const BondMap &) = delete;
 	BondMap &operator=(const BondMap &) = delete;

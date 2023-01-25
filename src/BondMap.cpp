@@ -141,7 +141,7 @@ bool CompoundBondMap::bonded(const std::string &compoundID, const std::string &a
 
 // --------------------------------------------------------------------
 
-BondMap::BondMap(const cif::datablock &db, int model_nr)
+BondMap::BondMap(const cif::datablock &db, size_t model_nr)
 {
 	using namespace cif::literals;
 
