@@ -906,7 +906,7 @@ CompoundFactoryImpl::CompoundFactoryImpl()
 }
 
 CompoundFactoryImpl::CompoundFactoryImpl(const std::filesystem::path &file, CompoundFactoryImpl *next)
-	: mPath(file)
+	: mPath(file.string())
 	, mFile(file)
 	, mNext(next)
 {
