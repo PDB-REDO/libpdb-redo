@@ -459,7 +459,7 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 		size_t ixb = mJA[i];
 
 		std::string b_id = rIndex.at(ixb);
-		auto altb = atom_site.find1<std::string>("id"_key == b_id, "label_alt_id");
+		auto altb = atom_site.find_first<std::string>("id"_key == b_id, "label_alt_id");
 
 		if (altb != alta and not altb.empty() and not alta.empty())
 			continue;
