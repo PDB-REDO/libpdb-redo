@@ -411,9 +411,17 @@ void Map<FTYPE>::write_masked(const std::filesystem::path &f, clipper::Grid_rang
 template <typename FTYPE>
 Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms) const
 {
+	using clipper::Coord_frac;
+	using clipper::Coord_orth;
+	using clipper::Coord_map;
+	using clipper::Coord_grid;
+	
+
 	Map<FTYPE> result(*this);
 
-	auto rtops = AlternativeSites(getSpacegroup(structure.get_datablock()), getCell(structure.get_datablock()));
+	auto spacegroup = mMap.spacegroup();
+	auto cell = mMap.cell();
+	auto rtops = AlternativeSites(spacegroup, cell);
 
 	for (auto &atom : atoms)
 	{
@@ -421,22 +429,50 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 		if (std::isnan(radius))
 			radius = cif::atom_type_traits(atom.get_type()).radius(cif::radius_type::calculated);
 		if (std::isnan(radius))	// TODO: now what?
-			radius = 200;
+		{
+			std::cerr << "Could not define radius for atom " << atom << std::endl;
+			continue;
+			// radius = 200;
+		}
+
+		float radiusSq = radius * radius;
+
+		auto o = Coord_orth(radius, radius, radius).coord_frac(cell);
+		o[0] = std::abs(o[0]);
+		o[1] = std::abs(o[1]);
+		o[2] = std::abs(o[2]);
 
 		auto cloc = toClipper(atom.get_location());
 
 		for (auto &rt : rtops)
 		{
-			auto rcloc = cloc.transform(rt);
+			auto p = cloc.transform(rt);
+			Coord_frac fp = p.coord_frac(cell);
+			Coord_frac fMin = fp - o, fMax = fp + o;
 
-			iterateGrid(toClipper(toPoint(rcloc)), radius, result.mMap,
-				[&result, radiusSq = radius * radius, a = atom.get_location()](auto iw)
-				{
-					cif::point p = toPoint(iw.coord_orth());
+			// see if the box around p actually overlaps the cell
 
-					if (distance_squared(a, p) < radiusSq)
-						result.mMap[iw] = -10;
-				});
+			if (fMin.u() > 1 or fMax.u() < 0 or
+				fMin.v() > 1 or fMax.v() < 0 or
+				fMin.w() > 1 or fMax.w() < 0)
+				continue;
+
+			auto pp = toPoint(p);
+
+			Coord_map mMin = fMin.coord_map(mMap.grid_sampling()), mMax = fMax.coord_map(mMap.grid_sampling());
+			Coord_grid gMin = mMin.floor(), gMax = mMax.ceil();
+
+			auto i0 = clipper::Xmap_base::Map_reference_coord(mMap, gMin);
+			for (auto iu = i0; iu.coord().u() <= gMax[0]; iu.next_u())
+				for (auto iv = iu; iv.coord().v() <= gMax[1]; iv.next_v())
+					for (auto iw = iv; iw.coord().w() <= gMax[2]; iw.next_w())
+					{
+						cif::point gp = toPoint(iw.coord_orth());
+
+						if (distance_squared(gp, pp) < radiusSq)
+							result.mMap[iw] = -10;
+
+					}
 		}
 	}
 
