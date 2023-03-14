@@ -224,16 +224,21 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 	}
 
 	// treat waters special
-	std::string water_entity_id = db["entity"].find1<std::string>("type"_key == "water", "id");
-
-	for (size_t i = 0; i < dim; ++i)
+	std::string water_entity_id;
+	try
 	{
-		if (atoms[i]["label_entity_id"] == water_entity_id)
+		water_entity_id = db["entity"].find1<std::string>("type"_key == "water", "id");
+
+		for (size_t i = 0; i < dim; ++i)
 		{
-			auto pt = locations[i];
-			residues.emplace_back(pt, 0.f, std::vector<std::tuple<size_t,point>>{ { i, pt } });
+			if (atoms[i]["label_entity_id"] == water_entity_id)
+			{
+				auto pt = locations[i];
+				residues.emplace_back(pt, 0.f, std::vector<std::tuple<size_t,point>>{ { i, pt } });
+			}
 		}
 	}
+	catch (...) {}
 
 	// loop over pdbx_nonpoly_scheme
 	for (const auto &[asymID, entityID] : db["pdbx_nonpoly_scheme"].rows<std::string, std::string>("asym_id", "entity_id"))
