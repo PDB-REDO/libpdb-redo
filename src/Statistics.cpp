@@ -951,13 +951,13 @@ void StatsCollector::sumDensity(std::vector<AtomData> &atomData,
 		auto radius = data.radius;
 		double sumDensity = 0;
 
-		iterateGrid(toClipper(atom.get_location()), radius, Fb, [&](Xmap_base::Map_reference_coord &iw)
+		iterateGrid(toClipper(atom.get_location()), radius, Fb, [&, radius_sq = radius * radius](Xmap_base::Map_reference_coord &iw)
 			{
 			auto p = toPoint(iw.coord_orth());
 			
-			double d = distance(p, atom.get_location());
+			double d = distance_squared(p, atom.get_location());
 
-			if (d <= radius)
+			if (d <= radius_sq)
 			{
 				double density = shape.calculatedDensity(p);
 				
