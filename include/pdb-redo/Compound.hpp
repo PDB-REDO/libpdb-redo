@@ -192,10 +192,7 @@ class Compound
 	// std::vector<std::tuple<std::string, std::string>> mapToIsomer(const Compound &c) const;
 
   private:
-	~Compound();
-
 	cif::file mCF;
-
 	std::string mID;
 	std::string mName;
 	std::string mGroup;
@@ -302,7 +299,6 @@ class Link
 	float chiralVolume(const std::string &id, const std::string &compound_id_1, const std::string &compound_id_2) const;
 
   private:
-	~Link();
 
 	std::string mID;
 	std::vector<LinkBond> mBonds;

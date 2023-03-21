@@ -47,8 +47,11 @@ namespace pdb_redo
 const uint32_t kRefSentinel = std::numeric_limits<uint32_t>::max();
 
 const double
-	kNonBondedContactDistanceSq = 15.0 * 15.0,
-	kMaxPeptideBondLengthSq = 3.5 * 3.5;
+	kMaxNonBondendContactDistance = 10.0,
+	kMaxPeptideBondLength = 3.5,
+
+	kMaxNonBondedContactDistanceSq = kMaxNonBondendContactDistance * kMaxNonBondendContactDistance,
+	kMaxPeptideBondLengthSq = kMaxPeptideBondLength * kMaxPeptideBondLength;
 
 // --------------------------------------------------------------------
 
@@ -515,7 +518,7 @@ void Minimizer::Finish()
 				continue;
 
 			for (auto s_a2 : saif(a2, [l = a1.get_location()](const cif::point &p)
-					 { return distance_squared(p, l) <= kNonBondedContactDistanceSq; }))
+					 { return distance_squared(p, l) <= kMaxNonBondedContactDistanceSq; }))
 			{
 				add_nbc(a1, a2);
 			}
@@ -670,35 +673,35 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 	}
 
-	for (auto &torsion : link.torsions())
-	{
-		if (torsion.esd == 0)
-			continue;
+	// for (auto &torsion : link.torsions())
+	// {
+	// 	if (torsion.esd == 0)
+	// 		continue;
 
-		try
-		{
-			if (getCompoundAtom(torsion.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(torsion.atom[1]).type_symbol == cif::H or
-				getCompoundAtom(torsion.atom[2]).type_symbol == cif::H or
-				getCompoundAtom(torsion.atom[3]).type_symbol == cif::H)
-			{
-				continue;
-			}
+	// 	try
+	// 	{
+	// 		if (getCompoundAtom(torsion.atom[0]).type_symbol == cif::H or
+	// 			getCompoundAtom(torsion.atom[1]).type_symbol == cif::H or
+	// 			getCompoundAtom(torsion.atom[2]).type_symbol == cif::H or
+	// 			getCompoundAtom(torsion.atom[3]).type_symbol == cif::H)
+	// 		{
+	// 			continue;
+	// 		}
 
-			cif::mm::atom a1 = getAtom(torsion.atom[0]);
-			cif::mm::atom a2 = getAtom(torsion.atom[1]);
-			cif::mm::atom a3 = getAtom(torsion.atom[2]);
-			cif::mm::atom a4 = getAtom(torsion.atom[3]);
+	// 		cif::mm::atom a1 = getAtom(torsion.atom[0]);
+	// 		cif::mm::atom a2 = getAtom(torsion.atom[1]);
+	// 		cif::mm::atom a3 = getAtom(torsion.atom[2]);
+	// 		cif::mm::atom a4 = getAtom(torsion.atom[3]);
 
-			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), torsion.angle, torsion.esd, torsion.period);
-		}
-		catch (const std::exception &ex)
-		{
-			if (cif::VERBOSE > 0)
-				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
-			continue;
-		}
-	}
+	// 		mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), torsion.angle, torsion.esd, torsion.period);
+	// 	}
+	// 	catch (const std::exception &ex)
+	// 	{
+	// 		if (cif::VERBOSE > 0)
+	// 			std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
+	// 		continue;
+	// 	}
+	// }
 
 	for (auto &center : link.chiralCentres())
 	{
@@ -1028,7 +1031,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 	m_s = gsl_multimin_fdfminimizer_alloc(T, 3 * mAtoms.size());
 
 	float tolerance = 0.06f;
-	double stepSize = 0.1 * gsl_blas_dnrm2(x);
+	double stepSize = 0.25 * gsl_blas_dnrm2(x);
 
 	gsl_multimin_fdfminimizer_set(m_s, &fdf, x, stepSize, tolerance);
 

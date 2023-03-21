@@ -541,6 +541,8 @@ float Compound::chiralVolume(const std::string &centreID) const
 Link::Link(cif::datablock &db)
 {
 	mID = db.name();
+	if (cif::starts_with(mID, "link_"))
+		mID.erase(mID.begin(), mID.begin() + 5);
 
 	auto &linkBonds = db["chem_link_bond"];
 
@@ -659,18 +661,12 @@ Link::Link(cif::datablock &db)
 
 const Link &Link::create(const std::string &id)
 {
-	auto result = CompoundFactory::instance().getLink(id);
-	if (result == nullptr)
-		result = CompoundFactory::instance().createLink(id);
+	auto result = CompoundFactory::instance().createLink(id);
 
 	if (result == nullptr)
 		throw std::runtime_error("Link with id " + id + " not found");
 
 	return *result;
-}
-
-Link::~Link()
-{
 }
 
 float Link::atomBondValue(const LinkAtom &atom1, const LinkAtom &atom2) const
@@ -833,8 +829,8 @@ class CompoundFactoryImpl
 		delete mNext;
 	}
 
-	Compound *get(std::string id);
-	Compound *create(std::string id);
+	const Compound *get(std::string id);
+	const Compound *create(std::string id);
 
 	const Link *getLink(std::string id);
 	const Link *createLink(std::string id);
@@ -885,8 +881,8 @@ class CompoundFactoryImpl
 	std::shared_timed_mutex mMutex;
 
 	std::string mPath;
-	std::vector<Compound *> mCompounds;
-	std::vector<const Link *> mLinks;
+	std::vector<std::unique_ptr<const Compound>> mCompounds;
+	std::vector<std::unique_ptr<const Link>> mLinks;
 	std::set<std::string> mKnownPeptides;
 	std::set<std::string> mKnownBases;
 	std::set<std::string> mMissing;
@@ -948,19 +944,19 @@ CompoundFactoryImpl::CompoundFactoryImpl(std::istream &data, CompoundFactoryImpl
 	}
 }
 
-Compound *CompoundFactoryImpl::get(std::string id)
+const Compound *CompoundFactoryImpl::get(std::string id)
 {
 	std::shared_lock lock(mMutex);
 
 	cif::to_upper(id);
 
-	Compound *result = nullptr;
+	const Compound *result = nullptr;
 
-	for (auto cmp : mCompounds)
+	for (auto &cmp : mCompounds)
 	{
 		if (cmp->id() == id)
 		{
-			result = cmp;
+			result = cmp.get();
 			break;
 		}
 	}
@@ -971,11 +967,11 @@ Compound *CompoundFactoryImpl::get(std::string id)
 	return result;
 }
 
-Compound *CompoundFactoryImpl::create(std::string id)
+const Compound *CompoundFactoryImpl::create(std::string id)
 {
 	cif::to_upper(id);
 
-	Compound *result = get(id);
+	const Compound *result = get(id);
 	if (result == nullptr and mMissing.count(id) == 0 and not mFile.empty())
 	{
 		std::unique_lock lock(mMutex);
@@ -1009,14 +1005,14 @@ Compound *CompoundFactoryImpl::create(std::string id)
 					mMissing.insert(id);
 				else
 				{
-					mCompounds.push_back(new Compound(resFile.string(), id, name, group));
-					result = mCompounds.back();
+					mCompounds.emplace_back(new Compound(resFile.string(), id, name, group));
+					result = mCompounds.back().get();
 				}
 			}
 			else
 			{
-				mCompounds.push_back(new Compound(mPath, id, name, group));
-				result = mCompounds.back();
+				mCompounds.emplace_back(new Compound(mPath, id, name, group));
+				result = mCompounds.back().get();
 			}
 		}
 
@@ -1035,11 +1031,11 @@ const Link *CompoundFactoryImpl::getLink(std::string id)
 
 	const Link *result = nullptr;
 
-	for (auto link : mLinks)
+	for (auto &link : mLinks)
 	{
-		if (link->id() == id)
+		if (cif::iequals(link->id(), id))
 		{
-			result = link;
+			result = link.get();
 			break;
 		}
 	}
@@ -1061,10 +1057,7 @@ const Link *CompoundFactoryImpl::createLink(std::string id)
 		std::unique_lock lock(mMutex);
 
 		if (mFile.contains("link_" + id))
-		{
-			result = new Link(mFile["link_" + id]);
-			mLinks.push_back(result);
-		}
+			result = mLinks.emplace_back(std::make_unique<Link>(mFile["link_" + id])).get();
 
 		if (result == nullptr and mNext != nullptr)
 			result = mNext->createLink(id);
