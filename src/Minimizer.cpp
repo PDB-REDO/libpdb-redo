@@ -359,8 +359,6 @@ void Minimizer::Finish()
 
 	std::set<std::tuple<AtomRef, AtomRef>> nbc;
 
-	SymmetryAtomIteratorFactory saif(mStructure, getSpacegroup(mStructure.get_datablock()), getCell(mStructure.get_datablock()));
-
 	auto add_nbc = [this, &nbc, &libAtom](const cif::mm::atom &a1, const cif::mm::atom &a2)
 	{
 		AtomRef ra1 = ref(a1);
@@ -508,6 +506,8 @@ void Minimizer::Finish()
 	};
 
 	// now add the non-bonded restraints
+	SymmetryAtomIteratorFactory saif(mStructure, getSpacegroup(mStructure.get_datablock()), getCell(mStructure.get_datablock()));
+
 	for (auto &a1 : mAtoms)
 	{
 		for (auto a2 : mStructure.atoms())
