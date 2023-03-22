@@ -47,10 +47,8 @@ namespace pdb_redo
 const uint32_t kRefSentinel = std::numeric_limits<uint32_t>::max();
 
 const double
-	kMaxNonBondendContactDistance = 10.0,
+	kMaxNonBondedContactDistance = 10.0,
 	kMaxPeptideBondLength = 3.5,
-
-	kMaxNonBondedContactDistanceSq = kMaxNonBondendContactDistance * kMaxNonBondendContactDistance,
 	kMaxPeptideBondLengthSq = kMaxPeptideBondLength * kMaxPeptideBondLength;
 
 // --------------------------------------------------------------------
@@ -517,10 +515,9 @@ void Minimizer::Finish()
 			if (a1 == a2 or mBonds(a1, a2))
 				continue;
 
-			for (auto s_a2 : saif(a2, [l = a1.get_location()](const cif::point &p)
-					 { return distance_squared(p, l) <= kMaxNonBondedContactDistanceSq; }))
+			for (auto s_a2 : saif(a2, a1.get_location(), kMaxNonBondedContactDistance))
 			{
-				add_nbc(a1, a2);
+				add_nbc(a1, s_a2);
 			}
 		}
 	}

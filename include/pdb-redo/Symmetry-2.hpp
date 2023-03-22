@@ -202,6 +202,11 @@ class SymmetryAtomIteratorFactory
 		return SymmetryAtomIteratorRange(*this, a, std::forward<ConditionFunc>(cond));
 	}
 
+	auto operator()(const cif::mm::atom &a, const cif::point &loc, float maxDistance) const
+	{
+		return this->operator()(a, [loc, dsq = maxDistance * maxDistance](const cif::point &p) { return distance_squared(p, loc) <= dsq; });
+	}
+
 	// std::string symop_mmcif(const cif::mm::atom& a) const;
 
   private:
