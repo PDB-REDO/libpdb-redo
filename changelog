@@ -1,3 +1,6 @@
+Version 3.0.6
+- Fix in calculating symmetry atom locations
+
 Version 3.0.5
 - Refinement work
 - Fix regression in bondmap voor sugars
