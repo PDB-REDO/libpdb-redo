@@ -1013,7 +1013,8 @@ double GSLMinimizer::refine(bool storeAtoms)
 	fdf.n = mAtoms.size() * 3;
 	fdf.params = this;
 
-	auto T = gsl_multimin_fdfminimizer_conjugate_pr;
+	// auto T = gsl_multimin_fdfminimizer_conjugate_pr;
+	auto T = gsl_multimin_fdfminimizer_vector_bfgs2;
 	auto x = gsl_vector_alloc(3 * mAtoms.size());
 
 	size_t ix = 0;
