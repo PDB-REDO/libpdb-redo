@@ -55,6 +55,11 @@ class SymmetryAtomIteratorFactory
 	SymmetryAtomIteratorFactory(const cif::mm::structure &structure, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell);
 	SymmetryAtomIteratorFactory(const cif::mm::structure &structure, int spacegroupNr, const clipper::Cell &cell);
 
+	SymmetryAtomIteratorFactory(const cif::mm::structure &structure)
+		: SymmetryAtomIteratorFactory(structure, getSpacegroup(structure.get_datablock()), getCell(structure.get_datablock()))
+	{
+	}
+
 	SymmetryAtomIteratorFactory(const SymmetryAtomIteratorFactory &) = delete;
 	SymmetryAtomIteratorFactory &operator=(const SymmetryAtomIteratorFactory &) = delete;
 
