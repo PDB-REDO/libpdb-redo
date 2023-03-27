@@ -122,13 +122,12 @@ endif()
 
 # Libraries
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
+find_package(GSL REQUIRED)
 
 if(NOT PDB_REDO_META)
 	find_package(newuoa REQUIRED)
 	find_package(cifpp 5.0.4 REQUIRED)
 endif()
-
-pkg_check_modules(GSL gsl REQUIRED IMPORTED_TARGET)
 
 # Create a revision file, containing the current git version info
 include(VersionString)
@@ -176,7 +175,7 @@ target_include_directories(pdb-redo
 	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 	${CCP4_INCLUDE_DIRS})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp newuoa::newuoa ${CCP4_LIBRARIES} ${GSL_LIBRARIES})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp newuoa::newuoa ${CCP4_LIBRARIES} GSL::gsl)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
