@@ -49,13 +49,18 @@ clipper::Atom toClipper(cif::row_handle atom, cif::row_handle aniso_row)
 	if (not atom["pdbx_formal_charge"].empty())
 	{
 		int charge = atom["pdbx_formal_charge"].as<int>();
-		if (std::abs(charge) > 1)
-			element += std::to_string(charge);
-		if (charge < 0)
-			element += '-';
-		else
-			element += '+';
+
+		if (cif::atom_type_traits(element).has_sf(charge))
+		{
+			element += std::to_string(std::abs(charge));
+
+			if (charge < 0)
+				element += '-';
+			else
+				element += '+';
+		}
 	}
+
 	result.set_element(element);
 
 	if (not atom["U_iso_or_equiv"].empty())
