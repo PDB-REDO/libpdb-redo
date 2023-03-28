@@ -111,7 +111,7 @@ clipper::Coord_orth CalculateOffsetForCell(const cif::mm::structure &structure, 
 			while (m + d > (c / 2))
 				d -= c;
 		}
-		return std::fmod(d, c);
+		return d;
 	};
 
 	if (cell.a() == 0 or cell.b() == 0 or cell.c() == 0)
