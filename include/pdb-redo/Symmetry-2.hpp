@@ -33,6 +33,24 @@
 namespace pdb_redo
 {
 
+struct sym_op
+{
+	uint8_t rnr;
+	uint8_t t[3];
+};
+
+static_assert(sizeof(sym_op) == 4, "Sym_op should be four bytes");
+
+std::string to_string(sym_op rtop);
+sym_op sym_op_from_string(std::string_view s);
+
+clipper::RTop_frac toClipperFrac(sym_op rtop, const clipper::Spacegroup &spacegroup);
+
+inline clipper::RTop_orth toClipperOrth(sym_op rtop, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
+{
+	return toClipperFrac(rtop, spacegroup).rtop_orth(cell);
+}
+
 // --------------------------------------------------------------------
 // Functions to use when working with symmetry stuff
 
@@ -47,7 +65,7 @@ std::string describeRToperation(const clipper::Spacegroup &spacegroup, const cli
 
 /// Return the closest RTop and distance. The rtop should be applied to \a b to get the actual point nearest to \a a.
 std::tuple<float,clipper::RTop_orth> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
-	const cif::point a, const cif::point b);
+	cif::point a, cif::point b);
 
 // --------------------------------------------------------------------
 // To iterate over all symmetry copies of an atom

@@ -96,10 +96,41 @@ BOOST_AUTO_TEST_CASE(symm_1)
 	BOOST_TEST(nr == 5005);
 }
 
+BOOST_AUTO_TEST_CASE(symm_2)
+{
+	cif::file f(gTestDir / "3bwh.cif.gz");
+	cif::mm::structure s(f);
+
+	auto sg = getSpacegroup(f.front());
+	auto c = getCell(f.front());
+
+	for (int i = 0; i < sg.num_symops(); ++i)
+	{
+		auto csymop = sg.symop(i);
+
+		auto rt = clipper::RTop_frac(csymop.rot(), csymop.trn()).rtop_orth(c);
+
+		auto d = describeRToperation(sg, c, rt);
+
+		std::cout << d << std::endl;
+
+		auto so = pdb_redo::sym_op_from_string(d);
+
+		BOOST_TEST(to_string(so) == d);
+
+
+		auto rt2 = pdb_redo::toClipperOrth(so, sg, c);
+
+		BOOST_TEST(rt.equals(rt2, 0.00001));	
+
+	}
+
+}
+
 // --------------------------------------------------------------------
 // more symmetry tests
 
-BOOST_AUTO_TEST_CASE(symm_3bwh)
+BOOST_AUTO_TEST_CASE(symm_3bwh_1)
 {
 	cif::file f(gTestDir / "3bwh.cif.gz");
 	cif::mm::structure s(f);
@@ -107,21 +138,17 @@ BOOST_AUTO_TEST_CASE(symm_3bwh)
 	auto a = s.get_residue("B", 0, "6").get_atom_by_atom_id("O2");
 	auto b = s.get_residue("A", 1, "").get_atom_by_atom_id("O");
 
-	{
-		pdb_redo::SymmetryAtomIteratorFactory saif(s);
+	// {
+	// 	pdb_redo::SymmetryAtomIteratorFactory saif(s);
 
-		// auto a = s.atoms().front();
-		for (auto sa : saif(b))
-			std::cout << sa << " " << sa.get_location() << " " << sa.symmetry() << std::endl;
-	}
+	// 	// auto a = s.atoms().front();
+	// 	for (auto sa : saif(b))
+	// 		std::cout << sa << " " << sa.get_location() << " " << sa.symmetry() << std::endl;
+	// }
 
 	const auto &[d, rtop] = closestSymmetryCopy(getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), a.get_location(), b.get_location());
 
 	BOOST_CHECK(d < 3);
-
-
-	// for (auto ba : b)
-	// 	std::cout << ba << " " << ba.get_location() << " " << ba.symmetry() << std::endl;
 }
 
 // --------------------------------------------------------------------

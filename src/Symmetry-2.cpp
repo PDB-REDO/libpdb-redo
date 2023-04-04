@@ -39,6 +39,80 @@ namespace pdb_redo
 
 // --------------------------------------------------------------------
 
+std::string to_string(sym_op rtop)
+{
+	std::ostringstream os;
+	os << (int)rtop.rnr << '_' << (int)rtop.t[0] << (int)rtop.t[1] << (int)rtop.t[2];
+	return os.str();
+}
+
+sym_op sym_op_from_string(std::string_view s)
+{
+	std::istringstream is(std::string{ s });
+
+	char ch;
+	int rnr;
+	uint8_t t[3];
+
+	is >> rnr >> ch >> t[0] >> t[1] >> t[2];
+	if (ch != '_' or t[0] < '0' or t[0] > '9' or t[1] < '0' or t[1] > '9' or t[2] < '0' or t[2] > '9')
+		throw std::invalid_argument("Invalid symmetry operator description");
+
+	sym_op result;
+	result.rnr = rnr;
+	result.t[0] = t[0] - '0';
+	result.t[1] = t[1] - '0';
+	result.t[2] = t[2] - '0';
+	return result;
+}
+
+clipper::RTop_frac toClipperFrac(sym_op rtop, const clipper::Spacegroup &spacegroup)
+{
+	auto spacegroup_nr = getSpacegroupNumber(spacegroup);
+
+	const size_t N = cif::kSymopNrTableSize;
+	int32_t L = 0, R = static_cast<int32_t>(N - 1);
+	while (L <= R)
+	{
+		int32_t i = (L + R) / 2;
+		if (cif::kSymopNrTable[i].spacegroup() < spacegroup_nr)
+			L = i + 1;
+		else
+			R = i - 1;
+	}
+
+	for (size_t i = L; i < N and cif::kSymopNrTable[i].spacegroup() == spacegroup_nr; ++i)
+	{
+		if (cif::kSymopNrTable[i].rotational_number() != rtop.rnr)
+			continue;
+		
+		auto d = cif::kSymopNrTable[i].symop().data();
+
+		clipper::Mat33<> rot(
+			d[0] == 3 ? -1 : d[0], 
+			d[1] == 3 ? -1 : d[1], 
+			d[2] == 3 ? -1 : d[2], 
+			d[3] == 3 ? -1 : d[3], 
+			d[4] == 3 ? -1 : d[4], 
+			d[5] == 3 ? -1 : d[5], 
+			d[6] == 3 ? -1 : d[6], 
+			d[7] == 3 ? -1 : d[7], 
+			d[8] == 3 ? -1 : d[8]);
+
+		clipper::Vec3<> trn(
+			(d[9] == 0 ? 0 : 1.0 * d[9] / d[10]),
+			(d[11] == 0 ? 0 : 1.0 * d[11] / d[12]),
+			(d[13] == 0 ? 0 : 1.0 * d[13] / d[14])
+		);
+
+		return clipper::RTop_frac(rot, trn);
+	}
+
+	throw std::invalid_argument("symmetry operator not found!");
+}
+
+// --------------------------------------------------------------------
+
 std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup &spacegroup,
 	const clipper::Cell &cell)
 {
@@ -72,15 +146,44 @@ std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup &spac
 // --------------------------------------------------------------------
 
 std::tuple<float,clipper::RTop_orth> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
-	const cif::point a, const cif::point b)
+	cif::point a, cif::point b)
 {
-	auto fca = toClipper(a).coord_frac(cell);
-	auto fcb = toClipper(b).coord_frac(cell);
+	// move a as close as possible to the origin, and move b in the same way
 
-	clipper::Coord_orth ca = fca.coord_orth(cell);
-	clipper::Coord_orth cb = fcb.coord_orth(cell);
+	auto calculateD = [&](float c, float a)
+	{
+		float d = 0;
+		assert(a != 0);
+		if (a != 0)
+		{
+			while (c + d < -(a / 2))
+				d += a;
+			while (c + d > (a / 2))
+				d -= a;
+		}
+		return d;
+	};
 
-	float result_dsq = (cb - ca).lengthsq();
+	if (cell.a() == 0 or cell.b() == 0 or cell.c() == 0)
+		throw std::runtime_error("Invalid cell, contains a dimension that is zero");
+
+	cif::point d;
+
+	d.m_x = calculateD(a.m_x, static_cast<float>(cell.a()));
+	d.m_y = calculateD(a.m_y, static_cast<float>(cell.b()));
+	d.m_z = calculateD(a.m_z, static_cast<float>(cell.c()));
+
+	a += d;
+	b += d;
+
+	d.m_x = calculateD(b.m_x, static_cast<float>(cell.a()));
+	d.m_y = calculateD(b.m_y, static_cast<float>(cell.b()));
+	d.m_z = calculateD(b.m_z, static_cast<float>(cell.c()));
+
+	auto ca = toClipper(a);
+	auto cd = toClipper(d);
+
+	float result_dsq = distance_squared(a, b);
 	float result_d = std::sqrt(result_dsq);
 	clipper::RTop_orth result_rt{};
 
@@ -95,7 +198,7 @@ std::tuple<float,clipper::RTop_orth> closestSymmetryCopy(const clipper::Spacegro
 					auto rtop = clipper::RTop_frac(
 						symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w)).rtop_orth(cell);
 
-					auto ocb = cb.transform(rtop);
+					auto ocb = toClipper(b + d).transform(rtop) + cd;
 
 					auto dsq = (ca - ocb).lengthsq();
 					if (dsq < result_dsq)
