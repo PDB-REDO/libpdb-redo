@@ -1296,7 +1296,7 @@ Minimizer *Minimizer::create(cif::mm::structure &structure, const std::vector<ci
 		else
 		{
 			residues.emplace_back(&structure.get_residue(ptnr1_label_asym_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
-			linked.emplace_back(rb, residues.back(), ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
+			linked.emplace_back(residues.back(), rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);	
 		}
 	}
 
@@ -1312,11 +1312,25 @@ Minimizer *Minimizer::create(cif::mm::structure &structure, const std::vector<ci
 		try
 		{
 			result->addLinkRestraints(*a, *b, atom_a, atom_b, a->get_compound_id() + "-" + b->get_compound_id());
-		}
-		catch (const std::exception &e)
+			continue;
+		} 
+		catch (...) {}
+
+		try
 		{
-			result->addLinkRestraints(*b, *a, atom_a, atom_b, b->get_compound_id() + "-" + a->get_compound_id());
+			result->addLinkRestraints(*b, *a, atom_b, atom_a, b->get_compound_id() + "-" + a->get_compound_id());
+			continue;
 		}
+		catch (...) {}
+
+		// Last resort, if link is NAG-ASN, try pyr-ASN instead:
+
+		if (a->get_compound_id() == "NAG" and b->get_compound_id() == "ASN")
+			result->addLinkRestraints(*b, *a, atom_b, atom_a, "pyr-ASN");
+		else if (b->get_compound_id() == "NAG" and a->get_compound_id() == "ASN")
+			result->addLinkRestraints(*a, *b, atom_a, atom_b, "pyr-ASN");
+		else
+			throw std::runtime_error("Missing link information for " + a->get_compound_id() + " and " + b->get_compound_id());
 	}
 
 	if (xMap != nullptr and mapWeight != 0)

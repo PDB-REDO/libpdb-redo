@@ -40,38 +40,6 @@ using cif::point;
 
 // --------------------------------------------------------------------
 
-std::vector<clipper::RTop_orth> DistanceMap::AlternativeSites(const clipper::Spacegroup &spacegroup,
-	const clipper::Cell &cell)
-{
-	std::vector<clipper::RTop_orth> result;
-
-	// to make the operation at index 0 equal to identity
-	result.push_back(clipper::RTop_orth::identity());
-
-	for (int i = 0; i < spacegroup.num_symops(); ++i)
-	{
-		const auto &symop = spacegroup.symop(i);
-
-		for (int u : { -1, 0, 1 })
-			for (int v : { -1, 0, 1 })
-				for (int w : { -1, 0, 1 })
-				{
-					if (i == 0 and u == 0 and v == 0 and w == 0)
-						continue;
-
-					auto rtop = clipper::RTop_frac(
-						symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w))
-					                .rtop_orth(cell);
-
-					result.push_back(std::move(rtop));
-				}
-	}
-
-	return result;
-}
-
-// --------------------------------------------------------------------
-
 std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<size_t,point>> &atoms)
 {
 	std::vector<point> pts;
@@ -146,62 +114,8 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 			pMax.m_z = pt.m_z;
 	};
 
-	// correct locations so that the median of x, y and z are inside the cell
-	std::vector<float> c(locations.size());
-	auto median = [&]()
-	{
-		return dim % 1 == 0
-		           ? c[dim / 2]
-		           : (c[dim / 2 - 1] + c[dim / 2]) / 2;
-	};
-
-	transform(locations.begin(), locations.end(), c.begin(), [](point &l)
-		{ return static_cast<float>(l.m_x); });
-	sort(c.begin(), c.end());
-	float mx = median();
-
-	transform(locations.begin(), locations.end(), c.begin(), [](point &l)
-		{ return static_cast<float>(l.m_y); });
-	sort(c.begin(), c.end());
-	float my = median();
-
-	transform(locations.begin(), locations.end(), c.begin(), [](point &l)
-		{ return static_cast<float>(l.m_z); });
-	sort(c.begin(), c.end());
-	float mz = median();
-
-	if (cif::VERBOSE > 1)
-		std::cerr << "median position of atoms: " << point(mx, my, mz) << std::endl;
-
-	auto calculateD = [&](float m, float c)
-	{
-		float d = 0;
-		while (m + d < -(c / 2))
-			d += c;
-		while (m + d > (c / 2))
-			d -= c;
-		return d;
-	};
-
-	mD.m_x = calculateD(mx, static_cast<float>(cell.a()));
-	mD.m_y = calculateD(my, static_cast<float>(cell.b()));
-	mD.m_z = calculateD(mz, static_cast<float>(cell.c()));
-
-	clipper::Coord_orth D = toClipper(mD);
-
-	if (mD.m_x != 0 or mD.m_y != 0 or mD.m_z != 0)
-	{
-		if (cif::VERBOSE > 1)
-			std::cerr << "moving coorinates by " << mD.m_x << ", " << mD.m_y << " and " << mD.m_z << std::endl;
-
-		for_each(locations.begin(), locations.end(), [&](point &p)
-			{ p += mD; });
-	}
-
 	pMin -= mMaxDistance; // extend bounding box
 	pMax += mMaxDistance;
-
-	mRtOrth = AlternativeSites(spacegroup, cell);
 
 	DistMap dist;
 
@@ -217,33 +131,30 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 				rAtoms.emplace_back(i, locations[i]);
 		}
 		
-		AddDistancesForAtoms(rAtoms, rAtoms, dist, 0);
+		AddDistancesForAtoms(rAtoms, rAtoms, dist);
 
 		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
 		residues.emplace_back(center, radius, std::move(rAtoms));
 	}
 
 	// treat waters special
-	std::string water_entity_id;
-	try
+	auto water_entity_id = db["entity"].find1<std::optional<std::string>>("type"_key == "water", "id");
+	if (water_entity_id.has_value())
 	{
-		water_entity_id = db["entity"].find1<std::string>("type"_key == "water", "id");
-
 		for (size_t i = 0; i < dim; ++i)
 		{
-			if (atoms[i]["label_entity_id"] == water_entity_id)
+			if (atoms[i]["label_entity_id"] == *water_entity_id)
 			{
 				auto pt = locations[i];
 				residues.emplace_back(pt, 0.f, std::vector<std::tuple<size_t,point>>{ { i, pt } });
 			}
 		}
 	}
-	catch (...) {}
 
 	// loop over pdbx_nonpoly_scheme
 	for (const auto &[asymID, entityID] : db["pdbx_nonpoly_scheme"].rows<std::string, std::string>("asym_id", "entity_id"))
 	{
-		if (entityID == water_entity_id)
+		if (water_entity_id.has_value() and entityID == *water_entity_id)
 			continue;
 
 		std::vector<std::tuple<size_t,point>> rAtoms;
@@ -253,7 +164,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 				rAtoms.emplace_back(i, locations[i]);
 		}
 		
-		AddDistancesForAtoms(rAtoms, rAtoms, dist, 0);
+		AddDistancesForAtoms(rAtoms, rAtoms, dist);
 
 		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
 		residues.emplace_back(center, radius, std::move(rAtoms));
@@ -269,7 +180,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 				rAtoms.emplace_back(i, locations[i]);
 		}
 		
-		AddDistancesForAtoms(rAtoms, rAtoms, dist, 0);
+		AddDistancesForAtoms(rAtoms, rAtoms, dist);
 
 		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
 		residues.emplace_back(center, radius, std::move(rAtoms));
@@ -292,34 +203,37 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 			auto d = distance(centerI, centerJ) - radiusI - radiusJ;
 			if (d < mMaxDistance)
 			{
-				AddDistancesForAtoms(atomsI, atomsJ, dist, 0);
+				AddDistancesForAtoms(atomsI, atomsJ, dist);
 				continue;
 			}
 
-			// now try all symmetry operations to see if we can move rj close to ri
+			// // now try all symmetry operations to see if we can move rj close to ri
 
-			clipper::Coord_orth cI = toClipper(centerI);
-			clipper::Coord_orth cJ = toClipper(centerJ);
+			// clipper::Coord_orth cI = toClipper(centerI);
+			// clipper::Coord_orth cJ = toClipper(centerJ);
 
-			auto minR2 = d;
+			// auto minR2 = d;
 
-			int32_t kbest = 0;
-			for (int32_t k = 1; k < static_cast<int32_t>(mRtOrth.size()); ++k)
-			{
-				auto &rt = mRtOrth[k];
+			// int32_t kbest = 0;
+			// for (int32_t k = 1; k < static_cast<int32_t>(mRtOrth.size()); ++k)
+			// {
+			// 	auto &rt = mRtOrth[k];
 
-				auto pJ = (cJ + D).transform(rt) - D;
-				double r2 = std::sqrt((cI - pJ).lengthsq()) - radiusI - radiusJ;
+			// 	auto pJ = (cJ + D).transform(rt) - D;
+			// 	double r2 = std::sqrt((cI - pJ).lengthsq()) - radiusI - radiusJ;
 
-				if (minR2 > r2)
-				{
-					minR2 = static_cast<float>(r2);
-					kbest = k;
-				}
-			}
+			// 	if (minR2 > r2)
+			// 	{
+			// 		minR2 = static_cast<float>(r2);
+			// 		kbest = k;
+			// 	}
+			// }
 
-			if (minR2 < mMaxDistance)
-				AddDistancesForAtoms(atomsI, atomsJ, dist, kbest);
+			const auto &[dist, rtop] = closestSymmetryCopy(spacegroup, cell, centerI, centerJ);
+
+			if (dist < mMaxDistance)
+				;
+				// AddDistancesForAtoms(atomsI, atomsJ, dist, d, rtop);
 		}
 	}
 
@@ -355,7 +269,8 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 
 // --------------------------------------------------------------------
 
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b, DistMap &dm, int32_t rtix)
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b, DistMap &dm,
+	int32_t rtix, cif::point offset)
 {
 	for (const auto &[ixa, loc_a] : a)
 	{
@@ -366,10 +281,14 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 			if (ixa == ixb)
 				continue;
 
-			clipper::Coord_orth pb = toClipper(loc_b);
+			clipper::Coord_orth pb = toClipper(loc_b + offset);
 
 			if (rtix)
-				pb = pb.transform(mRtOrth[rtix]);
+			{
+				auto symop = spacegroup.symop(rtix);
+				auto rtop = clipper::RTop_frac(symop.rot(), symop.trn()).rtop_orth(cell);
+				pb = pb.transform(rtop);
+			}
 
 			auto d = static_cast<float>((pa - pb).lengthsq());
 			if (d > mMaxDistanceSQ)
@@ -393,7 +312,7 @@ float DistanceMap::operator()(const std::string &a, const std::string &b) const
 	}
 	catch (const std::out_of_range &ex)
 	{
-		throw std::runtime_error("atom " + a + " not found in distance map");
+		throw std::out_of_range("atom " + a + " not found in distance map");
 	}
 
 	try
@@ -402,7 +321,7 @@ float DistanceMap::operator()(const std::string &a, const std::string &b) const
 	}
 	catch (const std::out_of_range &ex)
 	{
-		throw std::runtime_error("atom " + b + " not found in distance map");
+		throw std::out_of_range("atom " + b + " not found in distance map");
 	}
 
 	//	if (ixb < ixa)
@@ -471,11 +390,11 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 		auto atom_b = mStructure.get_atom_by_id(b_id);
 
-		if (rti > 0)
-			result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(rti)));
-		else if (rti < 0)
-			result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
-		else
+		// if (rti > 0)
+		// 	result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(rti)));
+		// else if (rti < 0)
+		// 	result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
+		// else
 			result.emplace_back(atom_b);
 	}
 

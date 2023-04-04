@@ -36,7 +36,6 @@ namespace pdb_redo
 // --------------------------------------------------------------------
 // Functions to use when working with symmetry stuff
 
-clipper::Coord_orth CalculateOffsetForCell(const cif::mm::structure &structure, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell);
 std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell);
 // int GetSpacegroupNumber(std::string spacegroup);	// alternative for clipper's parsing code
 // std::string SpacegroupToHall(std::string spacegroup);
@@ -45,6 +44,10 @@ cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const cif::point &d,
 	const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
 
 std::string describeRToperation(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
+
+/// Return the closest RTop and distance. The rtop should be applied to \a b to get the actual point nearest to \a a.
+std::tuple<float,clipper::RTop_orth> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+	const cif::point a, const cif::point b);
 
 // --------------------------------------------------------------------
 // To iterate over all symmetry copies of an atom
@@ -78,8 +81,28 @@ class SymmetryAtomIteratorFactory
 			, m_i(0)
 			, m_a(atom)
 			, m_c(atom)
+			, m_l(m_a.get_location())
 			, m_cond(cond)
 		{
+			// Find the offset first, that needs to be applied
+			auto calc_offset = [&](float c, float e)
+			{
+				float d = 0;
+				assert(e != 0);
+				if (e != 0)
+				{
+					while (c + d < -(e / 2))
+						d += e;
+					while (c + d > (e / 2))
+						d -= e;
+				}
+				return d;
+			};
+
+			m_o.m_x = calc_offset(m_l.m_x, m_f->mCell.a());
+			m_o.m_y = calc_offset(m_l.m_y, m_f->mCell.b());
+			m_o.m_z = calc_offset(m_l.m_z, m_f->mCell.c());
+
 			while (not test() and m_i < m_f->mRtOrth.size())
 				++m_i;
 		}
@@ -151,11 +174,11 @@ class SymmetryAtomIteratorFactory
 			if (m_i < m_f->mRtOrth.size())
 			{
 				auto &rt = m_f->mRtOrth[m_i];
-				auto loc = m_a.get_location();
+				auto loc = m_l;
 
-				loc += m_f->mD;
+				loc += m_o;
 				loc = toPoint(toClipper(loc).transform(rt));
-				loc -= m_f->mD;
+				loc -= m_o;
 
 				if (m_cond(loc))
 				{
@@ -171,6 +194,7 @@ class SymmetryAtomIteratorFactory
 		const SymmetryAtomIteratorFactory *m_f;
 		size_t m_i;
 		cif::mm::atom m_a, m_c;
+		cif::point m_l, m_o;
 		ConditionFunc &m_cond;
 	};
 
@@ -212,11 +236,13 @@ class SymmetryAtomIteratorFactory
 		return this->operator()(a, [loc, dsq = maxDistance * maxDistance](const cif::point &p) { return distance_squared(p, loc) <= dsq; });
 	}
 
-	// std::string symop_mmcif(const cif::mm::atom& a) const;
+	auto operator()(const cif::mm::atom &a) const
+	{
+		return this->operator()(a, [](const cif::point &p) { return true; });
+	}
 
   private:
 	clipper::Spacegroup mSpacegroup;
-	cif::point mD; // needed to move atoms to center
 	std::vector<clipper::RTop_orth> mRtOrth;
 	clipper::Cell mCell;
 };

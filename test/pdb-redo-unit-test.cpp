@@ -40,6 +40,7 @@
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/Statistics.hpp"
 #include "pdb-redo/SkipList.hpp"
+#include "pdb-redo/Symmetry-2.hpp"
 
 namespace fs = std::filesystem;
 namespace tt = boost::test_tools;
@@ -93,6 +94,34 @@ BOOST_AUTO_TEST_CASE(symm_1)
 	nr = pdb_redo::getSpacegroupNumber(mHKLInfo.spacegroup());
 
 	BOOST_TEST(nr == 5005);
+}
+
+// --------------------------------------------------------------------
+// more symmetry tests
+
+BOOST_AUTO_TEST_CASE(symm_3bwh)
+{
+	cif::file f(gTestDir / "3bwh.cif.gz");
+	cif::mm::structure s(f);
+
+	auto a = s.get_residue("B", 0, "6").get_atom_by_atom_id("O2");
+	auto b = s.get_residue("A", 1, "").get_atom_by_atom_id("O");
+
+	{
+		pdb_redo::SymmetryAtomIteratorFactory saif(s);
+
+		// auto a = s.atoms().front();
+		for (auto sa : saif(b))
+			std::cout << sa << " " << sa.get_location() << " " << sa.symmetry() << std::endl;
+	}
+
+	const auto &[d, rtop] = closestSymmetryCopy(getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), a.get_location(), b.get_location());
+
+	BOOST_CHECK(d < 3);
+
+
+	// for (auto ba : b)
+	// 	std::cout << ba << " " << ba.get_location() << " " << ba.symmetry() << std::endl;
 }
 
 // --------------------------------------------------------------------
@@ -443,4 +472,3 @@ BOOST_AUTO_TEST_CASE(stats_2)
 		BOOST_CHECK(std::isnan(ri.OPIA));
 	}
 }
-

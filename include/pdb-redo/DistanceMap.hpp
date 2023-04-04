@@ -60,16 +60,14 @@ class DistanceMap
 
 	std::vector<cif::mm::atom> near(const cif::mm::atom &atom, float maxDistance = 3.5f) const;
 
-	static std::vector<clipper::RTop_orth>
-	AlternativeSites(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell);
-
   private:
 	using DistKeyType = std::tuple<size_t, size_t>;
 	using DistValueType = std::tuple<float, int32_t>;
 	using DistMap = std::map<DistKeyType, DistValueType>;
 
 	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
-		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, int32_t rtix);
+		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm,
+		int32_t rtix = 0, cif::point offset = {});
 
 	const cif::mm::structure &mStructure;
 	clipper::Cell cell;
@@ -82,8 +80,6 @@ class DistanceMap
 
 	std::vector<std::tuple<float, int32_t>> mA;
 	std::vector<size_t> mIA, mJA;
-	cif::point mD; // needed to move atoms to center
-	std::vector<clipper::RTop_orth> mRtOrth;
 };
 
 } // namespace pdb_redo
