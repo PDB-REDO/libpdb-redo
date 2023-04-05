@@ -33,6 +33,7 @@
 #include <cif++.hpp>
 
 #include <pdb-redo/ClipperWrapper.hpp>
+#include <pdb-redo/Symmetry-2.hpp>
 
 #ifdef near
 #undef near
@@ -62,12 +63,13 @@ class DistanceMap
 
   private:
 	using DistKeyType = std::tuple<size_t, size_t>;
-	using DistValueType = std::tuple<float, int32_t>;
+	using DistValueType = std::tuple<float, sym_op>;
 	using DistMap = std::map<DistKeyType, DistValueType>;
 
 	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
-		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm,
-		int32_t rtix = 0, cif::point offset = {});
+		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, sym_op rtop = {});
+
+	cif::point offsetToOrigin(const cif::point &p) const;
 
 	const cif::mm::structure &mStructure;
 	clipper::Cell cell;
@@ -78,7 +80,7 @@ class DistanceMap
 
 	float mMaxDistance, mMaxDistanceSQ;
 
-	std::vector<std::tuple<float, int32_t>> mA;
+	std::vector<std::tuple<float, sym_op>> mA;
 	std::vector<size_t> mIA, mJA;
 };
 

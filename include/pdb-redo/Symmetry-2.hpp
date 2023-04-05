@@ -37,19 +37,45 @@ struct sym_op
 {
 	uint8_t rnr;
 	uint8_t t[3];
+
+	sym_op(uint8_t rnri = 1, uint8_t tx = 5, uint8_t ty = 5, uint8_t tz = 5)
+	{
+		rnr = rnri;
+		t[0] = tx;
+		t[1] = ty;
+		t[2] = tz;
+	}
+
+	sym_op(std::string_view s);
+
+	sym_op(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
+
+	sym_op(const sym_op &) = default;
+	sym_op(sym_op &&) = default;
+	sym_op &operator=(const sym_op &) = default;
+	sym_op &operator=(sym_op &&) = default;
+
+	constexpr bool is_identity() const
+	{
+		return rnr == 1 and t[0] == 5 and t[1] == 5 and t[2] == 5;
+	}
+
+	explicit constexpr operator bool() const
+	{
+		return not is_identity();
+	}
+
+	std::string string() const;
+
+	clipper::RTop_frac toClipperFrac(const clipper::Spacegroup &spacegroup) const;
+
+	clipper::RTop_orth toClipperOrth(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell) const
+	{
+		return toClipperFrac(spacegroup).rtop_orth(cell);
+	}
 };
 
 static_assert(sizeof(sym_op) == 4, "Sym_op should be four bytes");
-
-std::string to_string(sym_op rtop);
-sym_op sym_op_from_string(std::string_view s);
-
-clipper::RTop_frac toClipperFrac(sym_op rtop, const clipper::Spacegroup &spacegroup);
-
-inline clipper::RTop_orth toClipperOrth(sym_op rtop, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
-{
-	return toClipperFrac(rtop, spacegroup).rtop_orth(cell);
-}
 
 // --------------------------------------------------------------------
 // Functions to use when working with symmetry stuff
@@ -58,8 +84,13 @@ std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup &spac
 // int GetSpacegroupNumber(std::string spacegroup);	// alternative for clipper's parsing code
 // std::string SpacegroupToHall(std::string spacegroup);
 
-cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const cif::point &d,
-	const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
+// cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const cif::point &d,
+// 	const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
+
+cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
+cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop);
+cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
+cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop);
 
 std::string describeRToperation(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
 

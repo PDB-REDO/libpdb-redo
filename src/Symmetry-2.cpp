@@ -39,34 +39,37 @@ namespace pdb_redo
 
 // --------------------------------------------------------------------
 
-std::string to_string(sym_op rtop)
+sym_op::sym_op(std::string_view s)
+{
+	auto b = s.data();
+	auto e = b + s.length();
+
+	int rnri;
+
+	auto r = std::from_chars(b, e, rnri);
+	
+	rnr = rnri;
+	t[0] = r.ptr[1] - '0';
+	t[1] = r.ptr[2] - '0';
+	t[2] = r.ptr[3] - '0';
+
+	if (r.ec != std::errc() or rnri > 192 or r.ptr[0] != '_' or t[0] > 9 or t[1] > 9 or t[2] > 9)
+		throw std::invalid_argument("Could not convert string into sym_op");
+}
+
+sym_op::sym_op(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
+	: sym_op(describeRToperation(spacegroup, cell, rt))
+{
+}
+
+std::string sym_op::string() const
 {
 	std::ostringstream os;
-	os << (int)rtop.rnr << '_' << (int)rtop.t[0] << (int)rtop.t[1] << (int)rtop.t[2];
+	os << (int)rnr << '_' << (int)t[0] << (int)t[1] << (int)t[2];
 	return os.str();
 }
 
-sym_op sym_op_from_string(std::string_view s)
-{
-	std::istringstream is(std::string{ s });
-
-	char ch;
-	int rnr;
-	uint8_t t[3];
-
-	is >> rnr >> ch >> t[0] >> t[1] >> t[2];
-	if (ch != '_' or t[0] < '0' or t[0] > '9' or t[1] < '0' or t[1] > '9' or t[2] < '0' or t[2] > '9')
-		throw std::invalid_argument("Invalid symmetry operator description");
-
-	sym_op result;
-	result.rnr = rnr;
-	result.t[0] = t[0] - '0';
-	result.t[1] = t[1] - '0';
-	result.t[2] = t[2] - '0';
-	return result;
-}
-
-clipper::RTop_frac toClipperFrac(sym_op rtop, const clipper::Spacegroup &spacegroup)
+clipper::RTop_frac sym_op::toClipperFrac(const clipper::Spacegroup &spacegroup) const
 {
 	auto spacegroup_nr = getSpacegroupNumber(spacegroup);
 
@@ -83,7 +86,7 @@ clipper::RTop_frac toClipperFrac(sym_op rtop, const clipper::Spacegroup &spacegr
 
 	for (size_t i = L; i < N and cif::kSymopNrTable[i].spacegroup() == spacegroup_nr; ++i)
 	{
-		if (cif::kSymopNrTable[i].rotational_number() != rtop.rnr)
+		if (cif::kSymopNrTable[i].rotational_number() != rnr)
 			continue;
 		
 		auto d = cif::kSymopNrTable[i].symop().data();
@@ -105,7 +108,11 @@ clipper::RTop_frac toClipperFrac(sym_op rtop, const clipper::Spacegroup &spacegr
 			(d[13] == 0 ? 0 : 1.0 * d[13] / d[14])
 		);
 
-		return clipper::RTop_frac(rot, trn);
+		return clipper::RTop_frac(rot, trn + clipper::Vec3<clipper::ftype>{
+			t[0] - 5.0f,
+			t[1] - 5.0f,
+			t[2] - 5.0f
+		});
 	}
 
 	throw std::invalid_argument("symmetry operator not found!");
@@ -322,10 +329,33 @@ std::string describeRToperation(const clipper::Spacegroup &spacegroup, const cli
 
 // --------------------------------------------------------------------
 
-cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const cif::point &d,
-	const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
+cif::point offsetToOrigin(const clipper::Cell &cell, const cif::point &p)
+{
+	cif::point d{};
+
+	while (p.m_x + d.m_x < (cell.a() / 2))
+		d.m_x += cell.a();
+	while (p.m_x + d.m_x > (cell.a() / 2))
+		d.m_x -= cell.a();
+
+	while (p.m_y + d.m_y < (cell.b() / 2))
+		d.m_y += cell.b();
+	while (p.m_y + d.m_y > (cell.b() / 2))
+		d.m_y -= cell.b();
+
+	while (p.m_z + d.m_z < (cell.c() / 2))
+		d.m_z += cell.c();
+	while (p.m_z + d.m_z > (cell.c() / 2))
+		d.m_z -= cell.c();
+
+	return d;
+};
+
+cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
 	auto loc = atom.get_location();
+	auto d = offsetToOrigin(cell, loc);
+
 	loc += d;
 	loc = toPoint(toClipper(loc).transform(rt));
 	loc -= d;
@@ -333,6 +363,27 @@ cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const cif::point &d,
 	std::string rt_operation = describeRToperation(spacegroup, cell, rt);
 
 	return cif::mm::atom(atom, loc, rt_operation);
+}
+
+cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop)
+{
+	auto loc = atom.get_location();
+	auto d = offsetToOrigin(cell, loc);
+
+	loc = toPoint(toClipper(loc + d).transform(symop.toClipperOrth(spacegroup, cell))) - d;
+
+	return cif::mm::atom(atom, loc, symop.string());
+}
+
+cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
+{
+	auto d = offsetToOrigin(cell, loc);
+	return toPoint(toClipper(loc + d).transform(rt)) - d;
+}
+
+cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop)
+{
+	return symmetryCopy(loc, spacegroup, cell, symop.toClipperOrth(spacegroup, cell));
 }
 
 // -----------------------------------------------------------------------

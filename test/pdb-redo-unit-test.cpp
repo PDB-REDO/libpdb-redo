@@ -114,16 +114,33 @@ BOOST_AUTO_TEST_CASE(symm_2)
 
 		std::cout << d << std::endl;
 
-		auto so = pdb_redo::sym_op_from_string(d);
+		sym_op so(d);
 
-		BOOST_TEST(to_string(so) == d);
+		BOOST_TEST(so.string() == d);
 
+		auto rt2 = so.toClipperOrth(sg, c);
 
-		auto rt2 = pdb_redo::toClipperOrth(so, sg, c);
-
-		BOOST_TEST(rt.equals(rt2, 0.00001));	
-
+		BOOST_TEST(rt.equals(rt2, 0.00001));
 	}
+}
+
+BOOST_AUTO_TEST_CASE(symm_3)
+{
+	auto sg = clipper::Spacegroup(clipper::Spgr_descr(195)); // P 2 3, cubic
+	auto c = clipper::Cell(clipper::Cell_descr(1, 2, 3));
+
+	cif::point a{ 1, 0, 0 }, b{ 0, 1, 0 };
+	auto kD = distance(a, b);
+
+	BOOST_TEST(distance(a, symmetryCopy(b, sg, c, sym_op("1_555"))) == kD);
+
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_455"))) == c.a());
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_545"))) == c.b());
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_554"))) == c.c());
+
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_455"))) == distance(a, { 0, 0, 0 }));
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_545"))) == distance(a, { 1, -2, 0 }));
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_554"))) == distance(a, { 1, 0, -3 }));
 
 }
 
@@ -149,6 +166,19 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_1)
 	const auto &[d, rtop] = closestSymmetryCopy(getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), a.get_location(), b.get_location());
 
 	BOOST_CHECK(d < 3);
+}
+
+BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1))
+{
+	cif::file f(gTestDir / "3bwh.cif.gz");
+	cif::mm::structure s(f);
+
+	pdb_redo::DistanceMap dm(s, 3);
+
+	auto a = s.get_residue("B", 0, "6").get_atom_by_atom_id("O2");
+	auto b = s.get_residue("A", 1, "").get_atom_by_atom_id("O");
+
+	BOOST_TEST(dm(a.id(), b.id()) == 2.56f);
 }
 
 // --------------------------------------------------------------------

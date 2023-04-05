@@ -199,7 +199,6 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 			const auto &[centerJ, radiusJ, atomsJ] = residues[j];
 
 			// first case, no symmetry operations
-
 			auto d = distance(centerI, centerJ) - radiusI - radiusJ;
 			if (d < mMaxDistance)
 			{
@@ -207,33 +206,26 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 				continue;
 			}
 
-			// // now try all symmetry operations to see if we can move rj close to ri
+			bool added = false;
+			for (int i = 0; i < spacegroup.num_symops() and not added; ++i)
+			{
+				const auto &symop = spacegroup.symop(i);
 
-			// clipper::Coord_orth cI = toClipper(centerI);
-			// clipper::Coord_orth cJ = toClipper(centerJ);
+				for (int u = -1; u < 1 and not added; ++u)
+					for (int v = -1; v < 1 and not added; ++v)
+						for (int w = -1; w < 1 and not added; ++w)
+						{
+							auto rtop = clipper::RTop_frac(symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w)).rtop_orth(cell);
+							auto scj = symmetryCopy(centerJ, spacegroup, cell, rtop);
 
-			// auto minR2 = d;
-
-			// int32_t kbest = 0;
-			// for (int32_t k = 1; k < static_cast<int32_t>(mRtOrth.size()); ++k)
-			// {
-			// 	auto &rt = mRtOrth[k];
-
-			// 	auto pJ = (cJ + D).transform(rt) - D;
-			// 	double r2 = std::sqrt((cI - pJ).lengthsq()) - radiusI - radiusJ;
-
-			// 	if (minR2 > r2)
-			// 	{
-			// 		minR2 = static_cast<float>(r2);
-			// 		kbest = k;
-			// 	}
-			// }
-
-			const auto &[dist, rtop] = closestSymmetryCopy(spacegroup, cell, centerI, centerJ);
-
-			if (dist < mMaxDistance)
-				;
-				// AddDistancesForAtoms(atomsI, atomsJ, dist, d, rtop);
+							d = distance(centerI, scj) - radiusI - radiusJ;
+							if (d < mMaxDistance)
+							{
+								AddDistancesForAtoms(atomsI, atomsJ, dist, sym_op(spacegroup, cell, rtop));
+								added = true;
+							}
+						}
+			}			
 		}
 	}
 
@@ -269,35 +261,53 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 
 // --------------------------------------------------------------------
 
+cif::point DistanceMap::offsetToOrigin(const cif::point &p) const
+{
+	cif::point d{};
+
+	while (p.m_x + d.m_x < (cell.a() / 2))
+		d.m_x += cell.a();
+	while (p.m_x + d.m_x > (cell.a() / 2))
+		d.m_x -= cell.a();
+
+	while (p.m_y + d.m_y < (cell.b() / 2))
+		d.m_y += cell.b();
+	while (p.m_y + d.m_y > (cell.b() / 2))
+		d.m_y -= cell.b();
+
+	while (p.m_z + d.m_z < (cell.c() / 2))
+		d.m_z += cell.c();
+	while (p.m_z + d.m_z > (cell.c() / 2))
+		d.m_z -= cell.c();
+
+	return d;
+};
+
+// --------------------------------------------------------------------
+
 void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b, DistMap &dm,
-	int32_t rtix, cif::point offset)
+	sym_op symop)
 {
 	for (const auto &[ixa, loc_a] : a)
 	{
-		clipper::Coord_orth pa = toClipper(loc_a);
-
 		for (const auto &[ixb, loc_b] : b)
 		{
 			if (ixa == ixb)
 				continue;
 
-			clipper::Coord_orth pb = toClipper(loc_b + offset);
+			float d;
+			if (symop)
+				d = cif::distance_squared(loc_a, symmetryCopy(loc_b, spacegroup, cell, symop));
+			else
+				d = cif::distance_squared(loc_a, loc_b);
 
-			if (rtix)
-			{
-				auto symop = spacegroup.symop(rtix);
-				auto rtop = clipper::RTop_frac(symop.rot(), symop.trn()).rtop_orth(cell);
-				pb = pb.transform(rtop);
-			}
-
-			auto d = static_cast<float>((pa - pb).lengthsq());
 			if (d > mMaxDistanceSQ)
 				continue;
 
 			d = std::sqrt(d);
 
-			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, rtix);
-			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, -rtix);
+			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, symop);
+			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, symop);
 		}
 	}
 }
@@ -374,8 +384,8 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
 	{
 		float d;
-		int32_t rti;
-		std::tie(d, rti) = mA[i];
+		sym_op rtop;
+		std::tie(d, rtop) = mA[i];
 
 		if (d > maxDistance)
 			continue;
@@ -390,11 +400,11 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 		auto atom_b = mStructure.get_atom_by_id(b_id);
 
-		// if (rti > 0)
-		// 	result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(rti)));
+		if (rtop)
+			result.emplace_back(symmetryCopy(atom_b, spacegroup, cell, rtop));
 		// else if (rti < 0)
 		// 	result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
-		// else
+		else
 			result.emplace_back(atom_b);
 	}
 
