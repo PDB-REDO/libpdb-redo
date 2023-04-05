@@ -351,6 +351,16 @@ cif::point offsetToOrigin(const clipper::Cell &cell, const cif::point &p)
 	return d;
 };
 
+std::tuple<int,int,int> offsetToOriginInt(const clipper::Cell &cell, const cif::point &p)
+{
+	auto o = offsetToOrigin(cell, p);
+	return {
+		std::rintf(o.m_x / cell.a()),
+		std::rintf(o.m_y / cell.b()),
+		std::rintf(o.m_z / cell.c())
+	};
+}
+
 cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
 	auto loc = atom.get_location();
@@ -367,18 +377,20 @@ cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const clipper::Spacegroup 
 
 cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop)
 {
-	auto loc = atom.get_location();
-	auto d = offsetToOrigin(cell, loc);
-
-	loc = toPoint(toClipper(loc + d).transform(symop.toClipperOrth(spacegroup, cell))) - d;
-
+	auto loc = symmetryCopy(atom.get_location(), spacegroup, cell, symop.toClipperOrth(spacegroup, cell));
 	return cif::mm::atom(atom, loc, symop.string());
 }
 
 cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
-	auto d = offsetToOrigin(cell, loc);
-	return toPoint(toClipper(loc + d).transform(rt)) - d;
+	const auto &[di_u, di_v, di_w] = offsetToOriginInt(cell, loc);
+
+	auto cloc = toClipper(loc);
+
+	auto f_rt = rt.rtop_frac(cell);
+	auto o_rt = clipper::RTop_frac(f_rt.rot(), f_rt.trn() + clipper::Vec3<>(di_u, di_v, di_w)).rtop_orth(cell);
+
+	return cloc.transform(rt);
 }
 
 cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop)

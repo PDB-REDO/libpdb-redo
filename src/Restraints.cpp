@@ -485,7 +485,7 @@ void NonBondedContactRestraint::df(const AtomLocationProvider &atoms, DFCollecto
 		if (bi < 0.1)
 			bi = 0.1;
 
-		if (cif::VERBOSE > 2)
+		// if (cif::VERBOSE > 2)
 			std::cerr << "non-bonded::df(): " << atoms.atom(mA) << " and " << atoms.atom(mB) << " "
 					  << "distance: " << bi << " "
 					  << "target: " << mMinDist << std::endl;

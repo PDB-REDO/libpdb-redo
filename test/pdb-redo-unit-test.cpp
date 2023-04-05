@@ -124,6 +124,32 @@ BOOST_AUTO_TEST_CASE(symm_2)
 	}
 }
 
+BOOST_AUTO_TEST_CASE(symm_4, *utf::tolerance(0.1f))
+{
+	// based on 2b8h
+	auto sg = clipper::Spacegroup(clipper::Spgr_descr(154)); // p 32 2 1
+	auto c = clipper::Cell(clipper::Cell_descr(107.516, 107.516, 338.487, 90.00, 90.00, 120.00));
+	
+	cif::point a{-23.016, 47.514, -8.469};	// C1 NAG F 1
+	cif::point b{-16.707, 59.364, 24.320};	// CG1 VAL A 41-122
+
+	cif::point sb(59.76,15.21,-24.32);		// 4_555 copy of b
+
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_455"))) == static_cast<float>(c.a()));
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_545"))) == static_cast<float>(c.b()));
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_554"))) == static_cast<float>(c.c()));
+
+
+	auto sb2 = symmetryCopy(b, sg, c, sym_op("4_555"));
+	BOOST_TEST(sb.m_x == sb2.m_x);
+	BOOST_TEST(sb.m_y == sb2.m_y);
+	BOOST_TEST(sb.m_z == sb2.m_z);
+
+	BOOST_TEST(distance(a, b) == 35.43f);
+	BOOST_TEST(distance(a, symmetryCopy(b, sg, c, sym_op("1_555"))) == 35.43f);
+	BOOST_TEST(distance(a, sb2) == 43.66f);
+}
+
 BOOST_AUTO_TEST_CASE(symm_3)
 {
 	auto sg = clipper::Spacegroup(clipper::Spgr_descr(195)); // P 2 3, cubic
@@ -168,7 +194,7 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_1)
 	BOOST_CHECK(d < 3);
 }
 
-BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1))
+BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1f))
 {
 	cif::file f(gTestDir / "3bwh.cif.gz");
 	cif::mm::structure s(f);
@@ -178,8 +204,43 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1))
 	auto a = s.get_residue("B", 0, "6").get_atom_by_atom_id("O2");
 	auto b = s.get_residue("A", 1, "").get_atom_by_atom_id("O");
 
-	BOOST_TEST(dm(a.id(), b.id()) == 2.56f);
+	BOOST_TEST(distance(a, b) == 2.54f);
+	BOOST_TEST(dm(a.id(), b.id()) == 2.54f);
+	BOOST_TEST(dm(b.id(), a.id()) == 2.54f);
+
+	std::cout << "near a " << a << " " << a.get_location() << " " << a.symmetry() << std::endl;
+	for (auto n : dm.near(a, 3))
+		std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+
+	std::cout << "near b " << b << " " << b.get_location() << " " << b.symmetry() << std::endl;
+	for (auto n : dm.near(b, 3))
+		std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
 }
+
+BOOST_AUTO_TEST_CASE(symm_2b8h_1, *utf::tolerance(0.1f))
+{
+	cif::file f(gTestDir / "2b8h.cif.gz");
+	cif::mm::structure s(f);
+
+	pdb_redo::DistanceMap dm(s, 3);
+
+	auto a = s.get_residue("F", 0, "1").get_atom_by_atom_id("C1");
+	auto b = s.get_residue("A", 120, "").get_atom_by_atom_id("ND2");
+
+	BOOST_TEST(dm(a.id(), b.id()) == 1.44f);
+	BOOST_TEST(dm(b.id(), a.id()) == 1.44f);
+
+	std::cout << "near a " << a << " " << a.get_location() << " " << a.symmetry() << std::endl;
+	for (auto n : dm.near(a, 3))
+		std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+
+	std::cout << "near b " << b << " " << b.get_location() << " " << b.symmetry() << std::endl;
+	for (auto n : dm.near(b, 3))
+		std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+}
+
+
+
 
 // --------------------------------------------------------------------
 // skip list test

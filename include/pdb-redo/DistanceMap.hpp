@@ -67,7 +67,9 @@ class DistanceMap
 	using DistMap = std::map<DistKeyType, DistValueType>;
 
 	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
-		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, sym_op rtop = {});
+		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm);
+	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
+		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, const clipper::RTop_orth &rtop);
 
 	cif::point offsetToOrigin(const cif::point &p) const;
 

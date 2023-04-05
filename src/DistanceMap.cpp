@@ -186,7 +186,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 		residues.emplace_back(center, radius, std::move(rAtoms));
 	}
 
-	cif::Progress progress(residues.size() * (residues.size() - 1), "Creating distance map");
+	cif::Progress progress((residues.size() - 1) * (residues.size() - 2), "Creating distance map");
 
 	for (size_t i = 0; i + 1 < residues.size(); ++i)
 	{
@@ -221,7 +221,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 							d = distance(centerI, scj) - radiusI - radiusJ;
 							if (d < mMaxDistance)
 							{
-								AddDistancesForAtoms(atomsI, atomsJ, dist, sym_op(spacegroup, cell, rtop));
+								AddDistancesForAtoms(atomsI, atomsJ, dist, rtop);
 								added = true;
 							}
 						}
@@ -285,8 +285,7 @@ cif::point DistanceMap::offsetToOrigin(const cif::point &p) const
 
 // --------------------------------------------------------------------
 
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b, DistMap &dm,
-	sym_op symop)
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b, DistMap &dm)
 {
 	for (const auto &[ixa, loc_a] : a)
 	{
@@ -295,19 +294,38 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 			if (ixa == ixb)
 				continue;
 
-			float d;
-			if (symop)
-				d = cif::distance_squared(loc_a, symmetryCopy(loc_b, spacegroup, cell, symop));
-			else
-				d = cif::distance_squared(loc_a, loc_b);
+			float d = cif::distance_squared(loc_a, loc_b);
 
 			if (d > mMaxDistanceSQ)
 				continue;
 
 			d = std::sqrt(d);
 
-			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, symop);
-			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, symop);
+			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, sym_op{});
+			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, sym_op{});
+		}
+	}
+}
+
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b,
+	DistMap &dm, const clipper::RTop_orth &rtop)
+{
+	for (const auto &[ixa, loc_a] : a)
+	{
+		for (const auto &[ixb, loc_b] : b)
+		{
+			if (ixa == ixb)
+				continue;
+
+			float d = cif::distance_squared(loc_a, symmetryCopy(loc_b, spacegroup, cell, rtop));
+
+			if (d > mMaxDistanceSQ)
+				continue;
+
+			d = std::sqrt(d);
+
+			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, sym_op{spacegroup, cell, rtop});
+			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, sym_op{spacegroup, cell, rtop.inverse()});
 		}
 	}
 }

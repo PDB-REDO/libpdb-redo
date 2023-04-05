@@ -77,7 +77,11 @@ std::string AtomLocationProvider::atom(AtomRef atomID) const
 
 	auto seq_id = a.get_label_seq_id();
 
-	return (seq_id ? std::to_string(seq_id) : a.get_auth_seq_id()) + ' ' + a.get_label_atom_id();
+	std::string symmetry;
+	if (a.symmetry() != "1_555")
+		symmetry = " " + a.symmetry();
+
+	return a.get_label_asym_id() + (seq_id ? std::to_string(seq_id) : a.get_auth_seq_id()) + ' ' + a.get_label_atom_id() + symmetry;
 }
 
 // --------------------------------------------------------------------
