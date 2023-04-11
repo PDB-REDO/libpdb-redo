@@ -383,14 +383,40 @@ cif::mm::atom symmetryCopy(const cif::mm::atom &atom, const clipper::Spacegroup 
 
 cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt)
 {
-	const auto &[di_u, di_v, di_w] = offsetToOriginInt(cell, loc);
+	auto o = offsetToOrigin(cell, loc);
 
-	auto cloc = toClipper(loc);
+	if (o.m_x or o.m_y or o.m_z)
+	{
+		clipper::RTop_orth rt_o(clipper::Mat33<>::identity(), toClipper(o));
 
-	auto f_rt = rt.rtop_frac(cell);
-	auto o_rt = clipper::RTop_frac(f_rt.rot(), f_rt.trn() + clipper::Vec3<>(di_u, di_v, di_w)).rtop_orth(cell);
+		return toClipper(loc).transform(clipper::RTop_orth(rt_o * rt * rt_o.inverse()));
+	}
+	else
+		return toClipper(loc).transform(rt);
 
-	return cloc.transform(rt);
+
+
+	// const auto &[di_u, di_v, di_w] = offsetToOriginInt(cell, loc);
+
+	// auto cloc = toClipper(loc);
+
+	// if (di_u or di_v or di_w)
+	// {
+	// 	clipper::RTop_frac f_o_rt(clipper::Mat33<>::identity(), clipper::Vec3<>(di_u, di_v, di_w));
+	// 	auto f_rt = clipper::RTop_frac(f_o_rt * rt.rtop_frac(cell) * f_o_rt.inverse());
+
+	// 	auto f_rto = f_rt.rtop_orth(cell);
+	// 	auto r1 = cloc.transform(f_rto);
+
+
+	// 	auto o_rt = sym_op(1, 5 + di_u, 5 + di_v, 5 + di_w).toClipperOrth(spacegroup, cell);
+	// 	auto cloco = cloc.transform(o_rt);
+	// 	auto clocort = cloco.transform(rt);
+	// 	auto result = clocort.transform(o_rt.inverse());
+	// 	return result;
+	// }
+	// else
+	// 	return cloc.transform(rt);
 }
 
 cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop)

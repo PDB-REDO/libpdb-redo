@@ -130,24 +130,30 @@ BOOST_AUTO_TEST_CASE(symm_4, *utf::tolerance(0.1f))
 	auto sg = clipper::Spacegroup(clipper::Spgr_descr(154)); // p 32 2 1
 	auto c = clipper::Cell(clipper::Cell_descr(107.516, 107.516, 338.487, 90.00, 90.00, 120.00));
 	
-	cif::point a{-23.016, 47.514, -8.469};	// C1 NAG F 1
-	cif::point b{-16.707, 59.364, 24.320};	// CG1 VAL A 41-122
+	// cif::point a{-23.016, 47.514, -8.469};	// C1 NAG F 1
+	// cif::point b{-16.707, 59.364, 24.320};	// CG1 VAL A 41-122
 
-	cif::point sb(59.76,15.21,-24.32);		// 4_555 copy of b
+	// cif::point sb(59.76,15.21,-24.32);		// 4_555 copy of b
+
+	cif::point a{   -8.688,  79.351, 10.439 }; // O6 NAG A 500
+	cif::point b{  -35.356,  33.693, -3.236 }; // CG2 THR D 400
+	cif::point sb(  -6.916,   79.34,   3.236); // 4_565 copy of b
 
 	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_455"))) == static_cast<float>(c.a()));
 	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_545"))) == static_cast<float>(c.b()));
 	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_554"))) == static_cast<float>(c.c()));
 
 
-	auto sb2 = symmetryCopy(b, sg, c, sym_op("4_555"));
+	auto sa2 = symmetryCopy(a, sg, c, sym_op("4_565"));
+
+	auto sb2 = symmetryCopy(b, sg, c, sym_op("4_565"));
 	BOOST_TEST(sb.m_x == sb2.m_x);
 	BOOST_TEST(sb.m_y == sb2.m_y);
 	BOOST_TEST(sb.m_z == sb2.m_z);
 
-	BOOST_TEST(distance(a, b) == 35.43f);
-	BOOST_TEST(distance(a, symmetryCopy(b, sg, c, sym_op("1_555"))) == 35.43f);
-	BOOST_TEST(distance(a, sb2) == 43.66f);
+	// BOOST_TEST(distance(a, b) == 35.43f);
+	// BOOST_TEST(distance(a, symmetryCopy(b, sg, c, sym_op("1_555"))) == 35.43f);
+	BOOST_TEST(distance(a, sb2) == 7.42f);
 }
 
 BOOST_AUTO_TEST_CASE(symm_3)
@@ -172,6 +178,43 @@ BOOST_AUTO_TEST_CASE(symm_3)
 
 // --------------------------------------------------------------------
 // more symmetry tests
+
+BOOST_AUTO_TEST_CASE(symm_2bi3_1, *utf::tolerance(0.1f))
+{
+	cif::file f(gTestDir / "2bi3.cif.gz");
+	cif::mm::structure s(f);
+
+	auto &db = f.front();
+
+	auto sg = getSpacegroup(db);
+	auto c = getCell(db);
+
+	auto struct_conn = db["struct_conn"];
+	for (const auto &[
+			asym1, seqid1, authseqid1, atomid1, symm1,
+			asym2, seqid2, authseqid2, atomid2, symm2,
+			dist] : struct_conn.find<
+				std::string,int,std::string,std::string,std::string,
+				std::string,int,std::string,std::string,std::string,
+				float>(
+			cif::key("ptnr1_symmetry") != "1_555" or cif::key("ptnr2_symmetry") != "1_555",
+			"ptnr1_label_asym_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id", "ptnr1_label_atom_id", "ptnr1_symmetry", 
+			"ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id", "ptnr2_label_atom_id", "ptnr2_symmetry", 
+			"pdbx_dist_value"
+		))
+	{
+		auto &r1 = s.get_residue(asym1, seqid1, authseqid1);
+		auto &r2 = s.get_residue(asym2, seqid2, authseqid2);
+
+		auto a1 = r1.get_atom_by_atom_id(atomid1);
+		auto a2 = r2.get_atom_by_atom_id(atomid2);
+
+		auto sa1 = symmetryCopy(a1, sg, c, sym_op(symm1));
+		auto sa2 = symmetryCopy(a2, sg, c, sym_op(symm2));
+
+		BOOST_TEST(distance(sa1, sa2) == dist);
+	}
+}
 
 BOOST_AUTO_TEST_CASE(symm_3bwh_1)
 {
@@ -199,12 +242,15 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1f))
 	cif::file f(gTestDir / "3bwh.cif.gz");
 	cif::mm::structure s(f);
 
-	pdb_redo::DistanceMap dm(s, 3);
-
 	auto a = s.get_residue("B", 0, "6").get_atom_by_atom_id("O2");
 	auto b = s.get_residue("A", 1, "").get_atom_by_atom_id("O");
 
-	BOOST_TEST(distance(a, b) == 2.54f);
+	auto sb = symmetryCopy(b, getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), sym_op("4_945"));
+
+	BOOST_TEST(distance(a, sb) == 2.54f);
+
+	pdb_redo::DistanceMap dm(s, 3);
+
 	BOOST_TEST(dm(a.id(), b.id()) == 2.54f);
 	BOOST_TEST(dm(b.id(), a.id()) == 2.54f);
 
