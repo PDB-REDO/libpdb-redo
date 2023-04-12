@@ -510,7 +510,9 @@ void Minimizer::Finish()
 	};
 
 	// now add the non-bonded restraints
-	SymmetryAtomIteratorFactory saif(mStructure, getSpacegroup(mStructure.get_datablock()), getCell(mStructure.get_datablock()));
+
+	auto sg = getSpacegroup(mStructure.get_datablock());
+	auto c = getCell(mStructure.get_datablock());
 
 	for (auto &a1 : mAtoms)
 	{
@@ -519,10 +521,16 @@ void Minimizer::Finish()
 			if (a1 == a2 or mBonds(a1, a2))
 				continue;
 
-			for (auto s_a2 : saif(a2, a1.get_location(), kMaxNonBondedContactDistance))
+			if (distance_squared(a1, a2) < kMaxNonBondedContactDistance * kMaxNonBondedContactDistance)
 			{
-				add_nbc(a1, s_a2);
+				add_nbc(a1, a2);
+				continue;
 			}
+
+			const auto &[d, symop] = closestSymmetryCopy(sg, c, a1.get_location(), a2.get_location());
+
+			if (d < kMaxNonBondedContactDistance)
+				add_nbc(a1, symmetryCopy(a2, sg, c, symop));
 		}
 	}
 

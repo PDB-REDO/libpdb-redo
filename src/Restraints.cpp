@@ -464,12 +464,13 @@ double NonBondedContactRestraint::f(const AtomLocationProvider &atoms) const
 	{
 		double d = mMinDist - std::sqrt(distance);
 		result = (d * d) / (mDistESD * mDistESD);
+
+		if (cif::VERBOSE > 2)
+			std::cerr << "non-bonded-contact::f() = " << result << " min-dist is " << mMinDist << " and dist is " << std::sqrt(distance)
+					<< " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << std::endl
+					<< " a1: " << atoms[mA] << " a2: " << atoms[mB] << std::endl;
 	}
 
-	if (cif::VERBOSE > 2)
-		std::cerr << "non-bonded-contact::f() = " << result << " min-dist is " << mMinDist << " and dist is " << std::sqrt(distance)
-				  << " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << std::endl
-				  << " a1: " << atoms[mA] << " a2: " << atoms[mB] << std::endl;
 
 	return result;
 }
@@ -485,7 +486,7 @@ void NonBondedContactRestraint::df(const AtomLocationProvider &atoms, DFCollecto
 		if (bi < 0.1)
 			bi = 0.1;
 
-		// if (cif::VERBOSE > 2)
+		if (cif::VERBOSE > 2)
 			std::cerr << "non-bonded::df(): " << atoms.atom(mA) << " and " << atoms.atom(mB) << " "
 					  << "distance: " << bi << " "
 					  << "target: " << mMinDist << std::endl;

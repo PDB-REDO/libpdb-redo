@@ -37,6 +37,8 @@ namespace c = cif;
 namespace pdb_redo
 {
 
+int32_t GetRotationalIndexNumber(int spacegroup, const clipper::RTop_frac &rt);
+
 // --------------------------------------------------------------------
 
 sym_op::sym_op(std::string_view s)
@@ -152,7 +154,7 @@ std::vector<clipper::RTop_orth> AlternativeSites(const clipper::Spacegroup &spac
 
 // --------------------------------------------------------------------
 
-std::tuple<float,clipper::RTop_orth> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+std::tuple<float,sym_op> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
 	cif::point a, cif::point b)
 {
 	// move a as close as possible to the origin, and move b in the same way
@@ -188,36 +190,54 @@ std::tuple<float,clipper::RTop_orth> closestSymmetryCopy(const clipper::Spacegro
 	d.m_z = calculateD(b.m_z, static_cast<float>(cell.c()));
 
 	auto ca = toClipper(a);
-	auto cd = toClipper(d);
+	auto cb = toClipper(b);
 
-	float result_dsq = distance_squared(a, b);
-	float result_d = std::sqrt(result_dsq);
-	clipper::RTop_orth result_rt{};
+	auto cfa = ca.coord_frac(cell);
+	auto cfb = cb.coord_frac(cell);
+
+	float result_d = std::numeric_limits<float>::max();
+	sym_op result_s;
 
 	for (int i = 0; i < spacegroup.num_symops(); ++i)
 	{
-		const auto &symop = spacegroup.symop(i);
+		auto rt = spacegroup.symop(i);
+		sym_op s(i + 1);	//GetRotationalIndexNumber(getSpacegroupNumber(spacegroup), rt)
 
-		for (int u : {-1, 0, 1})
-			for (int v : {-1, 0, 1})
-				for (int w : {-1, 0, 1})
-				{
-					auto rtop = clipper::RTop_frac(
-						symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w)).rtop_orth(cell);
+		auto scfb = cfb.transform(rt);
 
-					auto ocb = toClipper(b + d).transform(rtop) + cd;
+		for (int j = 0; j < 3; ++j)
+		{
+			while (scfb[j] - 0.5f > cfa[j])
+			{
+				s.t[j] -= 1;
+				scfb[j] -= 1;
+			}
 
-					auto dsq = (ca - ocb).lengthsq();
-					if (dsq < result_dsq)
-					{
-						result_d = std::sqrt(dsq);
-						result_dsq = dsq;
-						result_rt = rtop;
-					}
-				}
+			while (scfb[j] + 0.5f < cfa[j])
+			{
+				s.t[j] += 1;
+				scfb[j] += 1;
+			}
+		}
+
+		auto dsq = cell.metric_real().lengthsq(cfa - scfb);
+		if (result_d > dsq)
+		{
+			result_d = dsq;
+			result_s = s;
+		}
 	}
 
-	return { result_d, result_rt };
+	result_s.rnr = GetRotationalIndexNumber(getSpacegroupNumber(spacegroup), spacegroup.symop(result_s.rnr - 1));
+
+	return { std::sqrt(result_d), result_s };
+}
+
+std::tuple<float,cif::mm::atom> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+	const cif::mm::atom &a, const cif::mm::atom &b)
+{
+	auto &&[d, symop] = closestSymmetryCopy(spacegroup, cell, a.get_location(), b.get_location());
+	return { d, symmetryCopy(b, spacegroup, cell, symop) };
 }
 
 // --------------------------------------------------------------------
@@ -389,34 +409,16 @@ cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spaceg
 	{
 		clipper::RTop_orth rt_o(clipper::Mat33<>::identity(), toClipper(o));
 
-		return toClipper(loc).transform(clipper::RTop_orth(rt_o * rt * rt_o.inverse()));
+		auto c1 = toClipper(loc);
+		auto c2 = c1.transform(rt_o);
+		auto c3 = c2.transform(rt);
+		auto c4 = c3.transform(rt_o.inverse());
+		return c4;
+
+		// return toClipper(loc).transform(clipper::RTop_orth(rt_o * rt * rt_o.inverse()));
 	}
 	else
 		return toClipper(loc).transform(rt);
-
-
-
-	// const auto &[di_u, di_v, di_w] = offsetToOriginInt(cell, loc);
-
-	// auto cloc = toClipper(loc);
-
-	// if (di_u or di_v or di_w)
-	// {
-	// 	clipper::RTop_frac f_o_rt(clipper::Mat33<>::identity(), clipper::Vec3<>(di_u, di_v, di_w));
-	// 	auto f_rt = clipper::RTop_frac(f_o_rt * rt.rtop_frac(cell) * f_o_rt.inverse());
-
-	// 	auto f_rto = f_rt.rtop_orth(cell);
-	// 	auto r1 = cloc.transform(f_rto);
-
-
-	// 	auto o_rt = sym_op(1, 5 + di_u, 5 + di_v, 5 + di_w).toClipperOrth(spacegroup, cell);
-	// 	auto cloco = cloc.transform(o_rt);
-	// 	auto clocort = cloco.transform(rt);
-	// 	auto result = clocort.transform(o_rt.inverse());
-	// 	return result;
-	// }
-	// else
-	// 	return cloc.transform(rt);
 }
 
 cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop)

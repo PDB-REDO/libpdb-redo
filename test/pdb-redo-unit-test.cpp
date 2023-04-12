@@ -126,6 +126,8 @@ BOOST_AUTO_TEST_CASE(symm_2)
 
 BOOST_AUTO_TEST_CASE(symm_4, *utf::tolerance(0.1f))
 {
+	using namespace pdb_redo::literals;
+
 	// based on 2b8h
 	auto sg = clipper::Spacegroup(clipper::Spgr_descr(154)); // p 32 2 1
 	auto c = clipper::Cell(clipper::Cell_descr(107.516, 107.516, 338.487, 90.00, 90.00, 120.00));
@@ -139,12 +141,11 @@ BOOST_AUTO_TEST_CASE(symm_4, *utf::tolerance(0.1f))
 	cif::point b{  -35.356,  33.693, -3.236 }; // CG2 THR D 400
 	cif::point sb(  -6.916,   79.34,   3.236); // 4_565 copy of b
 
-	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_455"))) == static_cast<float>(c.a()));
-	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_545"))) == static_cast<float>(c.b()));
-	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, sym_op("1_554"))) == static_cast<float>(c.c()));
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, "1_455"_so)) == static_cast<float>(c.a()));
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, "1_545"_so)) == static_cast<float>(c.b()));
+	BOOST_TEST(distance(a, symmetryCopy(a, sg, c, "1_554"_so)) == static_cast<float>(c.c()));
 
-
-	auto sa2 = symmetryCopy(a, sg, c, sym_op("4_565"));
+	// auto sa2 = symmetryCopy(a, sg, c, sym_op("4_565"));
 
 	auto sb2 = symmetryCopy(b, sg, c, sym_op("4_565"));
 	BOOST_TEST(sb.m_x == sb2.m_x);
@@ -213,10 +214,18 @@ BOOST_AUTO_TEST_CASE(symm_2bi3_1, *utf::tolerance(0.1f))
 		auto sa2 = symmetryCopy(a2, sg, c, sym_op(symm2));
 
 		BOOST_TEST(distance(sa1, sa2) == dist);
+
+
+		auto pa1 = a1.get_location();
+		const auto &[d, so] = closestSymmetryCopy(sg, c, pa1, a2.get_location());
+
+		BOOST_TEST(d == dist);
+
+		BOOST_TEST(so.string() == symm2);
 	}
 }
 
-BOOST_AUTO_TEST_CASE(symm_3bwh_1)
+BOOST_AUTO_TEST_CASE(symm_3bwh_1, *utf::tolerance(0.1f))
 {
 	cif::file f(gTestDir / "3bwh.cif.gz");
 	cif::mm::structure s(f);
@@ -224,17 +233,18 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_1)
 	auto a = s.get_residue("B", 0, "6").get_atom_by_atom_id("O2");
 	auto b = s.get_residue("A", 1, "").get_atom_by_atom_id("O");
 
-	// {
-	// 	pdb_redo::SymmetryAtomIteratorFactory saif(s);
+	auto &db = s.get_datablock();
+	auto sg = getSpacegroup(db);
+	auto c = getCell(db);
 
-	// 	// auto a = s.atoms().front();
-	// 	for (auto sa : saif(b))
-	// 		std::cout << sa << " " << sa.get_location() << " " << sa.symmetry() << std::endl;
-	// }
+	const auto &[d, symop] = closestSymmetryCopy(sg, c, a.get_location(), b.get_location());
 
-	const auto &[d, rtop] = closestSymmetryCopy(getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), a.get_location(), b.get_location());
+	BOOST_TEST(d == 2.54f);
+	BOOST_TEST(symop.string() == "4_545");
 
-	BOOST_CHECK(d < 3);
+
+	auto p = symmetryCopy(b.get_location(), sg, c, symop);
+	BOOST_TEST(distance(p, a.get_location()) == 2.54f);
 }
 
 BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1f))
@@ -245,9 +255,13 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1f))
 	auto a = s.get_residue("B", 0, "6").get_atom_by_atom_id("O2");
 	auto b = s.get_residue("A", 1, "").get_atom_by_atom_id("O");
 
-	auto sb = symmetryCopy(b, getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), sym_op("4_945"));
+	auto sb = symmetryCopy(b, getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), sym_op("4_545"));
 
 	BOOST_TEST(distance(a, sb) == 2.54f);
+
+	const auto &[d, so] = closestSymmetryCopy(getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), a.get_location(), b.get_location());
+	BOOST_TEST(d == 2.54f);
+
 
 	pdb_redo::DistanceMap dm(s, 3);
 
@@ -256,7 +270,10 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1f))
 
 	std::cout << "near a " << a << " " << a.get_location() << " " << a.symmetry() << std::endl;
 	for (auto n : dm.near(a, 3))
-		std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+	{
+		if (n.symmetry() != "1_555")
+			BOOST_TEST(n.symmetry() == "4_545");
+	}
 
 	std::cout << "near b " << b << " " << b.get_location() << " " << b.symmetry() << std::endl;
 	for (auto n : dm.near(b, 3))
@@ -276,13 +293,20 @@ BOOST_AUTO_TEST_CASE(symm_2b8h_1, *utf::tolerance(0.1f))
 	BOOST_TEST(dm(a.id(), b.id()) == 1.44f);
 	BOOST_TEST(dm(b.id(), a.id()) == 1.44f);
 
-	std::cout << "near a " << a << " " << a.get_location() << " " << a.symmetry() << std::endl;
-	for (auto n : dm.near(a, 3))
-		std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+	// std::cout << "near a " << a << " " << a.get_location() << " " << a.symmetry() << std::endl;
+	// for (auto n : dm.near(a, 3))
+	// 	std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
 
-	std::cout << "near b " << b << " " << b.get_location() << " " << b.symmetry() << std::endl;
-	for (auto n : dm.near(b, 3))
-		std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+	// std::cout << "near b " << b << " " << b.get_location() << " " << b.symmetry() << std::endl;
+	// for (auto n : dm.near(b, 3))
+	// 	std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+
+	cif::point p{-23.014,47.468,-8.473};
+
+	// for (auto a: dm.near(p, 3.5))
+
+
+
 }
 
 

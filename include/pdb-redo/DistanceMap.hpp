@@ -63,13 +63,13 @@ class DistanceMap
 
   private:
 	using DistKeyType = std::tuple<size_t, size_t>;
-	using DistValueType = std::tuple<float, sym_op>;
+	using DistValueType = std::tuple<float, sym_op, bool>;
 	using DistMap = std::map<DistKeyType, DistValueType>;
 
 	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
 		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm);
 	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
-		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, const clipper::RTop_orth &rtop);
+		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, sym_op symop);
 
 	cif::point offsetToOrigin(const cif::point &p) const;
 
@@ -82,7 +82,7 @@ class DistanceMap
 
 	float mMaxDistance, mMaxDistanceSQ;
 
-	std::vector<std::tuple<float, sym_op>> mA;
+	std::vector<std::tuple<float, sym_op, bool>> mA;
 	std::vector<size_t> mIA, mJA;
 };
 

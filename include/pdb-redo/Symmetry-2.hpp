@@ -33,11 +33,56 @@
 namespace pdb_redo
 {
 
-struct sym_op
-{
-	uint8_t rnr;
-	uint8_t t[3];
+// class cell;
+// class spacegroup;
+// class rtop;
+// class sym_op;
 
+// class cell
+// {
+//   public:
+// 	cell(const cif::datablock &db);
+
+// 	float get_a() const			{ return m_a; }
+// 	float get_b() const			{ return m_b; }
+// 	float get_c() const			{ return m_c; }
+
+// 	float get_alpha() const		{ return m_alpha; }
+// 	float get_beta() const		{ return m_beta; }
+// 	float get_gamma() const		{ return m_gamma; }
+
+//   private:
+// 	float m_a, m_b, m_c, m_alpha, m_beta, m_gamma;
+// };
+
+// class rtop
+// {
+//   public:
+// 	rtop(const spacegroup &sg, const cell &c, int nr);
+
+// 	friend rtop operator+(rtop rt, cif::point t);
+// 	friend cif::point operator*(cif::point p, rtop rt);
+
+//   private:
+// 	cell m_c;
+// 	cif::quaternion m_q;
+// 	cif::point m_t;
+// };
+
+
+// class spacegroup
+// {
+//   public:
+// 	spacegroup(const cif::datablock &db);
+
+//   private:
+// 	std::vector<
+// };
+
+/// @brief A class that encapsulates the symmetry operations as used in PDB files, i.e. a rotational number and a translation vector
+class sym_op
+{
+  public:
 	sym_op(uint8_t rnri = 1, uint8_t tx = 5, uint8_t ty = 5, uint8_t tz = 5)
 	{
 		rnr = rnri;
@@ -73,9 +118,24 @@ struct sym_op
 	{
 		return toClipperFrac(spacegroup).rtop_orth(cell);
 	}
+
+//   private:
+	uint8_t rnr;
+	uint8_t t[3];
 };
 
 static_assert(sizeof(sym_op) == 4, "Sym_op should be four bytes");
+
+namespace literals
+{
+
+	inline sym_op operator""_so(const char *text, size_t length)
+	{
+		return sym_op({ text, length });
+	}
+
+}
+
 
 // --------------------------------------------------------------------
 // Functions to use when working with symmetry stuff
@@ -95,8 +155,11 @@ cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spaceg
 std::string describeRToperation(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, const clipper::RTop_orth &rt);
 
 /// Return the closest RTop and distance. The rtop should be applied to \a b to get the actual point nearest to \a a.
-std::tuple<float,clipper::RTop_orth> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+std::tuple<float,sym_op> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
 	cif::point a, cif::point b);
+
+std::tuple<float,cif::mm::atom> closestSymmetryCopy(const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+	const cif::mm::atom &a, const cif::mm::atom &b);
 
 // --------------------------------------------------------------------
 // To iterate over all symmetry copies of an atom

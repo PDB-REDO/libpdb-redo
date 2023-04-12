@@ -206,26 +206,9 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 				continue;
 			}
 
-			bool added = false;
-			for (int i = 0; i < spacegroup.num_symops() and not added; ++i)
-			{
-				const auto &symop = spacegroup.symop(i);
-
-				for (int u = -1; u < 1 and not added; ++u)
-					for (int v = -1; v < 1 and not added; ++v)
-						for (int w = -1; w < 1 and not added; ++w)
-						{
-							auto rtop = clipper::RTop_frac(symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w)).rtop_orth(cell);
-							auto scj = symmetryCopy(centerJ, spacegroup, cell, rtop);
-
-							d = distance(centerI, scj) - radiusI - radiusJ;
-							if (d < mMaxDistance)
-							{
-								AddDistancesForAtoms(atomsI, atomsJ, dist, rtop);
-								added = true;
-							}
-						}
-			}			
+			const auto &[ds, symop] = closestSymmetryCopy(spacegroup, cell, centerI, centerJ);
+			if (ds - radiusI - radiusJ < mMaxDistance)
+				AddDistancesForAtoms(atomsI, atomsJ, dist, symop);
 		}
 	}
 
@@ -301,14 +284,14 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 
 			d = std::sqrt(d);
 
-			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, sym_op{});
-			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, sym_op{});
+			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, sym_op{}, false);
+			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, sym_op{}, false);
 		}
 	}
 }
 
 void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b,
-	DistMap &dm, const clipper::RTop_orth &rtop)
+	DistMap &dm, sym_op symop)
 {
 	for (const auto &[ixa, loc_a] : a)
 	{
@@ -317,15 +300,15 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 			if (ixa == ixb)
 				continue;
 
-			float d = cif::distance_squared(loc_a, symmetryCopy(loc_b, spacegroup, cell, rtop));
+			float d = cif::distance_squared(loc_a, symmetryCopy(loc_b, spacegroup, cell, symop));
 
 			if (d > mMaxDistanceSQ)
 				continue;
 
 			d = std::sqrt(d);
 
-			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, sym_op{spacegroup, cell, rtop});
-			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, sym_op{spacegroup, cell, rtop.inverse()});
+			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, symop, false);
+			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, symop, true);
 		}
 	}
 }
@@ -401,9 +384,7 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
 	{
-		float d;
-		sym_op rtop;
-		std::tie(d, rtop) = mA[i];
+		const auto &[d, symop, inverse] = mA[i];
 
 		if (d > maxDistance)
 			continue;
@@ -418,10 +399,16 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 		auto atom_b = mStructure.get_atom_by_id(b_id);
 
-		if (rtop)
-			result.emplace_back(symmetryCopy(atom_b, spacegroup, cell, rtop));
-		// else if (rti < 0)
-		// 	result.emplace_back(symmetryCopy(atom_b, mD, spacegroup, cell, mRtOrth.at(-rti).inverse()));
+		if (symop)
+		{
+			if (inverse)
+			{
+				auto rt = symop.toClipperOrth(spacegroup, cell);
+				result.emplace_back(symmetryCopy(atom_b, spacegroup, cell, rt.inverse()));
+			}
+			else
+				result.emplace_back(symmetryCopy(atom_b, spacegroup, cell, symop));
+		}
 		else
 			result.emplace_back(atom_b);
 	}
