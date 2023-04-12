@@ -240,7 +240,7 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_1, *utf::tolerance(0.1f))
 	const auto &[d, symop] = closestSymmetryCopy(sg, c, a.get_location(), b.get_location());
 
 	BOOST_TEST(d == 2.54f);
-	BOOST_TEST(symop.string() == "4_545");
+	BOOST_TEST(symop.string() == "3_545");
 
 
 	auto p = symmetryCopy(b.get_location(), sg, c, symop);
@@ -255,7 +255,7 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1f))
 	auto a = s.get_residue("B", 0, "6").get_atom_by_atom_id("O2");
 	auto b = s.get_residue("A", 1, "").get_atom_by_atom_id("O");
 
-	auto sb = symmetryCopy(b, getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), sym_op("4_545"));
+	auto sb = symmetryCopy(b, getSpacegroup(s.get_datablock()), getCell(s.get_datablock()), sym_op("3_545"));
 
 	BOOST_TEST(distance(a, sb) == 2.54f);
 
@@ -272,7 +272,7 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1f))
 	for (auto n : dm.near(a, 3))
 	{
 		if (n.symmetry() != "1_555")
-			BOOST_TEST(n.symmetry() == "4_545");
+			BOOST_TEST(n.symmetry() == "3_545");
 	}
 
 	std::cout << "near b " << b << " " << b.get_location() << " " << b.symmetry() << std::endl;

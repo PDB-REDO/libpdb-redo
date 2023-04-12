@@ -93,16 +93,7 @@ clipper::RTop_frac sym_op::toClipperFrac(const clipper::Spacegroup &spacegroup) 
 		
 		auto d = cif::kSymopNrTable[i].symop().data();
 
-		clipper::Mat33<> rot(
-			d[0] == 3 ? -1 : d[0], 
-			d[1] == 3 ? -1 : d[1], 
-			d[2] == 3 ? -1 : d[2], 
-			d[3] == 3 ? -1 : d[3], 
-			d[4] == 3 ? -1 : d[4], 
-			d[5] == 3 ? -1 : d[5], 
-			d[6] == 3 ? -1 : d[6], 
-			d[7] == 3 ? -1 : d[7], 
-			d[8] == 3 ? -1 : d[8]);
+		clipper::Mat33<> rot(d[0], d[1], d[2], d[3], d[4], d[5], d[6], d[7], d[8]);
 
 		clipper::Vec3<> trn(
 			(d[9] == 0 ? 0 : 1.0 * d[9] / d[10]),
@@ -424,20 +415,6 @@ cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spaceg
 cif::point symmetryCopy(const cif::point &loc, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell, sym_op symop)
 {
 	return symmetryCopy(loc, spacegroup, cell, symop.toClipperOrth(spacegroup, cell));
-}
-
-// -----------------------------------------------------------------------
-
-SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const cif::mm::structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell)
-	: mSpacegroup(spacegroup)
-	, mRtOrth(AlternativeSites(mSpacegroup, cell))
-	, mCell(cell)
-{
-}
-
-SymmetryAtomIteratorFactory::SymmetryAtomIteratorFactory(const cif::mm::structure &p, int spacegroupNr, const clipper::Cell &cell)
-	: SymmetryAtomIteratorFactory(p, clipper::Spacegroup{GetCCP4SpacegroupDescr(spacegroupNr)}, cell)
-{
 }
 
 } // namespace pdb_redo
