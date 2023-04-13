@@ -29,23 +29,15 @@
    Date: dinsdag 22 mei, 2018
 */
 
-#include <numeric>
-
-#include <cif++.hpp>
-
-#include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/Minimizer.hpp"
 #include "pdb-redo/Restraints.hpp"
 
+#include <cif++.hpp>
+
+#include <numeric>
+
 namespace pdb_redo
 {
-
-using clipper::Coord_frac;
-using clipper::Coord_grid;
-using clipper::Coord_map;
-using clipper::Coord_orth;
-
-// --------------------------------------------------------------------
 
 double BondRestraint::f(const AtomLocationProvider &atoms) const
 {
@@ -348,7 +340,7 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 		center += atoms[a];
 	center /= mAtoms.size();
 
-	clipper::Matrix<double> mat(3, 3);
+	cif::matrix3x3<float> mat;
 	for (auto &a : mAtoms)
 	{
 		mat(0, 0) += (atoms[a].m_x - center.m_x) * (atoms[a].m_x - center.m_x);
@@ -363,7 +355,8 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 	mat(2, 0) = mat(0, 2);
 	mat(2, 1) = mat(1, 2);
 
-	/*auto eigen = */mat.eigen(true);
+#warning "Oeps!"
+	// /*auto eigen = */mat.eigen(true);
 
 	abcd[0] = mat(0, 0);
 	abcd[1] = mat(1, 0);
@@ -520,8 +513,8 @@ double DensityRestraint::f(const AtomLocationProvider &atoms) const
 
 	for (auto &a : mAtoms)
 	{
-		Coord_orth p = toClipper(atoms[a.first]);
-		Coord_frac pf = p.coord_frac(mXMap.cell());
+		clipper::Coord_orth p{atoms[a.first].m_x, atoms[a.first].m_y, atoms[a.first].m_z };
+		clipper::Coord_frac pf = p.coord_frac(mXMap.cell());
 
 		result += a.second * mXMap.interp<clipper::Interp_cubic>(pf);
 	}
@@ -539,8 +532,8 @@ void DensityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 	for (auto &a : mAtoms)
 	{
-		Coord_orth p = toClipper(atoms[a.first]);
-		Coord_frac pf = p.coord_frac(mXMap.cell());
+		clipper::Coord_orth p{atoms[a.first].m_x, atoms[a.first].m_y, atoms[a.first].m_z };
+		clipper::Coord_frac pf = p.coord_frac(mXMap.cell());
 		auto pm = pf.coord_map(mXMap.grid_sampling());
 
 		clipper::Grad_map<double> grad;

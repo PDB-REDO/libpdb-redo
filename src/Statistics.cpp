@@ -39,10 +39,6 @@
 namespace pdb_redo
 {
 
-using clipper::Coord_grid;
-using clipper::Coord_orth;
-using clipper::Xmap;
-
 using cif::atom_type_traits;
 
 // --------------------------------------------------------------------
@@ -233,13 +229,13 @@ class PointWeightFunction
 
 struct AtomGridData
 {
-	AtomGridData(const Coord_grid &gp, double density)
+	AtomGridData(const clipper::Coord_grid &gp, double density)
 		: p(gp)
 		, density(density)
 	{
 	}
 
-	Coord_grid p;
+	clipper::Coord_grid p;
 	double density;
 };
 
@@ -311,7 +307,7 @@ struct AtomData
 
 // --------------------------------------------------------------------
 
-std::tuple<float, float> CalculateMapStatistics(const Xmap<float> &f)
+std::tuple<float, float> CalculateMapStatistics(const clipper::Xmap<float> &f)
 {
 	double sum = 0, sum2 = 0;
 	int count = 0;
@@ -1001,7 +997,7 @@ void StatsCollector::collectSums(std::vector<AtomData> &atomData, GridPtDataMap 
 			double e = gp.density / gpd;
 			double t = e * mSZ / rmsScaledF.second;
 
-			Xmap_base::Map_reference_coord ix(Fb, gp.p);
+			clipper::Xmap_base::Map_reference_coord ix(Fb, gp.p);
 
 			double fb = Fb[ix];
 			double fd = Fd[ix];
@@ -1055,7 +1051,7 @@ void StatsCollector::calculate(std::vector<AtomData> &atomData) const
 EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
 	cif::mm::structure &structure, bool electronScattering, const BondMap &bondMap)
 	: StatsCollector(mm, structure, electronScattering)
-	, mDistanceMap(structure, mm.spacegroup(), mm.cell(), 3.5f)
+	, mDistanceMap(structure, 3.5f)
 	, mBondMap(bondMap)
 {
 	// create a atom radius map, for EDIA
@@ -1108,7 +1104,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 {
 	StatsCollector::calculate(atomData);
 
-	const Xmap<float> &Fb = mMapMaker.fb();
+	const clipper::Xmap<float> &Fb = mMapMaker.fb();
 	//	Xmap<float>& fd = mMapMaker.fd();
 
 	struct lessAtom

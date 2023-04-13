@@ -26,14 +26,9 @@
 
 #pragma once
 
-#include <unordered_map>
-
-#include <clipper/clipper.h>
-
 #include <cif++.hpp>
 
-#include <pdb-redo/ClipperWrapper.hpp>
-#include <pdb-redo/Symmetry-2.hpp>
+#include <unordered_map>
 
 #ifdef near
 #undef near
@@ -46,11 +41,11 @@ class DistanceMap
 {
   public:
 
-	DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+	DistanceMap(const cif::mm::structure &p, const cif::spacegroup &spacegroup, const cif::cell &cell,
 		float maxDistance);
 
 	DistanceMap(const cif::mm::structure &p, float maxDistance)
-		: DistanceMap(p, getSpacegroup(p.get_datablock()), getCell(p.get_datablock()), maxDistance)
+		: DistanceMap(p, cif::spacegroup(p.get_datablock()), cif::cell(p.get_datablock()), maxDistance)
 	{
 	}
 
@@ -63,26 +58,26 @@ class DistanceMap
 
   private:
 	using DistKeyType = std::tuple<size_t, size_t>;
-	using DistValueType = std::tuple<float, sym_op, bool>;
+	using DistValueType = std::tuple<float, cif::sym_op, bool>;
 	using DistMap = std::map<DistKeyType, DistValueType>;
 
 	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
 		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm);
 	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
-		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, sym_op symop);
+		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, cif::sym_op symop);
 
 	cif::point offsetToOrigin(const cif::point &p) const;
 
 	const cif::mm::structure &mStructure;
-	clipper::Cell cell;
-	clipper::Spacegroup spacegroup;
+	cif::cell cell;
+	cif::spacegroup spacegroup;
 	size_t dim;
 	std::unordered_map<std::string, size_t> index;
 	std::map<size_t, std::string> rIndex;
 
 	float mMaxDistance, mMaxDistanceSQ;
 
-	std::vector<std::tuple<float, sym_op, bool>> mA;
+	std::vector<std::tuple<float, cif::sym_op, bool>> mA;
 	std::vector<size_t> mIA, mJA;
 };
 

@@ -145,7 +145,6 @@ set(project_sources
 	${PROJECT_SOURCE_DIR}/src/ResolutionCalculator.cpp
 	${PROJECT_SOURCE_DIR}/src/SkipList.cpp
 	${PROJECT_SOURCE_DIR}/src/Statistics.cpp
-	${PROJECT_SOURCE_DIR}/src/Symmetry-2.cpp
 	${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
 	${PROJECT_SOURCE_DIR}/src/Restraints.cpp
 )
@@ -161,7 +160,6 @@ set(project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/ResolutionCalculator.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/SkipList.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Statistics.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/Symmetry-2.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp
 )

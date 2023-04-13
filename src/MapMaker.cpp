@@ -37,7 +37,6 @@
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
 #include "pdb-redo/Statistics.hpp"
-#include "pdb-redo/Symmetry-2.hpp"
 
 #ifdef _MSC_VER
 #include <io.h>
@@ -416,38 +415,38 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 	using clipper::Coord_map;
 	using clipper::Coord_grid;
 	
-
 	Map<FTYPE> result(*this);
 
-	auto spacegroup = mMap.spacegroup();
-	auto cell = mMap.cell();
-	auto rtops = AlternativeSites(spacegroup, cell);
+	cif::spacegroup spacegroup(structure.get_datablock());
+	cif::cell cell(structure.get_datablock());
 
 	for (auto &atom : atoms)
 	{
 		float radius = cif::atom_type_traits(atom.get_type()).radius(cif::radius_type::van_der_waals);
 		if (std::isnan(radius))
 			radius = cif::atom_type_traits(atom.get_type()).radius(cif::radius_type::calculated);
+
 		if (std::isnan(radius))	// TODO: now what?
 		{
 			std::cerr << "Could not define radius for atom " << atom << std::endl;
 			continue;
-			// radius = 200;
 		}
 
 		float radiusSq = radius * radius;
 
-		auto o = Coord_orth(radius, radius, radius).coord_frac(cell);
+		auto o = Coord_orth(radius, radius, radius).coord_frac(mMap.cell());
 		o[0] = std::abs(o[0]);
 		o[1] = std::abs(o[1]);
 		o[2] = std::abs(o[2]);
 
-		auto cloc = toClipper(atom.get_location());
+		// auto cloc = toClipper(atom.get_location());
 
-		for (auto &rt : rtops)
+		for (auto &t : spacegroup)
 		{
-			auto p = cloc.transform(rt);
-			Coord_frac fp = p.coord_frac(cell);
+			auto rt = orthogonal(t, cell);
+			auto p = toClipper(rt(atom.get_location()));
+			auto fp = p.coord_frac(mMap.cell());
+
 			Coord_frac fMin = fp - o, fMax = fp + o;
 
 			// see if the box around p actually overlaps the cell
@@ -456,7 +455,7 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 				fMin.v() > 1 or fMax.v() < 0 or
 				fMin.w() > 1 or fMax.w() < 0)
 				continue;
-
+			
 			auto pp = toPoint(p);
 
 			Coord_map mMin = fMin.coord_map(mMap.grid_sampling()), mMax = fMax.coord_map(mMap.grid_sampling());

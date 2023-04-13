@@ -35,7 +35,6 @@
 #include <regex>
 
 #include "pdb-redo/Minimizer.hpp"
-#include "pdb-redo/Symmetry-2.hpp"
 
 namespace fs = std::filesystem;
 
@@ -511,8 +510,8 @@ void Minimizer::Finish()
 
 	// now add the non-bonded restraints
 
-	auto sg = getSpacegroup(mStructure.get_datablock());
-	auto c = getCell(mStructure.get_datablock());
+	cif::spacegroup sg(mStructure.get_datablock());
+	cif::cell c(mStructure.get_datablock());
 
 	for (auto &a1 : mAtoms)
 	{
@@ -527,10 +526,10 @@ void Minimizer::Finish()
 				continue;
 			}
 
-			const auto &[d, symop] = closestSymmetryCopy(sg, c, a1.get_location(), a2.get_location());
+			const auto &[d, p, symop] = cif::closest_symmetry_copy(sg, c, a1.get_location(), a2.get_location());
 
 			if (d < kMaxNonBondedContactDistance)
-				add_nbc(a1, symmetryCopy(a2, sg, c, symop));
+				add_nbc(a1, cif::mm::atom(a2, p, symop.string()));
 		}
 	}
 

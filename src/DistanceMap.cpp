@@ -24,14 +24,12 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <atomic>
-#include <mutex>
+#include "pdb-redo/DistanceMap.hpp"
 
 #include <cif++/utilities.hpp>
 
-#include "pdb-redo/ClipperWrapper.hpp"
-#include "pdb-redo/DistanceMap.hpp"
-#include "pdb-redo/Symmetry-2.hpp"
+#include <atomic>
+#include <mutex>
 
 namespace pdb_redo
 {
@@ -61,7 +59,7 @@ std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<s
 
 // --------------------------------------------------------------------
 
-DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup &spacegroup, const clipper::Cell &cell,
+DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::spacegroup &spacegroup, const cif::cell &cell,
 	float maxDistance)
 	: mStructure(p)
 	, cell(cell)
@@ -206,7 +204,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 				continue;
 			}
 
-			const auto &[ds, symop] = closestSymmetryCopy(spacegroup, cell, centerI, centerJ);
+			const auto &[ds, p, symop] = cif::closest_symmetry_copy(spacegroup, cell, centerI, centerJ);
 			if (ds - radiusI - radiusJ < mMaxDistance)
 				AddDistancesForAtoms(atomsI, atomsJ, dist, symop);
 		}
@@ -244,30 +242,6 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const clipper::Spacegroup 
 
 // --------------------------------------------------------------------
 
-cif::point DistanceMap::offsetToOrigin(const cif::point &p) const
-{
-	cif::point d{};
-
-	while (p.m_x + d.m_x < (cell.a() / 2))
-		d.m_x += cell.a();
-	while (p.m_x + d.m_x > (cell.a() / 2))
-		d.m_x -= cell.a();
-
-	while (p.m_y + d.m_y < (cell.b() / 2))
-		d.m_y += cell.b();
-	while (p.m_y + d.m_y > (cell.b() / 2))
-		d.m_y -= cell.b();
-
-	while (p.m_z + d.m_z < (cell.c() / 2))
-		d.m_z += cell.c();
-	while (p.m_z + d.m_z > (cell.c() / 2))
-		d.m_z -= cell.c();
-
-	return d;
-};
-
-// --------------------------------------------------------------------
-
 void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b, DistMap &dm)
 {
 	for (const auto &[ixa, loc_a] : a)
@@ -284,14 +258,14 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 
 			d = std::sqrt(d);
 
-			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, sym_op{}, false);
-			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, sym_op{}, false);
+			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, cif::sym_op{}, false);
+			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, cif::sym_op{}, false);
 		}
 	}
 }
 
 void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b,
-	DistMap &dm, sym_op symop)
+	DistMap &dm, cif::sym_op symop)
 {
 	for (const auto &[ixa, loc_a] : a)
 	{
@@ -300,7 +274,7 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 			if (ixa == ixb)
 				continue;
 
-			float d = cif::distance_squared(loc_a, symmetryCopy(loc_b, spacegroup, cell, symop));
+			float d = cif::distance_squared(loc_a, cif::symmetry_copy(loc_b, spacegroup, cell, symop));
 
 			if (d > mMaxDistanceSQ)
 				continue;
@@ -401,13 +375,14 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 		if (symop)
 		{
+			cif::point p = atom_b.get_location();
+
 			if (inverse)
-			{
-				auto rt = symop.toClipperOrth(spacegroup, cell);
-				result.emplace_back(symmetryCopy(atom_b, spacegroup, cell, rt.inverse()));
-			}
+				p = spacegroup.inverse(p, cell, symop);
 			else
-				result.emplace_back(symmetryCopy(atom_b, spacegroup, cell, symop));
+				p = spacegroup(p, cell, symop);
+
+			result.emplace_back(atom_b, p, symop.string());
 		}
 		else
 			result.emplace_back(atom_b);
