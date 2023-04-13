@@ -340,7 +340,7 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 		center += atoms[a];
 	center /= mAtoms.size();
 
-	cif::matrix3x3<float> mat;
+	cif::symmetric_matrix3x3<float> mat;
 	for (auto &a : mAtoms)
 	{
 		mat(0, 0) += (atoms[a].m_x - center.m_x) * (atoms[a].m_x - center.m_x);
@@ -351,12 +351,8 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 		mat(1, 2) += (atoms[a].m_y - center.m_y) * (atoms[a].m_z - center.m_z);
 	}
 
-	mat(1, 0) = mat(0, 1);
-	mat(2, 0) = mat(0, 2);
-	mat(2, 1) = mat(1, 2);
-
 #warning "Oeps!"
-	// /*auto eigen = */mat.eigen(true);
+	// auto &&[ev, em] = cif::eigen(mat);
 
 	abcd[0] = mat(0, 0);
 	abcd[1] = mat(1, 0);
