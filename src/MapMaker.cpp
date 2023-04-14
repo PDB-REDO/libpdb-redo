@@ -417,9 +417,6 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 	
 	Map<FTYPE> result(*this);
 
-	cif::spacegroup spacegroup(structure.get_datablock());
-	cif::cell cell(structure.get_datablock());
-
 	for (auto &atom : atoms)
 	{
 		float radius = cif::atom_type_traits(atom.get_type()).radius(cif::radius_type::van_der_waals);
@@ -439,40 +436,33 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 		o[1] = std::abs(o[1]);
 		o[2] = std::abs(o[2]);
 
-		// auto cloc = toClipper(atom.get_location());
+		auto pp = atom.get_location();
+		auto cloc = toClipper(pp);
 
-		for (auto &t : spacegroup)
-		{
-			auto rt = orthogonal(t, cell);
-			auto p = toClipper(rt(atom.get_location()));
-			auto fp = p.coord_frac(mMap.cell());
+		Coord_frac fp = cloc.coord_frac(mMap.cell());
+		Coord_frac fMin = fp - o, fMax = fp + o;
 
-			Coord_frac fMin = fp - o, fMax = fp + o;
+		// see if the box around p actually overlaps the cell
 
-			// see if the box around p actually overlaps the cell
+		if (fMin.u() > 1 or fMax.u() < 0 or
+			fMin.v() > 1 or fMax.v() < 0 or
+			fMin.w() > 1 or fMax.w() < 0)
+			continue;
 
-			if (fMin.u() > 1 or fMax.u() < 0 or
-				fMin.v() > 1 or fMax.v() < 0 or
-				fMin.w() > 1 or fMax.w() < 0)
-				continue;
-			
-			auto pp = toPoint(p);
+		Coord_map mMin = fMin.coord_map(mMap.grid_sampling()), mMax = fMax.coord_map(mMap.grid_sampling());
+		Coord_grid gMin = mMin.floor(), gMax = mMax.ceil();
 
-			Coord_map mMin = fMin.coord_map(mMap.grid_sampling()), mMax = fMax.coord_map(mMap.grid_sampling());
-			Coord_grid gMin = mMin.floor(), gMax = mMax.ceil();
+		auto i0 = clipper::Xmap_base::Map_reference_coord(mMap, gMin);
+		for (auto iu = i0; iu.coord().u() <= gMax[0]; iu.next_u())
+			for (auto iv = iu; iv.coord().v() <= gMax[1]; iv.next_v())
+				for (auto iw = iv; iw.coord().w() <= gMax[2]; iw.next_w())
+				{
+					cif::point gp = toPoint(iw.coord_orth());
 
-			auto i0 = clipper::Xmap_base::Map_reference_coord(mMap, gMin);
-			for (auto iu = i0; iu.coord().u() <= gMax[0]; iu.next_u())
-				for (auto iv = iu; iv.coord().v() <= gMax[1]; iv.next_v())
-					for (auto iw = iv; iw.coord().w() <= gMax[2]; iw.next_w())
-					{
-						cif::point gp = toPoint(iw.coord_orth());
+					if (distance_squared(gp, pp) < radiusSq)
+						result.mMap[iw] = -10;
 
-						if (distance_squared(gp, pp) < radiusSq)
-							result.mMap[iw] = -10;
-
-					}
-		}
+				}
 	}
 
 	return result;
