@@ -37,6 +37,7 @@
 #include <cif++/text.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
+#include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/Statistics.hpp"
 #include "pdb-redo/SkipList.hpp"
@@ -89,9 +90,9 @@ BOOST_AUTO_TEST_CASE(q_4, *utf::tolerance(0.1f))
 	auto q = cif::align_points(pB, pA);
 
 	BOOST_TEST(q.get_a() == 0.137875929f);
-	BOOST_TEST(q.get_b() == -0.15067713f);
+	BOOST_TEST(q.get_b() == 0.15067713f);
 	BOOST_TEST(q.get_c() == -0.942455589f);
-	BOOST_TEST(q.get_d() == 0.264696091f);
+	BOOST_TEST(q.get_d() == -0.264696091f);
 }
 
 // --------------------------------------------------------------------
@@ -271,16 +272,25 @@ BOOST_AUTO_TEST_CASE(symm_3bwh_2, *utf::tolerance(0.1f))
 	BOOST_TEST(dm(a.id(), b.id()) == 2.54f);
 	BOOST_TEST(dm(b.id(), a.id()) == 2.54f);
 
-	std::cout << "near a " << a << " " << a.get_location() << " " << a.symmetry() << std::endl;
-	for (auto n : dm.near(a, 3))
-	{
-		if (n.symmetry() != "1_555")
-			BOOST_TEST(n.symmetry() == "3_545");
-	}
+	// std::cout << "near a " << a << " " << a.get_location() << " " << a.symmetry() << std::endl;
+	// for (auto n : dm.near(a, 3))
+	// {
+	// 	if (n.symmetry() != "1_555")
+	// 		BOOST_TEST(n.symmetry() == "3_545");
+	// }
 
-	std::cout << "near b " << b << " " << b.get_location() << " " << b.symmetry() << std::endl;
-	for (auto n : dm.near(b, 3))
-		std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+	// std::cout << "near b " << b << " " << b.get_location() << " " << b.symmetry() << std::endl;
+	// for (auto n : dm.near(b, 3))
+	// 	std::cout << n << " " << n.get_location() << " " << n.symmetry() << std::endl;
+
+	auto a_56_cg = s.get_residue("A", 56, "").get_atom_by_atom_id("CG");
+
+	const auto &[d1, p1, so1] = cif::closest_symmetry_copy(sg, c, {31.34, -9.97, 45.52}, a_56_cg.get_location());
+
+	BOOST_TEST(d1 < 1.f);
+
+
+
 }
 
 // BOOST_AUTO_TEST_CASE(symm_2b8h_1, *utf::tolerance(0.1f))

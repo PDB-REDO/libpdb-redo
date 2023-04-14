@@ -32,6 +32,7 @@
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/BondMap.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
+#include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/Statistics.hpp"
 
 // --------------------------------------------------------------------
@@ -1051,7 +1052,6 @@ void StatsCollector::calculate(std::vector<AtomData> &atomData) const
 EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
 	cif::mm::structure &structure, bool electronScattering, const BondMap &bondMap)
 	: StatsCollector(mm, structure, electronScattering)
-	, mDistanceMap(structure, 3.5f)
 	, mBondMap(bondMap)
 {
 	// create a atom radius map, for EDIA
@@ -1116,6 +1116,8 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 	// Calculate EDIA scores
 
+	DistanceMap dm(mStructure, 3.5f);
+
 	cif::Progress progress(atomData.size(), "EDIA calculation");
 
 	for (auto &data : atomData)
@@ -1123,14 +1125,9 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 		auto &atom = data.atom;
 		float radius = mRadii.at(atom.get_type());
 
-		//		if (cif::VERBOSE > 2)
-		//			std::cerr << (atomData.size() + 1) << '\t'
-		//				 << atom_type_traits(atom.get_type()).symbol() << '\t'
-		//				 << radius << std::endl;
-
 		PointWeightFunction w(atom.get_location(), radius);
 
-		std::vector<cif::mm::atom> atomsNearBy = mDistanceMap.near(atom, 3.5f);
+		std::vector<cif::mm::atom> atomsNearBy = dm.near(atom, 3.5f);
 
 		std::vector<PointWeightFunction> wn;
 		for (auto a : atomsNearBy)

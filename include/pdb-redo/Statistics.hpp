@@ -27,7 +27,6 @@
 #pragma once
 
 #include <pdb-redo/BondMap.hpp>
-#include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/MapMaker.hpp"
 
 namespace pdb_redo
@@ -158,7 +157,6 @@ class EDIAStatsCollector : public StatsCollector
   protected:
 	virtual void calculate(std::vector<AtomData> &atomData) const;
 
-	DistanceMap mDistanceMap;
 	const BondMap &mBondMap;
 	std::map<cif::atom_type, float> mRadii;
 };
