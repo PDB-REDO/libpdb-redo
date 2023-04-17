@@ -437,7 +437,7 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 		o[2] = std::abs(o[2]);
 
 		auto pp = atom.get_location();
-		auto cloc = toClipper(pp);
+		Coord_orth cloc = pp;
 
 		Coord_frac fp = cloc.coord_frac(mMap.cell());
 		Coord_frac fMin = fp - o, fMax = fp + o;
@@ -457,11 +457,10 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 			for (auto iv = iu; iv.coord().v() <= gMax[1]; iv.next_v())
 				for (auto iw = iv; iw.coord().w() <= gMax[2]; iw.next_w())
 				{
-					cif::point gp = toPoint(iw.coord_orth());
+					cif::point gp = iw.coord_orth();
 
 					if (distance_squared(gp, pp) < radiusSq)
 						result.mMap[iw] = -10;
-
 				}
 	}
 
@@ -475,7 +474,7 @@ float Map<FTYPE>::z_weighted_density(const cif::mm::structure &structure, const 
 
 	for (auto &atom : atoms)
 	{
-		auto co = toClipper(atom.get_location());
+		clipper::Coord_orth co = atom.get_location();
 		auto a_cf = co.coord_frac(mMap.cell());
 		auto a_cm = a_cf.coord_map(mMap.grid_sampling());
 
