@@ -1075,7 +1075,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 		{
 			if (status != GSL_ENOPROG)
 				std::cerr << "Unexpected result from gsl_multimin_fdfminimizer_iterate: " << status << std::endl;
-			else if (cif::VERBOSE > 0)
+			else if (cif::VERBOSE > 1)
 				std::cerr << "Minimizer stopped at iteration " << i << " at " << m_s->f << std::endl;
 			break;
 		}
@@ -1092,7 +1092,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 
 		if (status == GSL_SUCCESS)
 		{
-			if (cif::VERBOSE > 0)
+			if (cif::VERBOSE > 1)
 				std::cerr << "Minimum found at iteration " << i << " at " << m_s->f << std::endl;
 			break;
 		}
