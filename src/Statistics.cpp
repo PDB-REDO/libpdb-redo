@@ -948,9 +948,9 @@ void StatsCollector::sumDensity(std::vector<AtomData> &atomData,
 		auto radius = data.radius;
 		double sumDensity = 0;
 
-		iterateGrid(toClipper(atom.get_location()), radius, Fb, [&, radius_sq = radius * radius](Xmap_base::Map_reference_coord &iw)
+		iterateGrid(atom.get_location(), radius, Fb, [&, radius_sq = radius * radius](Xmap_base::Map_reference_coord &iw)
 			{
-			auto p = toPoint(iw.coord_orth());
+			cif::point p = iw.coord_orth();
 			
 			double d = distance_squared(p, atom.get_location());
 
@@ -1135,9 +1135,9 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 		float ediaSum[2] = {};
 
-		iterateGrid(toClipper(atom.get_location()), radius, Fb, [&](auto iw)
+		iterateGrid(atom.get_location(), radius, Fb, [&](auto iw)
 		{
-			cif::point p = toPoint(iw.coord_orth());
+			cif::point p = iw.coord_orth();
 			
 			// EDIA calculations
 			auto fb = Fb[iw];

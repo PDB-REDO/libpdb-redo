@@ -50,7 +50,7 @@ clipper::Atom toClipper(cif::row_handle atom, cif::row_handle aniso_row)
 	{
 		int charge = atom["pdbx_formal_charge"].as<int>();
 
-		if (cif::atom_type_traits(element).has_sf(charge))
+		if (cif::atom_type_traits(element).has_sf(charge) and charge != 0)
 		{
 			element += std::to_string(std::abs(charge));
 
