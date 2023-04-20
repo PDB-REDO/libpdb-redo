@@ -121,6 +121,7 @@ else()
 endif()
 
 # Libraries
+find_package(Eigen3 REQUIRED)
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(GSL REQUIRED)
 

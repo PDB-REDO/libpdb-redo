@@ -41,11 +41,10 @@ class DistanceMap
 {
   public:
 
-	DistanceMap(const cif::mm::structure &p, const cif::spacegroup &spacegroup, const cif::cell &cell,
-		float maxDistance);
+	DistanceMap(const cif::mm::structure &p, const cif::crystal &crystal, float maxDistance);
 
 	DistanceMap(const cif::mm::structure &p, float maxDistance)
-		: DistanceMap(p, cif::spacegroup(p.get_datablock()), cif::cell(p.get_datablock()), maxDistance)
+		: DistanceMap(p, cif::crystal(p.get_datablock()), maxDistance)
 	{
 	}
 
@@ -69,8 +68,7 @@ class DistanceMap
 	cif::point offsetToOrigin(const cif::point &p) const;
 
 	const cif::mm::structure &mStructure;
-	cif::cell cell;
-	cif::spacegroup spacegroup;
+	cif::crystal crystal;
 	size_t dim;
 	std::unordered_map<std::string, size_t> index;
 	std::map<size_t, std::string> rIndex;
