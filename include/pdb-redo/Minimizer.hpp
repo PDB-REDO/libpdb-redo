@@ -95,20 +95,20 @@ class Minimizer
 	virtual ~Minimizer() {}
 
 	// factory method:
-	static Minimizer *create(const cif::mm::polymer &poly, int first, int last,
+	static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
 		const BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11);
 
-	static Minimizer *create(cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
+	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
 		const BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11)
 	{
-		return create(structure, atoms, bm, plane5AtomsESD, &xMap, mapWeight);
+		return create(crystal, structure, atoms, bm, plane5AtomsESD, &xMap, mapWeight);
 	}
 
 	// factory method for minimizer without density:
-	static Minimizer *create(cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
+	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
 		const BondMap &bm, float plane5AtomsESD = 0.11)
 	{
-		return create(structure, atoms, bm, plane5AtomsESD, nullptr, 0);
+		return create(crystal, structure, atoms, bm, plane5AtomsESD, nullptr, 0);
 	}
 
 	void dropTorsionRestraints();
@@ -123,13 +123,13 @@ class Minimizer
   protected:
 	Minimizer(const cif::mm::structure &structure, const BondMap &bm, float plane5AtomsESD);
 
-	static Minimizer *create(cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
+	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
 		const BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight);
 
 	virtual void addResidue(const cif::mm::residue &res);
 	virtual void addPolySection(const cif::mm::polymer &poly, int first, int last);
 	virtual void addDensityMap(const XMap &xMap, float mapWeight);
-	virtual void Finish();
+	virtual void Finish(const cif::crystal &crystal);
 
 	double score(const AtomLocationProvider &loc);
 

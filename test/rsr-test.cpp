@@ -43,6 +43,7 @@ BOOST_AUTO_TEST_CASE(refine_0)
 	cif::file file(example.string());
 
 	cif::mm::structure structure(file);
+	cif::crystal crystal(structure.get_datablock());
 
 	auto &chain = structure.polymers().front();
 
@@ -52,7 +53,7 @@ BOOST_AUTO_TEST_CASE(refine_0)
 
 	pdb_redo::BondMap bonds(structure);
 
-	auto minimizer = pdb_redo::Minimizer::create(chain, 3, 3, bonds, mm.fb());
+	auto minimizer = pdb_redo::Minimizer::create(crystal, chain, 3, 3, bonds, mm.fb());
 
 	minimizer->printStats();
 
@@ -100,6 +101,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 	cif::file file(example.string());
 
 	cif::mm::structure structure(file);
+	cif::crystal crystal(structure.get_datablock());
 
 	pdb_redo::BondMap bonds(structure);
 
@@ -110,7 +112,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 	auto &chain = structure.polymers().front();
 	auto &atoms3 = chain.at(2).atoms();
 
-	auto minimizer = pdb_redo::Minimizer::create(chain, 3, 3, bonds, mm.fb());
+	auto minimizer = pdb_redo::Minimizer::create(crystal, chain, 3, 3, bonds, mm.fb());
 
 	minimizer->printStats();
 
@@ -237,8 +239,9 @@ BOOST_AUTO_TEST_CASE(refine_2)
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
 	pdb_redo::BondMap bonds(structure);
+	cif::crystal crystal(structure.get_datablock());
 
-	auto minimizer = pdb_redo::Minimizer::create(structure, atoms, bonds, mm.fb());
+	auto minimizer = pdb_redo::Minimizer::create(crystal, structure, atoms, bonds, mm.fb());
 
 	minimizer->printStats();
 

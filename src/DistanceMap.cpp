@@ -59,11 +59,10 @@ std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<s
 
 // --------------------------------------------------------------------
 
-DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::spacegroup &spacegroup, const cif::cell &cell,
+DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crystal,
 	float maxDistance)
 	: mStructure(p)
-	, cell(cell)
-	, spacegroup(spacegroup)
+	, crystal(crystal)
 	, dim(0)
 	, mMaxDistance(maxDistance)
 	, mMaxDistanceSQ(maxDistance * maxDistance)
@@ -204,7 +203,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::spacegroup &spa
 				continue;
 			}
 
-			const auto &[ds, p, symop] = cif::closest_symmetry_copy(spacegroup, cell, centerI, centerJ);
+			const auto &[ds, p, symop] = crystal.closest_symmetry_copy(centerI, centerJ);
 			if (ds - radiusI - radiusJ < mMaxDistance)
 				AddDistancesForAtoms(atomsI, atomsJ, dist, symop);
 		}
@@ -274,7 +273,7 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 			if (ixa == ixb)
 				continue;
 
-			float d = cif::distance_squared(loc_a, cif::symmetry_copy(loc_b, spacegroup, cell, symop));
+			float d = cif::distance_squared(loc_a, crystal.symmetry_copy(loc_b, symop));
 
 			if (d > mMaxDistanceSQ)
 				continue;
@@ -378,9 +377,9 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 			cif::point p = atom_b.get_location();
 
 			if (inverse)
-				p = spacegroup.inverse(p, cell, symop);
+				p = crystal.inverse_symmetry_copy(p, symop);
 			else
-				p = spacegroup(p, cell, symop);
+				p = crystal.symmetry_copy(p, symop);
 
 			result.emplace_back(atom_b, p, symop.string());
 		}

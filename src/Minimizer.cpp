@@ -348,7 +348,7 @@ void Minimizer::addDensityMap(const XMap &xMap, float mapWeight)
 	mDensityRestraint.reset(new DensityRestraint(move(densityAtoms), xMap, mapWeight));
 }
 
-void Minimizer::Finish()
+void Minimizer::Finish(const cif::crystal &crystal)
 {
 	if (mAtoms.empty())
 		throw std::runtime_error("No atoms to refine");
@@ -510,9 +510,6 @@ void Minimizer::Finish()
 
 	// now add the non-bonded restraints
 
-	cif::spacegroup sg(mStructure.get_datablock());
-	cif::cell c(mStructure.get_datablock());
-
 	for (auto &a1 : mAtoms)
 	{
 		for (auto a2 : mStructure.atoms())
@@ -526,7 +523,7 @@ void Minimizer::Finish()
 				continue;
 			}
 
-			const auto &[d, p, symop] = cif::closest_symmetry_copy(sg, c, a1.get_location(), a2.get_location());
+			const auto &[d, p, symop] = crystal.closest_symmetry_copy(a1.get_location(), a2.get_location());
 
 			if (d < kMaxNonBondedContactDistance)
 				add_nbc(a1, cif::mm::atom(a2, p, symop.string()));
@@ -982,9 +979,9 @@ class GSLMinimizer : public Minimizer
 	{
 	}
 
-	virtual void Finish()
+	virtual void Finish(const cif::crystal &crystal)
 	{
-		Minimizer::Finish();
+		Minimizer::Finish(crystal);
 
 		for (auto &a : mReferencedAtoms)
 			mFixedLocations.push_back(a.get_location());
@@ -1192,17 +1189,17 @@ void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 
 // --------------------------------------------------------------------
 
-Minimizer *Minimizer::create(const cif::mm::polymer &poly, int first, int last, const BondMap &bonds,
+Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last, const BondMap &bonds,
 	const XMap &xMap, float mapWeight, float plane5AtomsESD)
 {
 	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure(), bonds, plane5AtomsESD));
 	result->addPolySection(poly, first, last);
 	result->addDensityMap(xMap, mapWeight);
-	result->Finish();
+	result->Finish(crystal);
 	return result.release();
 }
 
-Minimizer *Minimizer::create(cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
+Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
 	const BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight)
 {
 	std::unique_ptr<Minimizer> result(new GSLMinimizer(structure, bm, plane5AtomsESD));
@@ -1347,7 +1344,7 @@ Minimizer *Minimizer::create(cif::mm::structure &structure, const std::vector<ci
 	if (xMap != nullptr and mapWeight != 0)
 		result->addDensityMap(*xMap, mapWeight);
 
-	result->Finish();
+	result->Finish(crystal);
 
 	return result.release();
 }
