@@ -34,6 +34,8 @@
 
 #include <cif++.hpp>
 
+#include <Eigen/Eigenvalues>
+
 #include <numeric>
 
 namespace pdb_redo
@@ -340,24 +342,41 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 		center += atoms[a];
 	center /= mAtoms.size();
 
-	cif::symmetric_matrix3x3<float> mat;
-	// clipper::Matrix<double> mat(3, 3);
+	double Cxx = 0, Cyy = 0, Czz = 0, Cxy = 0, Cxz = 0, Cyz = 0;
+
 	for (auto &a : mAtoms)
 	{
-		mat(0, 0) += (atoms[a].m_x - center.m_x) * (atoms[a].m_x - center.m_x);
-		mat(1, 1) += (atoms[a].m_y - center.m_y) * (atoms[a].m_y - center.m_y);
-		mat(2, 2) += (atoms[a].m_z - center.m_z) * (atoms[a].m_z - center.m_z);
-		mat(0, 1) += (atoms[a].m_x - center.m_x) * (atoms[a].m_y - center.m_y);
-		mat(0, 2) += (atoms[a].m_x - center.m_x) * (atoms[a].m_z - center.m_z);
-		mat(1, 2) += (atoms[a].m_y - center.m_y) * (atoms[a].m_z - center.m_z);
+		Cxx += (atoms[a].m_x - center.m_x) * (atoms[a].m_x - center.m_x);
+		Cyy += (atoms[a].m_y - center.m_y) * (atoms[a].m_y - center.m_y);
+		Czz += (atoms[a].m_z - center.m_z) * (atoms[a].m_z - center.m_z);
+		Cxy += (atoms[a].m_x - center.m_x) * (atoms[a].m_y - center.m_y);
+		Cxz += (atoms[a].m_x - center.m_x) * (atoms[a].m_z - center.m_z);
+		Cyz += (atoms[a].m_y - center.m_y) * (atoms[a].m_z - center.m_z);
 	}
+	
+	Eigen::Matrix3d mat;
+	mat << Cxx, Cxy, Cxz,
+		   Cxy, Cyy, Cyz,
+		   Cxz, Cyz, Czz;
 
-	auto &&[ev, em] = cif::eigen(mat, true);
-	// mat.eigen(true);
+	Eigen::EigenSolver<Eigen::Matrix3d> es(mat);
 
-	abcd[0] = em(0, 0);
-	abcd[1] = em(1, 0);
-	abcd[2] = em(2, 0);
+	auto ev = es.eigenvalues();
+
+	float b_ev = std::numeric_limits<float>::max();
+	for (size_t i = 0; i < 3; ++i)
+	{
+		if (ev[i].real() > b_ev)
+			continue;
+
+		b_ev = ev[i].real();
+
+		auto col = es.eigenvectors().col(i);
+
+		abcd[0] = col(0).real();
+		abcd[1] = col(1).real();
+		abcd[2] = col(2).real();
+	}
 
 	double sumSq = 1e-20 + abcd[0] * abcd[0] + abcd[1] * abcd[1] + abcd[2] * abcd[2];
 

@@ -190,7 +190,7 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 		compounds.insert(mon_id);
 	}
 
-	cif::Progress progress(compounds.size(), "Creating bond map");
+	cif::progress_bar progress_bar(compounds.size(), "Creating bond map");
 
 	// some helper indices to speed things up a bit
 	using atom_map_key_type = std::tuple<std::string, int, std::string, std::string>;

@@ -980,7 +980,7 @@ void StatsCollector::collectSums(std::vector<AtomData> &atomData, GridPtDataMap 
 	const Xmap<float> &Fb = mMapMaker.fb();
 	const Xmap<float> &Fd = mMapMaker.fd();
 
-	cif::Progress progress(atomData.size(), "Stats calculation");
+	cif::progress_bar progress_bar(atomData.size(), "Stats calculation");
 
 	// Iterate over the atom data to collect the sums
 	for (auto &d : atomData)
@@ -1034,7 +1034,7 @@ void StatsCollector::collectSums(std::vector<AtomData> &atomData, GridPtDataMap 
 			d.sums.edSums[1] += ed3;
 		}
 
-		progress.consumed(1);
+		progress_bar.consumed(1);
 	}
 }
 
@@ -1118,7 +1118,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 	DistanceMap dm(mStructure, 3.5f);
 
-	cif::Progress progress(atomData.size(), "EDIA calculation");
+	cif::progress_bar progress_bar(atomData.size(), "EDIA calculation");
 
 	for (auto &data : atomData)
 	{
@@ -1224,7 +1224,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 		if (data.edia < 0)
 			data.edia = 0;
 
-		progress.consumed(1);
+		progress_bar.consumed(1);
 	}
 }
 
