@@ -319,9 +319,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	float samplingRate = 1.5;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	BondMap bm(structure);
-
-	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
+	pdb_redo::EDIAStatsCollector collector(mm, structure, false);
 	auto r = collector.collect();
 
 	auto ti = test.begin();
@@ -396,9 +394,7 @@ BOOST_AUTO_TEST_CASE(stats_2)
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	BondMap bm(structure);
-
-	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
+	pdb_redo::EDIAStatsCollector collector(mm, structure, false);
 	auto r = collector.collect();
 
 	for (auto& ri: r)
@@ -414,5 +410,63 @@ BOOST_AUTO_TEST_CASE(stats_2)
 
 		BOOST_CHECK(std::isnan(ri.EDIAm));
 		BOOST_CHECK(std::isnan(ri.OPIA));
+	}
+}
+
+// --------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(bond_map_1)
+{
+	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
+	cif::file file = cif::pdb::read(example.string());
+	
+	BOOST_CHECK(file.is_valid());
+
+	auto &db = file.front();
+	auto &atom_site = db["atom_site"];
+
+	std::vector<std::string> atom_ids;
+	std::vector<cif::point> atom_locs;
+	for (const auto &[id, x, y, z] : atom_site.rows<std::string,float,float,float>("id", "cartn_x", "cartn_y", "cartn_z"))
+	{
+		atom_ids.emplace_back(id);
+		atom_locs.emplace_back(x, y, z);
+	}
+
+	BondMap bm(db);
+
+	using key_type = std::tuple<std::string,std::string>;
+	std::map<key_type,bool> bonded;
+	
+	for (size_t i = 0; i + 1 < atom_ids.size(); ++i)
+	{
+		auto a = atom_ids[i];
+
+		for (size_t j = i + 1; j < atom_ids.size(); ++j)
+		{
+			auto b = atom_ids[j];
+			
+			bonded.emplace(std::make_tuple(a, b), bm(a, b));
+		}
+	}
+
+	cif::point c = atom_locs.front();
+	BondMap bm2(db, std::make_tuple(c, 6.0f));
+
+	for (size_t i = 0; i + 1 < atom_ids.size(); ++i)
+	{
+		auto a = atom_ids[i];
+		auto pa = atom_locs[i];
+
+		for (size_t j = i + 1; j < atom_ids.size(); ++j)
+		{
+			auto b = atom_ids[j];
+			auto pb = atom_locs[j];
+
+			if (distance(pa, c) < 6 and distance(pb, c) < 6)
+				BOOST_TEST(bm2(a, b) == bonded[std::make_tuple(a, b)]);
+			else
+				BOOST_CHECK_THROW(bm2(a, b), std::out_of_range);
+		}
 	}
 }

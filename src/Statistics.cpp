@@ -545,7 +545,7 @@ void StatsCollector::initialize()
 
 std::vector<ResidueStatistics> StatsCollector::collect() const
 {
-	std::vector<std::tuple<std::string, int, std::string>> residues;
+	residue_list residues;
 	std::vector<cif::mm::atom> atoms;
 
 	for (auto atom : mStructure.atoms())
@@ -565,6 +565,29 @@ std::vector<ResidueStatistics> StatsCollector::collect() const
 	BoundingBox bbox(mStructure, atoms, 5.0f);
 	return collect(residues, bbox, true);
 }
+
+std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID) const
+{
+	residue_list residues;
+	std::vector<cif::mm::atom> atoms;
+
+	for (auto atom_id : mStructure.get_datablock()["atom_site"].find<std::string>(cif::key("label_asym_id") == asymID, "id"))
+	{
+		auto &atom = atoms.emplace_back(mStructure.get_atom_by_id(atom_id));
+
+		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id());
+
+		if (residues.empty() or residues.back() != k)
+		{
+			residues.emplace_back(move(k));
+			atoms.emplace_back(std::move(atom));
+		}
+	}
+
+	BoundingBox bbox(mStructure, atoms, 5.0f);
+	return collect(residues, bbox, false);
+}
+
 
 std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID, int resFirst, int resLast, bool authNameSpace) const
 {
@@ -1049,10 +1072,8 @@ void StatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 // --------------------------------------------------------------------
 
-EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm,
-	cif::mm::structure &structure, bool electronScattering, const BondMap &bondMap)
+EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm, cif::mm::structure &structure, bool electronScattering)
 	: StatsCollector(mm, structure, electronScattering)
-	, mBondMap(bondMap)
 {
 	// create a atom radius map, for EDIA
 
@@ -1117,6 +1138,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 	// Calculate EDIA scores
 
 	DistanceMap dm(mStructure, 3.5f);
+	BondMap bm = createBondMap(atomData);
 
 	cif::progress_bar progress_bar(atomData.size(), "EDIA calculation");
 
@@ -1178,7 +1200,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 				{
 					S.insert(atomsNearBy[i]);
 					
-					if (not mBondMap(atomsNearBy[i], atom))
+					if (not bm(atomsNearBy[i], atom))
 						I.insert(atomsNearBy[i]);
 				}
 			}
@@ -1226,6 +1248,25 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 		progress_bar.consumed(1);
 	}
+}
+
+BondMap EDIAStatsCollector::createBondMap(std::vector<AtomData> &atomData) const
+{
+	std::vector<cif::point> pts;
+	for (auto a : atomData)
+		pts.emplace_back(a.atom.get_location());
+	
+	cif::point center = cif::centroid(pts);
+	float radius = 0;
+
+	for (auto pt : pts)
+	{
+		auto d = distance(pt, center);
+		if (radius < d)
+			radius = d;
+	}
+
+	return { mStructure.get_datablock(), std::make_tuple(center, radius + 3.5f) };
 }
 
 } // namespace pdb_redo

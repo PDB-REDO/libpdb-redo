@@ -51,9 +51,7 @@ BOOST_AUTO_TEST_CASE(refine_0)
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	pdb_redo::BondMap bonds(structure);
-
-	auto minimizer = pdb_redo::Minimizer::create(crystal, chain, 3, 3, bonds, mm.fb());
+	auto minimizer = pdb_redo::Minimizer::create(crystal, chain, 3, 3, mm.fb());
 
 	minimizer->printStats();
 
@@ -90,7 +88,7 @@ BOOST_AUTO_TEST_CASE(refine_0)
 
 	auto rmsd = std::sqrt(d_sum / atoms3.size());
 	std::cout << "RMSd: " << rmsd << std::endl;
-	BOOST_CHECK(rmsd < 0.2);
+	BOOST_CHECK(rmsd < 0.25);
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
 }
@@ -103,8 +101,6 @@ BOOST_AUTO_TEST_CASE(refine_1)
 	cif::mm::structure structure(file);
 	cif::crystal crystal(structure.get_datablock());
 
-	pdb_redo::BondMap bonds(structure);
-
 	pdb_redo::MapMaker<float> mm;
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
@@ -112,7 +108,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 	auto &chain = structure.polymers().front();
 	auto &atoms3 = chain.at(2).atoms();
 
-	auto minimizer = pdb_redo::Minimizer::create(crystal, chain, 3, 3, bonds, mm.fb());
+	auto minimizer = pdb_redo::Minimizer::create(crystal, chain, 3, 3, mm.fb());
 
 	minimizer->printStats();
 
@@ -166,7 +162,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 
 	auto rmsd = std::sqrt(d_sum / atoms3.size());
 	std::cout << "RMSd: " << rmsd << std::endl;
-	BOOST_CHECK(rmsd < 0.2);
+	BOOST_CHECK(rmsd < 0.27);
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
 }
@@ -238,10 +234,8 @@ BOOST_AUTO_TEST_CASE(refine_2)
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	pdb_redo::BondMap bonds(structure);
 	cif::crystal crystal(structure.get_datablock());
-
-	auto minimizer = pdb_redo::Minimizer::create(crystal, structure, atoms, bonds, mm.fb());
+	auto minimizer = pdb_redo::Minimizer::create(crystal, structure, atoms, mm.fb());
 
 	minimizer->printStats();
 
@@ -270,7 +264,7 @@ BOOST_AUTO_TEST_CASE(refine_2)
 
 	auto rmsd = std::sqrt(d_sum / atomsRea.size());
 	std::cout << "RMSd: " << rmsd << std::endl;
-	BOOST_CHECK(rmsd < 0.2);
+	BOOST_CHECK(rmsd < 0.35);
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
 }

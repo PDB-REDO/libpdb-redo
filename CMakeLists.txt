@@ -38,7 +38,6 @@ include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(Dart)
-include(FindPkgConfig)
 include(GenerateExportHeader)
 
 set(CXX_EXTENSIONS OFF)

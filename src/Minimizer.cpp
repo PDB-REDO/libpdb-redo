@@ -85,9 +85,8 @@ std::string AtomLocationProvider::atom(AtomRef atomID) const
 
 // --------------------------------------------------------------------
 
-Minimizer::Minimizer(const cif::mm::structure &structure, const BondMap &bonds, float plane5AtomsESD)
+Minimizer::Minimizer(const cif::mm::structure &structure, float plane5AtomsESD)
 	: mStructure(structure)
-	, mBonds(bonds)
 	, mPlane5ESD(plane5AtomsESD)
 {
 }
@@ -362,7 +361,10 @@ void Minimizer::Finish(const cif::crystal &crystal)
 
 	std::set<std::tuple<AtomRef, AtomRef>> nbc;
 
-	auto add_nbc = [this, &nbc, &libAtom](const cif::mm::atom &a1, const cif::mm::atom &a2)
+	BondMap bm = createBondMap();
+	// const BondMap &bm = mBonds;
+
+	auto add_nbc = [this, &nbc, &libAtom, &bm](const cif::mm::atom &a1, const cif::mm::atom &a2)
 	{
 		AtomRef ra1 = ref(a1);
 		AtomRef ra2 = ref(a2);
@@ -403,7 +405,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 
 		double minDist = 2.8;
 
-		if (mBonds.is1_4(a1, a2))
+		if (bm.is1_4(a1, a2))
 		{
 			if (cif::VERBOSE > 1)
 				std::cerr << "1_4 for " << a1 << " and " << a2 << std::endl;
@@ -514,12 +516,13 @@ void Minimizer::Finish(const cif::crystal &crystal)
 	{
 		for (auto a2 : mStructure.atoms())
 		{
-			if (a1 == a2 or mBonds(a1, a2))
+			if (a1 == a2)
 				continue;
 
 			if (distance_squared(a1, a2) < kMaxNonBondedContactDistance * kMaxNonBondedContactDistance)
 			{
-				add_nbc(a1, a2);
+				if (not bm(a1, a2))
+					add_nbc(a1, a2);
 				continue;
 			}
 
@@ -974,8 +977,8 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 class GSLMinimizer : public Minimizer
 {
   public:
-	GSLMinimizer(const cif::mm::structure &structure, const BondMap &bm, float plane5AtomsESD)
-		: Minimizer(structure, bm, plane5AtomsESD)
+	GSLMinimizer(const cif::mm::structure &structure, float plane5AtomsESD)
+		: Minimizer(structure, plane5AtomsESD)
 	{
 	}
 
@@ -1189,10 +1192,10 @@ void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 
 // --------------------------------------------------------------------
 
-Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last, const BondMap &bonds,
+Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
 	const XMap &xMap, float mapWeight, float plane5AtomsESD)
 {
-	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure(), bonds, plane5AtomsESD));
+	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure(), plane5AtomsESD));
 	result->addPolySection(poly, first, last);
 	result->addDensityMap(xMap, mapWeight);
 	result->Finish(crystal);
@@ -1200,9 +1203,9 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer
 }
 
 Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
-	const BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight)
+	float plane5AtomsESD, const XMap *xMap, float mapWeight)
 {
-	std::unique_ptr<Minimizer> result(new GSLMinimizer(structure, bm, plane5AtomsESD));
+	std::unique_ptr<Minimizer> result(new GSLMinimizer(structure, plane5AtomsESD));
 
 	std::vector<const cif::mm::residue *> residues;
 
@@ -1347,6 +1350,25 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 	result->Finish(crystal);
 
 	return result.release();
+}
+
+BondMap Minimizer::createBondMap()
+{
+	std::vector<cif::point> pts;
+	for (auto a : mReferencedAtoms)
+		pts.emplace_back(a.get_location());
+	
+	cif::point center = cif::centroid(pts);
+	float radius = 0;
+
+	for (auto pt : pts)
+	{
+		auto d = distance(pt, center);
+		if (radius < d)
+			radius = d;
+	}
+
+	return { mStructure.get_datablock(), std::make_tuple(center, radius + kMaxNonBondedContactDistance) };
 }
 
 } // namespace pdb_redo

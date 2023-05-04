@@ -88,8 +88,10 @@ class StatsCollector
 
 	virtual std::vector<ResidueStatistics> collect() const;
 
+	virtual std::vector<ResidueStatistics> collect(const std::string &asymID) const;
+
 	virtual std::vector<ResidueStatistics> collect(const std::string &asymID,
-		int resFirst, int resLast, bool authNameSpace = true) const;
+		int resFirst, int resLast, bool authNameSpace = false) const;
 
 	virtual ResidueStatistics collect(std::initializer_list<const cif::mm::residue *> residues) const;
 
@@ -151,13 +153,13 @@ class EDIAStatsCollector : public StatsCollector
 {
   public:
 	EDIAStatsCollector(MapMaker<float> &mm,
-		cif::mm::structure &structure, bool electronScattering,
-		const BondMap &bondMap);
+		cif::mm::structure &structure, bool electronScattering);
 
   protected:
 	virtual void calculate(std::vector<AtomData> &atomData) const;
 
-	const BondMap &mBondMap;
+	BondMap createBondMap(std::vector<AtomData> &atomData) const;
+
 	std::map<cif::atom_type, float> mRadii;
 };
 
