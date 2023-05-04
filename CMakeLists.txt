@@ -38,7 +38,6 @@ include(CheckIncludeFile)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(Dart)
-include(FindPkgConfig)
 include(GenerateExportHeader)
 
 set(CXX_EXTENSIONS OFF)
@@ -171,7 +170,7 @@ set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
 
 target_include_directories(pdb-redo
 	PUBLIC
-	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
+	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include;${EIGEN3_INCLUDE_DIR}>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 	${CCP4_INCLUDE_DIRS})
 target_link_libraries(pdb-redo PUBLIC cifpp::cifpp newuoa::newuoa ${CCP4_LIBRARIES} GSL::gsl)

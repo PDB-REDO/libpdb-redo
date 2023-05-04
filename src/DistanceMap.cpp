@@ -183,7 +183,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 		residues.emplace_back(center, radius, std::move(rAtoms));
 	}
 
-	cif::Progress progress((residues.size() - 1) * (residues.size() - 2), "Creating distance map");
+	cif::progress_bar progress_bar((residues.size() * (residues.size() - 1)) / 2, "Creating distance map");
 
 	for (size_t i = 0; i + 1 < residues.size(); ++i)
 	{
@@ -191,7 +191,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 
 		for (size_t j = i + 1; j < residues.size(); ++j)
 		{
-			progress.consumed(1);
+			progress_bar.consumed(1);
 
 			const auto &[centerJ, radiusJ, atomsJ] = residues[j];
 

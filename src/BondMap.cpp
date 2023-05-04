@@ -141,7 +141,27 @@ bool CompoundBondMap::bonded(const std::string &compoundID, const std::string &a
 
 // --------------------------------------------------------------------
 
-BondMap::BondMap(const cif::datablock &db, int model_nr)
+BondMap::BondMap(BondMap &&bm)
+	: dim(bm.dim)
+	, index(std::move(bm.index))
+	, bond(std::move(bm.bond))
+	, bond_1_4(std::move(bm.bond_1_4))
+	, link(std::move(bm.link))
+{
+}
+
+BondMap &BondMap::operator=(BondMap &&bm)
+{
+	dim = bm.dim;
+	index.swap(bm.index);
+	bond.swap(bm.bond);
+	bond_1_4.swap(bm.bond_1_4);
+	link.swap(bm.link);
+	
+	return *this;
+}
+
+BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,float>> around, int model_nr)
 {
 	using namespace cif::literals;
 
@@ -150,8 +170,23 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 	// First collect the atoms from the datablock
 	std::vector<cif::row_handle> atoms;
 
+	cif::crystal crystal(db);
+
 	for (auto rh : db["atom_site"].find("pdbx_PDB_model_num"_key == model_nr or "pdbx_PDB_model_num"_key == cif::null))
-		atoms.push_back(rh);
+	{
+		if (around)
+		{
+			const auto &[p, r] = *around;
+			const auto &[x, y, z] = rh.get<float,float,float>("Cartn_x", "Cartn_y", "Cartn_z");
+
+			const auto &[d, pt, op] = crystal.closest_symmetry_copy(p, {x, y, z});
+
+			if (d <= r)
+				atoms.push_back(rh);
+		}
+		else
+			atoms.push_back(rh);
+	}
 
 	dim = uint32_t(atoms.size());
 
@@ -190,7 +225,7 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 		compounds.insert(mon_id);
 	}
 
-	cif::Progress progress(compounds.size(), "Creating bond map");
+	cif::progress_bar progress_bar(compounds.size(), "Creating bond map");
 
 	// some helper indices to speed things up a bit
 	using atom_map_key_type = std::tuple<std::string, int, std::string, std::string>;
@@ -249,6 +284,8 @@ BondMap::BondMap(const cif::datablock &db, int model_nr)
 
 	for (auto c : compounds)
 	{
+		progress_bar.consumed(1);
+
 		if (c == "HOH" or c == "H2O" or c == "WAT")
 		{
 			if (cif::VERBOSE > 1)

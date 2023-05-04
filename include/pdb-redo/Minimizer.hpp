@@ -96,19 +96,19 @@ class Minimizer
 
 	// factory method:
 	static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
-		const BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11);
+		const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11);
 
 	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
-		const BondMap &bm, const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11)
+		const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11)
 	{
-		return create(crystal, structure, atoms, bm, plane5AtomsESD, &xMap, mapWeight);
+		return create(crystal, structure, atoms, plane5AtomsESD, &xMap, mapWeight);
 	}
 
 	// factory method for minimizer without density:
 	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
-		const BondMap &bm, float plane5AtomsESD = 0.11)
+		float plane5AtomsESD = 0.11)
 	{
-		return create(crystal, structure, atoms, bm, plane5AtomsESD, nullptr, 0);
+		return create(crystal, structure, atoms, plane5AtomsESD, nullptr, 0);
 	}
 
 	void dropTorsionRestraints();
@@ -121,10 +121,10 @@ class Minimizer
 	virtual void storeAtomLocations() = 0;
 
   protected:
-	Minimizer(const cif::mm::structure &structure, const BondMap &bm, float plane5AtomsESD);
+	Minimizer(const cif::mm::structure &structure, float plane5AtomsESD);
 
 	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
-		const BondMap &bm, float plane5AtomsESD, const XMap *xMap, float mapWeight);
+		float plane5AtomsESD, const XMap *xMap, float mapWeight);
 
 	virtual void addResidue(const cif::mm::residue &res);
 	virtual void addPolySection(const cif::mm::polymer &poly, int first, int last);
@@ -161,10 +161,11 @@ class Minimizer
 
 	AtomRef ref(const cif::mm::atom &atom);
 
+	BondMap createBondMap();
+
 	bool mElectronScattering = false; // TODO: use!
 
 	const cif::mm::structure &mStructure;
-	const BondMap &mBonds;
 	float mPlane5ESD;
 
 	std::vector<cif::mm::atom> mAtoms, mReferencedAtoms;

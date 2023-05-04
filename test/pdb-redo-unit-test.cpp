@@ -68,37 +68,6 @@ bool init_unit_test()
 	return true;
 }
 
-
-// --------------------------------------------------------------------
-
-BOOST_AUTO_TEST_CASE(q_4, *utf::tolerance(0.1f))
-{
-	std::vector<cif::point> pA{
-		{ -0.188163757, 1.20824051, -0.0742692947 },
-		{ -0.258220673, -0.184207916, -0.430510521 },
-		{ 0.446380615, -1.02402496, 0.504780769 }
-	};
-	
-	std::vector<cif::point> pB{
-		{ -0.266670227, 0.961334228, 0.659666061 },
-		{ 0.223335266, -0.319665909, 0.366666794 },
-		{ 0.0433349609, -0.641666412, -1.02633286 }
-	};
-
-	auto cA = center_points(pA);
-	auto cB = center_points(pB);
-
-	auto q = cif::align_points(pB, pA);
-
-	BOOST_TEST(q.get_a() == 0.137875929f);
-	BOOST_TEST(q.get_b() == 0.15067713f);
-	BOOST_TEST(q.get_c() == -0.942455589f);
-	BOOST_TEST(q.get_d() == -0.264696091f);
-}
-
-// --------------------------------------------------------------------
-
-
 // --------------------------------------------------------------------
 // skip list test
 
@@ -350,9 +319,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	float samplingRate = 1.5;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	BondMap bm(structure);
-
-	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
+	pdb_redo::EDIAStatsCollector collector(mm, structure, false);
 	auto r = collector.collect();
 
 	auto ti = test.begin();
@@ -427,9 +394,7 @@ BOOST_AUTO_TEST_CASE(stats_2)
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	BondMap bm(structure);
-
-	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
+	pdb_redo::EDIAStatsCollector collector(mm, structure, false);
 	auto r = collector.collect();
 
 	for (auto& ri: r)
@@ -448,96 +413,60 @@ BOOST_AUTO_TEST_CASE(stats_2)
 	}
 }
 
-BOOST_AUTO_TEST_CASE(eigen_1, *utf::tolerance(0.1f))
+// --------------------------------------------------------------------
+
+BOOST_AUTO_TEST_CASE(bond_map_1)
 {
-	clipper::Matrix<float> m(4, 4);
+	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
+	cif::file file = cif::pdb::read(example.string());
+	
+	BOOST_CHECK(file.is_valid());
 
-	m(0, 0) = 4;
-	m(1, 0) = m(0, 1) = -30;
-	m(2, 0) = m(0, 2) = 60;
-	m(3, 0) = m(0, 3) = -35;
-	m(1, 1) = 300;
-	m(2, 1) = m(1, 2) = -675;
-	m(3, 1) = m(1, 3) = 420;
-	m(2, 2) = 1620;
-	m(3, 2) = m(2, 3) = -1050;
-	m(3, 3) = 700;
+	auto &db = file.front();
+	auto &atom_site = db["atom_site"];
 
-	auto ev = m.eigen(true);
+	std::vector<std::string> atom_ids;
+	std::vector<cif::point> atom_locs;
+	for (const auto &[id, x, y, z] : atom_site.rows<std::string,float,float,float>("id", "cartn_x", "cartn_y", "cartn_z"))
+	{
+		atom_ids.emplace_back(id);
+		atom_locs.emplace_back(x, y, z);
+	}
 
-	BOOST_TEST(ev[0] == 0.1666428611718905f);
-	BOOST_TEST(ev[1] == 1.4780548447781369f);
-	BOOST_TEST(ev[2] == 37.1014913651276582f);
-	BOOST_TEST(ev[3] == 2585.25381092892231f);
+	BondMap bm(db);
 
-	// BOOST_TEST(m(0, 0) == 0.792608291163763585f);
-	// BOOST_TEST(m(1, 0) == 0.451923120901599794f);
-	// BOOST_TEST(m(2, 0) == 0.322416398581824992f);
-	// BOOST_TEST(m(3, 0) == 0.252161169688241933f);
+	using key_type = std::tuple<std::string,std::string>;
+	std::map<key_type,bool> bonded;
+	
+	for (size_t i = 0; i + 1 < atom_ids.size(); ++i)
+	{
+		auto a = atom_ids[i];
 
-	// BOOST_TEST(m(0, 1) == -0.582075699497237650f);
-	// BOOST_TEST(m(1, 1) == 0.370502185067093058f);
-	// BOOST_TEST(m(2, 1) == 0.509578634501799626f);
-	// BOOST_TEST(m(3, 1) == 0.514048272222164294f);
+		for (size_t j = i + 1; j < atom_ids.size(); ++j)
+		{
+			auto b = atom_ids[j];
+			
+			bonded.emplace(std::make_tuple(a, b), bm(a, b));
+		}
+	}
 
-	// BOOST_TEST(m(0, 2) == -0.179186290535454826f);
-	// BOOST_TEST(m(1, 2) == 0.741917790628453435f);
-	// BOOST_TEST(m(2, 2) == -0.100228136947192199f);
-	// BOOST_TEST(m(3, 2) == -0.638282528193614892f);
+	cif::point c = atom_locs.front();
+	BondMap bm2(db, std::make_tuple(c, 6.0f));
 
-	// BOOST_TEST(m(0, 3) == 0.0291933231647860588f);
-	// BOOST_TEST(m(1, 3) == -0.328712055763188997f);
-	// BOOST_TEST(m(2, 3) == 0.791411145833126331f);
-	// BOOST_TEST(m(3, 3) == -0.514552749997152907f);
+	for (size_t i = 0; i + 1 < atom_ids.size(); ++i)
+	{
+		auto a = atom_ids[i];
+		auto pa = atom_locs[i];
 
+		for (size_t j = i + 1; j < atom_ids.size(); ++j)
+		{
+			auto b = atom_ids[j];
+			auto pb = atom_locs[j];
 
+			if (distance(pa, c) < 6 and distance(pb, c) < 6)
+				BOOST_TEST(bm2(a, b) == bonded[std::make_tuple(a, b)]);
+			else
+				BOOST_CHECK_THROW(bm2(a, b), std::out_of_range);
+		}
+	}
 }
-
-
-BOOST_AUTO_TEST_CASE(eigen_2, *utf::tolerance(0.1f))
-{
-	cif::symmetric_matrix4x4<float> m;
-
-	m(0, 0) = 4;
-	m(0, 1) = -30;
-	m(0, 2) = 60;
-	m(0, 3) = -35;
-	m(1, 1) = 300;
-	m(1, 2) = -675;
-	m(1, 3) = 420;
-	m(2, 2) = 1620;
-	m(2, 3) = -1050;
-	m(3, 3) = 700;
-
-	cif::matrix4x4<float> m2;
-	m2 = m;
-
-	const auto &[ev, em] = cif::eigen(m2, true);
-
-	BOOST_TEST(ev[0] == 0.1666428611718905f);
-	BOOST_TEST(ev[1] == 1.4780548447781369f);
-	BOOST_TEST(ev[2] == 37.1014913651276582f);
-	BOOST_TEST(ev[3] == 2585.25381092892231f);
-
-	BOOST_TEST(em(0, 0) == 0.792608291163763585f);
-	BOOST_TEST(em(1, 0) == 0.451923120901599794f);
-	BOOST_TEST(em(2, 0) == 0.322416398581824992f);
-	BOOST_TEST(em(3, 0) == 0.252161169688241933f);
-
-	BOOST_TEST(em(0, 1) == -0.582075699497237650f);
-	BOOST_TEST(em(1, 1) == 0.370502185067093058f);
-	BOOST_TEST(em(2, 1) == 0.509578634501799626f);
-	BOOST_TEST(em(3, 1) == 0.514048272222164294f);
-
-	// BOOST_TEST(em(0, 2) == -0.179186290535454826f);
-	// BOOST_TEST(em(1, 2) == 0.741917790628453435f);
-	// BOOST_TEST(em(2, 2) == -0.100228136947192199f);
-	// BOOST_TEST(em(3, 2) == -0.638282528193614892f);
-
-	BOOST_TEST(em(0, 3) == 0.0291933231647860588f);
-	BOOST_TEST(em(1, 3) == -0.328712055763188997f);
-	BOOST_TEST(em(2, 3) == 0.791411145833126331f);
-	BOOST_TEST(em(3, 3) == -0.514552749997152907f);
-}
-
-
