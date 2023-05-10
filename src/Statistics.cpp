@@ -1008,7 +1008,12 @@ void StatsCollector::collectSums(std::vector<AtomData> &atomData, GridPtDataMap 
 	// Iterate over the atom data to collect the sums
 	for (auto &d : atomData)
 	{
-		auto rmsScaledF = mRmsScaled.at(d.asymID);
+		auto rmsi = mRmsScaled.find(d.asymID);
+
+		if (rmsi == mRmsScaled.end())
+			continue;
+
+		auto rmsScaledF = rmsi->second;
 
 		for (auto gp : d.points)
 		{

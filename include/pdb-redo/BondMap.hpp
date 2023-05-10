@@ -64,7 +64,9 @@ class BondMap
 
 	bool operator()(const std::string &atom_1, const std::string &atom_2) const
 	{
-		return isBonded(index.at(atom_1), index.at(atom_2));
+		auto aix1 = index.find(atom_1);
+		auto aix2 = index.find(atom_2);
+		return aix1 != index.end() and aix2 != index.end() and isBonded(aix1->second, aix2->second);
 	}
 
 	bool operator()(const cif::mm::atom &atom_1, const cif::mm::atom &atom_2) const
