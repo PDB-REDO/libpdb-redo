@@ -1041,8 +1041,8 @@ double GSLMinimizer::refine(bool storeAtoms)
 
 	// float tolerance = 0.06f;
 	// double stepSize = 0.25 * gsl_blas_dnrm2(x);
-	float tolerance = 0.05f;
-	double stepSize = 0.1;
+	float tolerance = 0.1f;
+	double stepSize = 0.25;
 
 	gsl_multimin_fdfminimizer_set(m_s, &fdf, x, stepSize, tolerance);
 
