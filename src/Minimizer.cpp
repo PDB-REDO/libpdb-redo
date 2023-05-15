@@ -50,6 +50,11 @@ const double
 	kMaxPeptideBondLength = 3.5,
 	kMaxPeptideBondLengthSq = kMaxPeptideBondLength * kMaxPeptideBondLength;
 
+const double
+	kDefaultMapWeight = 60,
+	kDefaultPlane5ESD = 0.11,
+	kDefaultChiralVolumeESD = 0.2;
+
 // --------------------------------------------------------------------
 
 struct lessAtom
@@ -85,9 +90,8 @@ std::string AtomLocationProvider::atom(AtomRef atomID) const
 
 // --------------------------------------------------------------------
 
-Minimizer::Minimizer(const cif::mm::structure &structure, float plane5AtomsESD)
+Minimizer::Minimizer(const cif::mm::structure &structure)
 	: mStructure(structure)
-	, mPlane5ESD(plane5AtomsESD)
 {
 }
 
@@ -301,7 +305,7 @@ void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last
 						ref(r.get_atom_by_atom_id("CA"))
 					};
 
-					mPlanarityRestraints.emplace_back(PlanarityRestraint{ move(atoms), mPlane5ESD });
+					mPlanarityRestraints.emplace_back(PlanarityRestraint{ move(atoms), kDefaultPlane5ESD });
 				}
 			}
 			catch (const std::exception &ex)
@@ -586,6 +590,23 @@ void Minimizer::dropTorsionRestraints()
 		mRestraints.erase(std::remove(mRestraints.begin(), mRestraints.end(), &r), mRestraints.end());
 	
 	mTorsionRestraints.clear();
+}
+
+void Minimizer::setMapWeight(float mapWeight)
+{
+	mDensityRestraint->mMapWeight = mapWeight;
+}
+
+void Minimizer::setChiralVolumeESD(float chiralityESD)
+{
+	for (auto &r : mChiralVolumeRestraints)
+		r.mESD = chiralityESD;
+}
+
+void Minimizer::setPlanarityESD(float planarityESD)
+{
+	for (auto &r : mPlanarityRestraints)
+		r.mESD = planarityESD;
 }
 
 AtomRef Minimizer::ref(const cif::mm::atom &atom)
@@ -977,8 +998,8 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 class GSLMinimizer : public Minimizer
 {
   public:
-	GSLMinimizer(const cif::mm::structure &structure, float plane5AtomsESD)
-		: Minimizer(structure, plane5AtomsESD)
+	GSLMinimizer(const cif::mm::structure &structure)
+		: Minimizer(structure)
 	{
 	}
 
@@ -1195,19 +1216,18 @@ void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 // --------------------------------------------------------------------
 
 Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
-	const XMap &xMap, float mapWeight, float plane5AtomsESD)
+	const XMap &xMap)
 {
-	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure(), plane5AtomsESD));
+	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure()));
 	result->addPolySection(poly, first, last);
-	result->addDensityMap(xMap, mapWeight);
+	result->addDensityMap(xMap, kDefaultMapWeight);
 	result->Finish(crystal);
 	return result.release();
 }
 
-Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
-	float plane5AtomsESD, const XMap *xMap, float mapWeight)
+Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap *xMap)
 {
-	std::unique_ptr<Minimizer> result(new GSLMinimizer(structure, plane5AtomsESD));
+	std::unique_ptr<Minimizer> result(new GSLMinimizer(structure));
 
 	std::vector<const cif::mm::residue *> residues;
 
@@ -1346,8 +1366,8 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 			throw std::runtime_error("Missing link information for " + a->get_compound_id() + " and " + b->get_compound_id());
 	}
 
-	if (xMap != nullptr and mapWeight != 0)
-		result->addDensityMap(*xMap, mapWeight);
+	if (xMap != nullptr)
+		result->addDensityMap(*xMap, kDefaultMapWeight);
 
 	result->Finish(crystal);
 

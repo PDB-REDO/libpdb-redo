@@ -286,15 +286,13 @@ void TorsionRestraint::print(const AtomLocationProvider &atoms) const
 
 // --------------------------------------------------------------------
 
-const double kChiralVolumeESD = 0.2; // according to coot that's a reasonable value...
-
 double ChiralVolumeRestraint::f(const AtomLocationProvider &atoms) const
 {
 	auto chiralVolume = dot_product(atoms[mA1] - atoms[mCentre],
 		cross_product(atoms[mA2] - atoms[mCentre], atoms[mA3] - atoms[mCentre]));
 
 	double d = mVolume - chiralVolume;
-	double result = (d * d) / (kChiralVolumeESD * kChiralVolumeESD);
+	double result = (d * d) / (mESD * mESD);
 
 	if (cif::VERBOSE > 2)
 		std::cerr << "chiral::f() = " << result << std::endl;
@@ -315,7 +313,7 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &d
 	auto chiralVolume = dot_product(a, cross_product(b, c));
 
 	auto d = chiralVolume - mVolume;
-	auto s = 2 * d / (kChiralVolumeESD * kChiralVolumeESD);
+	auto s = 2 * d / (mESD * mESD);
 
 	df.add(mCentre, s * DPoint{
 							-(b.m_y * c.m_z - b.m_z * c.m_y) - (a.m_z * c.m_y - a.m_y * c.m_z) - (a.m_y * b.m_z - a.m_z * b.m_y),
@@ -329,7 +327,7 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &d
 
 void ChiralVolumeRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << kChiralVolumeESD << std::endl;
+	std::cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << mESD << std::endl;
 }
 
 // --------------------------------------------------------------------

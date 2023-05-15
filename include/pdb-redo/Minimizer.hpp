@@ -95,23 +95,30 @@ class Minimizer
 	virtual ~Minimizer() {}
 
 	// factory method:
-	static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
-		const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11);
+	static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last, const XMap &xMap);
 
-	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
-		const XMap &xMap, float mapWeight = 60, float plane5AtomsESD = 0.11)
+	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap &xMap)
 	{
-		return create(crystal, structure, atoms, plane5AtomsESD, &xMap, mapWeight);
+		return create(crystal, structure, atoms, &xMap);
 	}
 
 	// factory method for minimizer without density:
-	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
-		float plane5AtomsESD = 0.11)
+	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms)
 	{
-		return create(crystal, structure, atoms, plane5AtomsESD, nullptr, 0);
+		return create(crystal, structure, atoms, nullptr);
 	}
 
+	// Drop all torsion restraints
 	void dropTorsionRestraints();
+
+	// Set the map weight, default is 60
+	void setMapWeight(float mapWeight);
+
+	// Set the chiral volume ESD, default is 0.2
+	void setChiralVolumeESD(float chiralityESD);
+
+	// Set the planarity ESD, default is 0.11
+	void setPlanarityESD(float planarityESD);
 
 	void printStats();
 
@@ -121,10 +128,10 @@ class Minimizer
 	virtual void storeAtomLocations() = 0;
 
   protected:
-	Minimizer(const cif::mm::structure &structure, float plane5AtomsESD);
 
-	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms,
-		float plane5AtomsESD, const XMap *xMap, float mapWeight);
+	Minimizer(const cif::mm::structure &structure);
+
+	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap *xMap);
 
 	virtual void addResidue(const cif::mm::residue &res);
 	virtual void addPolySection(const cif::mm::polymer &poly, int first, int last);
@@ -166,7 +173,6 @@ class Minimizer
 	bool mElectronScattering = false; // TODO: use!
 
 	const cif::mm::structure &mStructure;
-	float mPlane5ESD;
 
 	std::vector<cif::mm::atom> mAtoms, mReferencedAtoms;
 	std::vector<size_t> mRef2AtomIndex;

@@ -134,6 +134,9 @@ struct TransPeptideRestraint : public TorsionRestraint
 	}
 };
 
+const double kChiralVolumeESD = 0.2; // according to coot that's a reasonable value...
+
+
 struct ChiralVolumeRestraint : public Restraint
 {
 	ChiralVolumeRestraint(AtomRef c, AtomRef a1, AtomRef a2, AtomRef a3, double volume)
@@ -150,7 +153,7 @@ struct ChiralVolumeRestraint : public Restraint
 	virtual void print(const AtomLocationProvider &atoms) const;
 
 	AtomRef mCentre, mA1, mA2, mA3;
-	double mVolume;
+	double mVolume, mESD = kChiralVolumeESD;
 };
 
 struct PlanarityRestraint : public Restraint
