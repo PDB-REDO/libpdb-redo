@@ -152,7 +152,7 @@ class StatsCollector
 class EDIAStatsCollector : public StatsCollector
 {
   public:
-	EDIAStatsCollector(MapMaker<float> &mm,
+	EDIAStatsCollector(const MapMaker<float> &mm,
 		cif::mm::structure &structure, bool electronScattering);
 
   protected:

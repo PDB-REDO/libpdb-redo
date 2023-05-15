@@ -1077,7 +1077,7 @@ void StatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 // --------------------------------------------------------------------
 
-EDIAStatsCollector::EDIAStatsCollector(MapMaker<float> &mm, cif::mm::structure &structure, bool electronScattering)
+EDIAStatsCollector::EDIAStatsCollector(const MapMaker<float> &mm, cif::mm::structure &structure, bool electronScattering)
 	: StatsCollector(mm, structure, electronScattering)
 {
 	// create a atom radius map, for EDIA
