@@ -111,6 +111,24 @@ class Minimizer
 	// Drop all torsion restraints
 	void dropTorsionRestraints();
 
+	// Filter based on result of callback
+	// Signature of callback should be: bool (*filter)(cif::mm::atom a1, cif::mm::atom a2, cif::mm::atom a3, cif::mm::atom a4)
+	template <typename F>
+	void filterTorsionRestraints(F &&cb)
+	{
+		auto e = std::remove_if(mTorsionRestraints.begin(), mTorsionRestraints.end(),
+			[this, cb = std::move(cb)](TorsionRestraint &r)
+			{
+				return r.mA >= mAtoms.size() or r.mB >= mAtoms.size() or r.mC >= mAtoms.size() or r.mD >= mAtoms.size() or
+					cb(mAtoms[r.mA], mAtoms[r.mB], mAtoms[r.mC], mAtoms[r.mD]);
+			});
+		
+		for (auto i = e; i != mTorsionRestraints.end(); ++i)
+			mRestraints.erase(std::remove(mRestraints.begin(), mRestraints.end(), &*i), mRestraints.end());
+
+		mTorsionRestraints.erase(e, mTorsionRestraints.end());
+	}
+
 	// Set the map weight, default is 60
 	void setMapWeight(float mapWeight);
 

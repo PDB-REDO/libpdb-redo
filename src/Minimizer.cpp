@@ -527,7 +527,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 			{
 				if (not bm(a1, a2))
 					add_nbc(a1, a2);
-				continue;
+				// there used to be a continue here, but that's wrong of course
 			}
 
 			const auto &[d, p, symop] = crystal.closest_symmetry_copy(a1.get_location(), a2.get_location());
@@ -702,35 +702,35 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		}
 	}
 
-	// for (auto &torsion : link.torsions())
-	// {
-	// 	if (torsion.esd == 0)
-	// 		continue;
+	for (auto &torsion : link.torsions())
+	{
+		if (torsion.esd == 0)
+			continue;
 
-	// 	try
-	// 	{
-	// 		if (getCompoundAtom(torsion.atom[0]).type_symbol == cif::H or
-	// 			getCompoundAtom(torsion.atom[1]).type_symbol == cif::H or
-	// 			getCompoundAtom(torsion.atom[2]).type_symbol == cif::H or
-	// 			getCompoundAtom(torsion.atom[3]).type_symbol == cif::H)
-	// 		{
-	// 			continue;
-	// 		}
+		try
+		{
+			if (getCompoundAtom(torsion.atom[0]).type_symbol == cif::H or
+				getCompoundAtom(torsion.atom[1]).type_symbol == cif::H or
+				getCompoundAtom(torsion.atom[2]).type_symbol == cif::H or
+				getCompoundAtom(torsion.atom[3]).type_symbol == cif::H)
+			{
+				continue;
+			}
 
-	// 		cif::mm::atom a1 = getAtom(torsion.atom[0]);
-	// 		cif::mm::atom a2 = getAtom(torsion.atom[1]);
-	// 		cif::mm::atom a3 = getAtom(torsion.atom[2]);
-	// 		cif::mm::atom a4 = getAtom(torsion.atom[3]);
+			cif::mm::atom a1 = getAtom(torsion.atom[0]);
+			cif::mm::atom a2 = getAtom(torsion.atom[1]);
+			cif::mm::atom a3 = getAtom(torsion.atom[2]);
+			cif::mm::atom a4 = getAtom(torsion.atom[3]);
 
-	// 		mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), torsion.angle, torsion.esd, torsion.period);
-	// 	}
-	// 	catch (const std::exception &ex)
-	// 	{
-	// 		if (cif::VERBOSE > 0)
-	// 			std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
-	// 		continue;
-	// 	}
-	// }
+			mTorsionRestraints.emplace_back(ref(a1), ref(a2), ref(a3), ref(a4), torsion.angle, torsion.esd, torsion.period);
+		}
+		catch (const std::exception &ex)
+		{
+			if (cif::VERBOSE > 0)
+				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
+			continue;
+		}
+	}
 
 	for (auto &center : link.chiralCentres())
 	{
