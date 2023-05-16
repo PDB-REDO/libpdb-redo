@@ -532,7 +532,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 
 			const auto &[d, p, symop] = crystal.closest_symmetry_copy(a1.get_location(), a2.get_location());
 
-			if (d < kMaxNonBondedContactDistance)
+			if (symop != cif::sym_op() and d < kMaxNonBondedContactDistance)
 				add_nbc(a1, cif::mm::atom(a2, p, symop.string()));
 		}
 	}
