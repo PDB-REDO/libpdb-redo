@@ -533,7 +533,17 @@ void Minimizer::Finish(const cif::crystal &crystal)
 			const auto &[d, p, symop] = crystal.closest_symmetry_copy(a1.get_location(), a2.get_location());
 
 			if (symop != cif::sym_op() and d < kMaxNonBondedContactDistance)
-				add_nbc(a1, cif::mm::atom(a2, p, symop.string()));
+			{
+				AtomRef ra1 = ref(a1);
+				AtomRef ra2 = ref(cif::mm::atom(a2, p, symop.string()));
+
+				if (not nbc.count(std::make_tuple(ra1, ra2)))
+				{
+					mNonBondedContactRestraints.emplace_back(ra1, ra2, 2.8, 0.02);
+					nbc.insert(std::make_tuple(ra1, ra2));
+					nbc.insert(std::make_tuple(ra2, ra1));
+				}
+			}
 		}
 	}
 
@@ -612,6 +622,9 @@ void Minimizer::setPlanarityESD(float planarityESD)
 AtomRef Minimizer::ref(const cif::mm::atom &atom)
 {
 	std::string atomID = atom.id();
+	if (atom.is_symmetry_copy())
+		atomID += ':' + atom.symmetry();
+
 	AtomRef result;
 
 	auto k = mRefIndex.find(atomID);
