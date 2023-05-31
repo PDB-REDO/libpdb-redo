@@ -34,9 +34,10 @@ option(ENABLE_TESTING "Build test exectuables" OFF)
 
 include(GNUInstallDirs)
 include(CheckFunctionExists)
-include(CheckIncludeFile)
+include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
+include(CheckCXXSourceCompiles)
 include(Dart)
 include(GenerateExportHeader)
 
@@ -50,7 +51,7 @@ elseif(MSVC)
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /W4")
 endif()
 
-# Build shared libraries by default (not my cup of tea, but hey)
+# Building shared libraries?
 option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" OFF)
 
 # We do not want to write an export file for all our symbols...
@@ -58,6 +59,10 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # Optionally build a version to be installed inside CCP4
 option(BUILD_FOR_CCP4 "Build a version to be installed in CCP4" OFF)
+
+
+# Unit tests
+option(ENABLE_TESTING "Build test exectuables" OFF)
 
 if(BUILD_FOR_CCP4)
 	if("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
@@ -73,6 +78,7 @@ if(BUILD_FOR_CCP4)
 		endif()
 	endif("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
 endif()
+
 
 # Check if CCP4 is available
 if(EXISTS "$ENV{CCP4}")
@@ -102,23 +108,6 @@ if(MSVC)
 	add_definitions(-D_WIN32_WINNT=${ver})
 endif()
 
-# Optionally use mrc to create resources
-if(WIN32 AND BUILD_SHARED_LIBS)
-	message("Not using resources when building shared libraries for Windows")
-else()
-	find_program(MRC mrc)
-
-	if(MRC)
-		option(USE_RSRC "Use mrc to create resources" ON)
-	else()
-		message("Using resources not possible since mrc was not found")
-	endif()
-
-	if(USE_RSRC STREQUAL "ON")
-		message("Using resources compiled with ${MRC}")
-	endif()
-endif()
-
 # Libraries
 find_package(Eigen3 REQUIRED)
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
@@ -126,7 +115,7 @@ find_package(GSL REQUIRED)
 
 if(NOT PDB_REDO_META)
 	find_package(newuoa REQUIRED)
-	find_package(cifpp 5.0.4 REQUIRED)
+	find_package(cifpp 5.0.8 REQUIRED)
 endif()
 
 # Create a revision file, containing the current git version info
@@ -167,6 +156,7 @@ set(project_headers
 add_library(pdb-redo ${project_sources} ${project_headers})
 add_library(pdb-redo::pdb-redo ALIAS pdb-redo)
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
+generate_export_header(pdb-redo EXPORT_FILE_NAME pdb-redo/exports.hpp)
 
 target_include_directories(pdb-redo
 	PUBLIC
@@ -199,6 +189,12 @@ install(EXPORT pdb-redoTargets
 install(
 	DIRECTORY include/pdb-redo
 	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
+	COMPONENT Devel
+)
+
+install(
+	FILES ${PROJECT_BINARY_DIR}/pdb-redo/exports.hpp
+	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/pdb-redo/
 	COMPONENT Devel
 )
 
@@ -246,30 +242,13 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc DESTINATION ${CMAKE_INS
 if(ENABLE_TESTING)
 	enable_testing()
 
-	if(USE_RSRC)
-		add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj
-			COMMAND ${MRC} -o ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj ${CIFPP_SHARE_DIR}/mmcif_pdbx.dic ${COFF_SPEC}
-		)
-		set(PDB_REDO_TEST_RESOURCE ${CMAKE_CURRENT_BINARY_DIR}/pdb_redo_test_rsrc.obj)
-	endif()
-
-	list(APPEND PDB_REDO_tests pdb-redo-unit)
-
-	if(GSL_FOUND)
-		list(APPEND PDB_REDO_tests rsr)
-	endif()
+	list(APPEND PDB_REDO_tests pdb-redo-unit rsr)
 
 	foreach(PDB_REDO_TEST IN LISTS PDB_REDO_tests)
 		set(PDB_REDO_TEST "${PDB_REDO_TEST}-test")
 		set(PDB_REDO_TEST_SOURCE "${PROJECT_SOURCE_DIR}/test/${PDB_REDO_TEST}.cpp")
 
-		add_executable(${PDB_REDO_TEST} ${PDB_REDO_TEST_SOURCE} ${PDB_REDO_TEST_RESOURCE})
-
-		target_include_directories(${PDB_REDO_TEST} PRIVATE
-			${PROJECT_SOURCE_DIR}/include
-			${CMAKE_CURRENT_BINARY_DIR} # for config.h
-		)
-
+		add_executable(${PDB_REDO_TEST} ${PDB_REDO_TEST_SOURCE})
 		target_link_libraries(${PDB_REDO_TEST} PRIVATE pdb-redo)
 
 		if(MSVC)

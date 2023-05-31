@@ -91,7 +91,7 @@ clipper::Atom toClipper(const cif::mm::atom &atom)
 
 clipper::Spacegroup getSpacegroup(const cif::datablock &db)
 {
-	std::string spacegroup = db["symmetry"].find1<std::string>(cif::key("entry_id") == db.name(), "space_group_name_H-M");
+	std::string spacegroup = db["symmetry"].find_first<std::string>(cif::key("entry_id") == db.name(), "space_group_name_H-M");
 
 	if (spacegroup == "P 1-")
 		spacegroup = "P -1";
