@@ -9,7 +9,7 @@ Requirements
 ------------
 
 The code for this library was written in C++17. You therefore need a
-recent compiler to build it. For the development gcc with version 8.4.0
+recent compiler to build it. For the development gcc with version 9.4.0
 and up and clang 9.0 have been used. On MS Windows you'll need at least
 the 2019 version of MSVC.
 
@@ -20,10 +20,15 @@ Other requirements are:
   calculate atom radii
 - [libcifpp](https://github.com/PDB-REDO/libcifpp.git), a library containing
   code to read and manipulate macro molecular models in mmCIF and PDB format.
+- [gsl](https://www.gnu.org/software/gsl/), the GNU Scientific Library.
+  Usually you can install this using a package manager on your OS. In
+  Debian/Ubuntu the required package is libgsl-dev.
 - [cmake](https://cmake.org)
 
 Building
 --------
+
+_NOTE_: The following recipe is a bit out of date. My apologies.
 
 This recipe assumes you're building on a Unix like operating system and will build only static libraries which will be installed in the `.local` folder in your home directory, which means you do not need super user powers to build and install. However, this also means you should have the `$HOME/.local/bin` path in your _PATH_ environment variable.
 
