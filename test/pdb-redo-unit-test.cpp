@@ -466,7 +466,8 @@ BOOST_AUTO_TEST_CASE(bond_map_1)
 			if (distance(pa, c) < 6 and distance(pb, c) < 6)
 				BOOST_TEST(bm2(a, b) == bonded[std::make_tuple(a, b)]);
 			else
-				BOOST_CHECK_THROW(bm2(a, b), std::out_of_range);
+				// BOOST_CHECK_THROW(bm2(a, b), std::out_of_range);
+				BOOST_TEST(bm2(a, b) == false);
 		}
 	}
 }
