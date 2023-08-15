@@ -136,6 +136,7 @@ set(project_sources
 	${PROJECT_SOURCE_DIR}/src/Statistics.cpp
 	${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
 	${PROJECT_SOURCE_DIR}/src/Restraints.cpp
+	${PROJECT_SOURCE_DIR}/src/VersionString.cpp
 )
 
 set(project_headers
