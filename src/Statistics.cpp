@@ -426,7 +426,7 @@ void StatsCollector::initialize()
 		if (t <= cif::atom_type::He)
 			continue;
 
-		float w = a.get_occupancy() * t;
+		float w = a.get_occupancy() * static_cast<int>(t);
 
 		if (w <= 0)
 			continue;
