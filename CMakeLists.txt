@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(pdb-redo VERSION 3.0.6 LANGUAGES CXX C)
+project(pdb-redo VERSION 3.0.7 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -120,7 +120,7 @@ endif()
 
 # Create a revision file, containing the current git version info
 include(VersionString)
-write_version_header("${PROJECT_SOURCE_DIR}/src" "LibPDBREDO")
+write_version_header("${PROJECT_SOURCE_DIR}/src" LIB_NAME "LibPDBREDO")
 
 # Sources
 set(project_sources
