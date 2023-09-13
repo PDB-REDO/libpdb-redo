@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(libpdb-redo VERSION 3.0.7 LANGUAGES CXX C)
+project(libpdb-redo VERSION 3.1.0 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -38,7 +38,6 @@ include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(CheckCXXSourceCompiles)
-include(Dart)
 include(GenerateExportHeader)
 
 set(CXX_EXTENSIONS OFF)
@@ -136,6 +135,7 @@ set(project_sources
 	${PROJECT_SOURCE_DIR}/src/Statistics.cpp
 	${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
 	${PROJECT_SOURCE_DIR}/src/Restraints.cpp
+	${PROJECT_SOURCE_DIR}/src/TLS.cpp
 	${PROJECT_SOURCE_DIR}/src/Version.cpp
 )
 
@@ -152,6 +152,7 @@ set(project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Statistics.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/TLS.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Version.hpp
 )
 
