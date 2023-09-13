@@ -970,7 +970,7 @@ GSLDFCollector::~GSLDFCollector()
 {
 	if (cif::VERBOSE > 2)
 	{
-		std::cerr << std::string(cif::get_terminal_width(), '-') << std::endl
+		std::cerr << std::string(19, '-') << std::endl
 				  << "Collected gradient: " << std::endl;
 
 		for (size_t i = 0; i < mAtoms.size(); ++i)
@@ -986,7 +986,7 @@ GSLDFCollector::~GSLDFCollector()
 			std::cerr << "atom: " << label(i) << " d: " << std::setprecision(10) << dx << " " << dy << " " << dz << std::endl;
 		}
 
-		std::cerr << std::string(cif::get_terminal_width(), '-') << std::endl;
+		std::cerr << std::string(19, '-') << std::endl;
 	}
 }
 
