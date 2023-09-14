@@ -30,7 +30,7 @@ project(libpdb-redo VERSION 3.1.0 LANGUAGES CXX C)
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
 # Unit tests
-option(ENABLE_TESTING "Build test exectuables" OFF)
+option(BUILD_TESTING "Build test exectuables" OFF)
 
 include(GNUInstallDirs)
 include(CheckFunctionExists)
@@ -59,9 +59,8 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 # Optionally build a version to be installed inside CCP4
 option(BUILD_FOR_CCP4 "Build a version to be installed in CCP4" OFF)
 
-
 # Unit tests
-option(ENABLE_TESTING "Build test exectuables" OFF)
+option(BUILD_TESTING "Build test exectuables" OFF)
 
 if(BUILD_FOR_CCP4)
 	if("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
@@ -77,7 +76,6 @@ if(BUILD_FOR_CCP4)
 		endif()
 	endif("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
 endif()
-
 
 # Check if CCP4 is available
 if(EXISTS "$ENV{CCP4}")
@@ -242,7 +240,7 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc
 	INPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc.in)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
-if(ENABLE_TESTING)
+if(BUILD_TESTING)
 	enable_testing()
 
 	list(APPEND PDB_REDO_tests pdb-redo-unit rsr)

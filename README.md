@@ -123,7 +123,7 @@ git clone https://github.com/PDB-REDO/libcifpp.git
 cd libcifpp
 mkdir build
 cd build
-cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DCIFPP_BUILD_TESTS=ON
+cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DBUILD_TESTING=ON
 cmake --build .
 ```
 
@@ -142,7 +142,7 @@ cmake --install .
 An optional step here is to install the update script for CCD and pdbx dictionary files. To do this, you can add the -DINSTALL_UPDATE_SCRIPT=ON flag to the configure step:
 
 ```bash
-cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DCIFPP_BUILD_TESTS=ON -DINSTALL_UPDATE_SCRIPT=ON
+cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DBUILD_TESTING=ON -DINSTALL_UPDATE_SCRIPT=ON
 ```
 
 If you then run `sudo cmake --install .` the cron script will be installed. However, you will need to have sudo rights to do so.
@@ -207,7 +207,7 @@ git clone https://github.com/PDB-REDO/libpdb-redo.git
 cd libpdb-redo
 mkdir build
 cd build
-cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DPDB_REDO_BUILD_TESTS=ON
+cmake .. -DCMAKE_CXX_COMPILER=g++-8 -DBUILD_TESTING=ON
 cmake --build .
 ctest .
 cmake --install .
