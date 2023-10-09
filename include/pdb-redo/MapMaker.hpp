@@ -156,10 +156,12 @@ class MapMaker
 	MapType &fb() { return mFb; }
 	MapType &fd() { return mFd; }
 	MapType &fa() { return mFa; }
+	MapType &fo() { return mFo; }
 
 	const MapType &fb() const { return mFb; }
 	const MapType &fd() const { return mFd; }
 	const MapType &fa() const { return mFa; }
+	const MapType &fo() const { return mFo; }
 
 	double resLow() const { return mResLow; }
 	double resHigh() const { return mResHigh; }
@@ -176,7 +178,7 @@ class MapMaker
 
 	void fixMTZ();
 
-	MapType mFb, mFd, mFa;
+	MapType mFb, mFd, mFa, mFo;
 	Grid_sampling mGrid;
 	double mResLow, mResHigh;
 	int mNumRefln = 1000, mNumParam = 20;

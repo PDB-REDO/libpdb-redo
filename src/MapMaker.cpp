@@ -621,6 +621,7 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	clipper::Xmap<FTYPE> &fbMap = mFb;
 	clipper::Xmap<FTYPE> &fdMap = mFd;
 	clipper::Xmap<FTYPE> &faMap = mFa;
+	clipper::Xmap<FTYPE> &foMap = mFo;
 
 	fbMap.init(spacegroup, cell, mGrid); // define map
 	fbMap.fft_from(mFbData);             // generate map
@@ -633,6 +634,13 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 		faMap.init(spacegroup, cell, mGrid);
 		faMap.fft_from(mFaData);
 	}
+
+	clipper::HKL_data<clipper::data32::F_phi> myfphi(mFoData);
+	myfphi.compute(mFoData, mPhiFomData,
+		clipper::data32::Compute_fphi_from_fsigf_phifom());
+
+	foMap.init(spacegroup, cell, mGrid); // define map
+	foMap.fft_from(myfphi);
 
 	if (cif::VERBOSE > 0)
 	{
