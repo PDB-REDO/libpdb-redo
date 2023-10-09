@@ -5,3 +5,5 @@ data/
 **/build/
 src/revision.hpp
 Testing/
+docs/api/
+

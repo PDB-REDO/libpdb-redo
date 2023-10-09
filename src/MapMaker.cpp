@@ -442,13 +442,6 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 		Coord_frac fp = cloc.coord_frac(mMap.cell());
 		Coord_frac fMin = fp - o, fMax = fp + o;
 
-		// see if the box around p actually overlaps the cell
-
-		if (fMin.u() > 1 or fMax.u() < 0 or
-			fMin.v() > 1 or fMax.v() < 0 or
-			fMin.w() > 1 or fMax.w() < 0)
-			continue;
-
 		Coord_map mMin = fMin.coord_map(mMap.grid_sampling()), mMax = fMax.coord_map(mMap.grid_sampling());
 		Coord_grid gMin = mMin.floor(), gMax = mMax.ceil();
 
