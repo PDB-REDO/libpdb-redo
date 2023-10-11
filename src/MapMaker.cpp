@@ -343,7 +343,7 @@ void Map<FTYPE>::read(const std::filesystem::path &f)
 	fs::path dataFile = mapFile;
 
 	if (cif::VERBOSE > 0)
-		std::cout << "Reading map from " << mapFile << std::endl;
+		std::cout << "Reading map from " << mapFile << '\n';
 
 	if (mapFile.extension() == ".gz")
 	{
@@ -425,7 +425,7 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 
 		if (std::isnan(radius))	// TODO: now what?
 		{
-			std::cerr << "Could not define radius for atom " << atom << std::endl;
+			std::cerr << "Could not define radius for atom " << atom << '\n';
 			continue;
 		}
 
@@ -506,12 +506,12 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	fs::path hklin(f);
 
 	if (cif::VERBOSE > 0)
-		std::cerr << "Reading map from " << hklin << std::endl
-				  << "  with labels: FB: " << cif::join(fbLabels, ",") << std::endl
-				  << "  with labels: FD: " << cif::join(fdLabels, ",") << std::endl
-				  << "  with labels: FA: " << cif::join(faLabels, ",") << std::endl
-				  << "  with labels: FO: " << cif::join(foLabels, ",") << std::endl
-				  << "  with labels: FC: " << cif::join(fcLabels, ",") << std::endl;
+		std::cerr << "Reading map from " << hklin << '\n'
+				  << "  with labels: FB: " << cif::join(fbLabels, ",") << '\n'
+				  << "  with labels: FD: " << cif::join(fdLabels, ",") << '\n'
+				  << "  with labels: FA: " << cif::join(faLabels, ",") << '\n'
+				  << "  with labels: FO: " << cif::join(foLabels, ",") << '\n'
+				  << "  with labels: FC: " << cif::join(fcLabels, ",") << '\n';
 
 	fs::path dataFile = hklin;
 
@@ -636,12 +636,12 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 
 	if (cif::VERBOSE > 0)
 	{
-		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << std::endl
-				  << "  stored resolution: " << mHKLInfo.resolution().limit() << std::endl
-				  << "  calculated reshi = " << mResHigh << " reslo = " << mResLow << std::endl
-				  << "  spacegroup: " << spacegroup.symbol_hm() << std::endl
-				  << "  cell: " << cell.format() << std::endl
-				  << "  grid: " << mGrid.format() << std::endl;
+		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << '\n'
+				  << "  stored resolution: " << mHKLInfo.resolution().limit() << '\n'
+				  << "  calculated reshi = " << mResHigh << " reslo = " << mResLow << '\n'
+				  << "  spacegroup: " << spacegroup.symbol_hm() << '\n'
+				  << "  cell: " << cell.format() << '\n'
+				  << "  grid: " << mGrid.format() << '\n';
 
 		printStats();
 	}
@@ -780,14 +780,14 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 		if (ix < 0)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Ignoring hkl(" << h << ", " << k << ", " << l << ")" << std::endl;
+				std::cerr << "Ignoring hkl(" << h << ", " << k << ", " << l << ")\n";
 			continue;
 		}
 
 		if (first and (flag == freeRefl or flag == workRefl))
 		{
-			std::cerr << "Non-standard _refln.status column detected" << std::endl
-					  << "Assuming " << (freeRConvention == frXPLO ? "XPLOR" : "CCP4") << " convention for free R flag" << std::endl;
+			std::cerr << "Non-standard _refln.status column detected\n"
+					  << "Assuming " << (freeRConvention == frXPLO ? "XPLOR" : "CCP4") << " convention for free R flag\n";
 			first = false;
 		}
 
@@ -812,7 +812,7 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 
 			default:
 				if (cif::VERBOSE > 1)
-					std::cerr << "Unexpected value in status: '" << flag << "' for hkl(" << h << ", " << k << ", " << l << ")" << std::endl;
+					std::cerr << "Unexpected value in status: '" << flag << "' for hkl(" << h << ", " << k << ", " << l << ")\n";
 				break;
 		}
 	}
@@ -825,7 +825,7 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> freeLabels)
 {
 	if (cif::VERBOSE > 0)
-		std::cerr << "Recalculating maps from " << hklin << std::endl;
+		std::cerr << "Recalculating maps from " << hklin << '\n';
 
 	const std::string kBasePath("/%s/%s/[%s]");
 
@@ -881,8 +881,8 @@ void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 		sfcb(mFcData, mFoData, atoms);
 
 		if (cif::VERBOSE > 0)
-			std::cerr << "Bulk correction volume: " << sfcb.bulk_frac() << std::endl
-					  << "Bulk correction factor: " << sfcb.bulk_scale() << std::endl;
+			std::cerr << "Bulk correction volume: " << sfcb.bulk_frac() << '\n'
+					  << "Bulk correction factor: " << sfcb.bulk_scale() << '\n';
 	}
 
 	if (anisoScaling != as_None)
@@ -895,8 +895,8 @@ void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 			sfscl(mFcData, mFoData); // scale Fcal
 
 		if (cif::VERBOSE > 0)
-			std::cerr << "Anisotropic scaling:" << std::endl
-					  << sfscl.u_aniso_orth(F).format() << std::endl;
+			std::cerr << "Anisotropic scaling:\n"
+					  << sfscl.u_aniso_orth(F).format() << '\n';
 	}
 
 	// now do sigmaa calc
@@ -940,7 +940,7 @@ void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 	}
 
 	if (cif::VERBOSE > 1)
-		std::cerr << "calculated reshi = " << mResHigh << " reslo = " << mResLow << std::endl;
+		std::cerr << "calculated reshi = " << mResHigh << " reslo = " << mResLow << '\n';
 
 	// samplingRate /= 2;
 
@@ -958,10 +958,10 @@ void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 
 	if (cif::VERBOSE > 0)
 	{
-		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << std::endl
-				  << "  resolution: " << mResHigh << std::endl
-				  << "  cell: " << cell.format() << std::endl
-				  << "  grid: " << mGrid.format() << std::endl;
+		std::cerr << "Read Xmaps with sampling rate: " << samplingRate << '\n'
+				  << "  resolution: " << mResHigh << '\n'
+				  << "  cell: " << cell.format() << '\n'
+				  << "  grid: " << mGrid.format() << '\n';
 
 		printStats();
 	}
@@ -996,7 +996,7 @@ void MapMaker<FTYPE>::fixMTZ()
 	// first run the tests to see if we need to fix anything
 
 	if (cif::VERBOSE > 0)
-		std::cerr << "Testing MTZ file" << std::endl;
+		std::cerr << "Testing MTZ file\n";
 
 	for (auto ih = mFbData.first(); not ih.last(); ih.next())
 	{
@@ -1026,14 +1026,14 @@ void MapMaker<FTYPE>::fixMTZ()
 			{
 				tests[T10] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test 10 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test 10 failed at " << ih.hkl() << '\n';
 			}
 
 			if (tests[T11] and std::abs(FD) > 0.05)
 			{
 				tests[T11] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test 11 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test 11 failed at " << ih.hkl() << '\n';
 			}
 		}
 		else if (cls.centric())
@@ -1042,35 +1042,35 @@ void MapMaker<FTYPE>::fixMTZ()
 			{
 				tests[C5] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test C5 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test C5 failed at " << ih.hkl() << '\n';
 			}
 
 			if (tests[C6] and std::abs(FM - WFO) > 0.05)
 			{
 				tests[C6] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test C6 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test C6 failed at " << ih.hkl() << '\n';
 			}
 
 			if (tests[C7] and std::abs(FC + FD - WFO) > 0.05)
 			{
 				tests[C7] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test C7 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test C7 failed at " << ih.hkl() << '\n';
 			}
 
 			if (tests[C8] and std::abs(FC + 0.5 * FD - WFO) > 0.05)
 			{
 				tests[C8] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test C8 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test C8 failed at " << ih.hkl() << '\n';
 			}
 
 			if (tests[C9] and (1.01 * FC + FD - WFO) < -0.05)
 			{
 				tests[C9] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test C9 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test C9 failed at " << ih.hkl() << '\n';
 			}
 		}
 		else
@@ -1079,28 +1079,28 @@ void MapMaker<FTYPE>::fixMTZ()
 			{
 				tests[A1] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test A1 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test A1 failed at " << ih.hkl() << '\n';
 			}
 
 			if (tests[A2] and 1.01 * FC + FM - 2 * WFO < -0.05)
 			{
 				tests[A2] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test A2 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test A2 failed at " << ih.hkl() << '\n';
 			}
 
 			if (tests[A3] and std::abs(FM - FD - WFO) > 0.05)
 			{
 				tests[A3] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test A3 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test A3 failed at " << ih.hkl() << '\n';
 			}
 
 			if (tests[A4] and std::abs(FM - 0.5 * FD - WFO) > 0.05)
 			{
 				tests[A4] = false;
 				if (cif::VERBOSE > 0)
-					std::cerr << "Test A4 failed at " << ih.hkl() << std::endl;
+					std::cerr << "Test A4 failed at " << ih.hkl() << '\n';
 			}
 		}
 	}
@@ -1210,8 +1210,8 @@ void MapMaker<FTYPE>::printStats()
 		f1w = 0.1;
 	r1w /= f1w;
 
-	std::cerr << "R-factor      : " << r1w << std::endl
-			  << "Free R-factor : " << r1f << std::endl;
+	std::cerr << "R-factor      : " << r1w << '\n'
+			  << "Free R-factor : " << r1f << '\n';
 }
 
 template <typename FTYPE>

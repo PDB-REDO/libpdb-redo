@@ -57,11 +57,11 @@ BOOST_AUTO_TEST_CASE(refine_0)
 
 	auto score = minimizer->refine(true);
 
-	std::cout << "minimizer score: " << score << std::endl;
+	std::cout << "minimizer score: " << score << '\n';
 
 	minimizer->printStats();
 
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 
 	cif::file refFile(example.string());
 	cif::mm::structure reference(refFile);
@@ -83,14 +83,14 @@ BOOST_AUTO_TEST_CASE(refine_0)
 		auto d = distance(a1, a2);
 		d_sum += d * d;
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << '\n';
 	}
 
 	auto rmsd = std::sqrt(d_sum / atoms3.size());
-	std::cout << "RMSd: " << rmsd << std::endl;
+	std::cout << "RMSd: " << rmsd << '\n';
 	BOOST_CHECK(rmsd < 0.25);
 
-	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
+	std::cout << std::string(cif::get_terminal_width(), '=') << '\n';
 }
 
 BOOST_AUTO_TEST_CASE(refine_1)
@@ -132,22 +132,22 @@ BOOST_AUTO_TEST_CASE(refine_1)
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << '\n';
 	}
 
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 
 	minimizer->printStats();
 
 	auto score = minimizer->refine(true);
 
-	std::cout << "minimizer score: " << score << std::endl;
+	std::cout << "minimizer score: " << score << '\n';
 
 	minimizer->printStats();
 
 	double d_sum = 0;
 
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 
 	for (size_t i = 0; i < atoms3.size(); ++i)
 	{
@@ -157,14 +157,14 @@ BOOST_AUTO_TEST_CASE(refine_1)
 		auto d = distance(a1, a2);
 		d_sum += d * d;
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << '\n';
 	}
 
 	auto rmsd = std::sqrt(d_sum / atoms3.size());
-	std::cout << "RMSd: " << rmsd << std::endl;
+	std::cout << "RMSd: " << rmsd << '\n';
 	BOOST_CHECK(rmsd < 0.27);
 
-	std::cout << std::string(cif::get_terminal_width(), '=') << std::endl;
+	std::cout << std::string(cif::get_terminal_width(), '=') << '\n';
 }
 
 BOOST_AUTO_TEST_CASE(refine_2)
@@ -225,10 +225,10 @@ BOOST_AUTO_TEST_CASE(refine_2)
 		auto a1 = atomsRea.at(i);
 		auto a2 = refAtomsRea.at(i);
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << '\n';
 	}
 
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 
 	pdb_redo::MapMaker<float> mm;
 	float samplingRate = 0.75;
@@ -241,11 +241,11 @@ BOOST_AUTO_TEST_CASE(refine_2)
 
 	auto score = minimizer->refine(true);
 
-	std::cout << "minimizer score: " << score << std::endl;
+	std::cout << "minimizer score: " << score << '\n';
 
 	minimizer->printStats();
 
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 
 	double d_sum = 0;
 
@@ -257,14 +257,14 @@ BOOST_AUTO_TEST_CASE(refine_2)
 		auto d = distance(a1, a2);
 		d_sum += d * d;
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << std::endl;
+		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << '\n';
 	}
 
 	file.save("/tmp/rsr-test-3.cif");
 
 	auto rmsd = std::sqrt(d_sum / atomsRea.size());
-	std::cout << "RMSd: " << rmsd << std::endl;
+	std::cout << "RMSd: " << rmsd << '\n';
 	BOOST_CHECK(rmsd < 0.35);
 
-	std::cout << std::string(cif::get_terminal_width(), '-') << std::endl;
+	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 }

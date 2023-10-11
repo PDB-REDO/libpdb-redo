@@ -128,7 +128,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "While processing bond restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing bond restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -157,7 +157,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "While processing angle restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing angle restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -188,7 +188,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing torsion restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -220,7 +220,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "While processing chiral volume restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing chiral volume restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -249,7 +249,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "While processing planarity restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing planarity restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -311,7 +311,7 @@ void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last
 			catch (const std::exception &ex)
 			{
 				if (cif::VERBOSE > 1)
-					std::cerr << "While processing plane-5-atoms restraints: " << ex.what() << std::endl;
+					std::cerr << "While processing plane-5-atoms restraints: " << ex.what() << '\n';
 				//			continue;
 			}
 
@@ -412,7 +412,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 		if (bm.is1_4(a1, a2))
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "1_4 for " << a1 << " and " << a2 << std::endl;
+				std::cerr << "1_4 for " << a1 << " and " << a2 << '\n';
 			minDist = 2.64;
 		}
 		else if ((a1.get_label_seq_id() + 1 == a2.get_label_seq_id() and a1.get_label_atom_id() == "O" and a2.get_label_atom_id() == "C") or
@@ -504,7 +504,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 			catch (const std::exception &ex)
 			{
 				if (cif::VERBOSE > 0)
-					std::cerr << "err calculating nbc distance: " << ex.what() << std::endl;
+					std::cerr << "err calculating nbc distance: " << ex.what() << '\n';
 				minDist = 2.8;
 			}
 		}
@@ -578,14 +578,14 @@ void Minimizer::Finish(const cif::crystal &crystal)
 	// report
 
 	if (cif::VERBOSE > 1)
-		std::cout << "created " << mBondRestraints.size() << " bond restraints" << std::endl
-				  << "created " << mAngleRestraints.size() << " angle restraints" << std::endl
-				  << "created " << mTorsionRestraints.size() << " torsion restraints" << std::endl
-				  << "created " << mPlanarityRestraints.size() << " plane restraints" << std::endl
-				  << "created " << mTransPeptideRestraints.size() << " trans peptide restraints" << std::endl
-				  << "created " << mChiralVolumeRestraints.size() << " chiral vol restraints" << std::endl
-				  << "created " << mNonBondedContactRestraints.size() << " non-bonded-contact restraints" << std::endl
-				  << std::endl;
+		std::cout << "created " << mBondRestraints.size() << " bond restraints\n"
+				  << "created " << mAngleRestraints.size() << " angle restraints\n"
+				  << "created " << mTorsionRestraints.size() << " torsion restraints\n"
+				  << "created " << mPlanarityRestraints.size() << " plane restraints\n"
+				  << "created " << mTransPeptideRestraints.size() << " trans peptide restraints\n"
+				  << "created " << mChiralVolumeRestraints.size() << " chiral vol restraints\n"
+				  << "created " << mNonBondedContactRestraints.size() << " non-bonded-contact restraints\n"
+				  << '\n';
 
 	AtomLocationProvider loc(mReferencedAtoms);
 
@@ -685,7 +685,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "While processing bond restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing bond restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -710,7 +710,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "While processing angle restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing angle restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -740,7 +740,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "While processing torsion restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing torsion restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -761,14 +761,23 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			cif::mm::atom a2 = getAtom(center.atom[1]);
 			cif::mm::atom a3 = getAtom(center.atom[2]);
 
-			auto volume = link.chiralVolume(center.id, a.get_compound_id(), b.get_compound_id());
+			auto volume = a_is_1 ?
+				link.chiralVolume(center.id, a.get_compound_id(), b.get_compound_id()) :
+				link.chiralVolume(center.id, b.get_compound_id(), a.get_compound_id());
+			
+			if (std::isnan(volume))
+			{
+				if (cif::VERBOSE > 0)
+					std::cerr << "While processing chiral volume restraints: NaN volume\n";
+				continue;
+			}
 
 			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1), ref(a2), ref(a3), volume);
 		}
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "While processing chiral volume restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing chiral volume restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -793,7 +802,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		catch (const std::exception &ex)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "While processing planarity restraints: " << ex.what() << std::endl;
+				std::cerr << "While processing planarity restraints: " << ex.what() << '\n';
 			continue;
 		}
 	}
@@ -804,7 +813,7 @@ void Minimizer::printStats()
 	AtomLocationProvider loc(mReferencedAtoms);
 
 	// for (auto &r : mBondRestraints)
-	// 	std::cout << mReferencedAtoms[r.mA] << " -> " << mReferencedAtoms[r.mB] << " = " << r.f(loc) << std::endl;
+	// 	std::cout << mReferencedAtoms[r.mA] << " -> " << mReferencedAtoms[r.mB] << " = " << r.f(loc) << '\n';
 
 	double bondScore = rmsz(loc, mBondRestraints);
 	double angleScore = rmsz(loc, mAngleRestraints);
@@ -815,14 +824,14 @@ void Minimizer::printStats()
 	double nbcScore = rmsz(loc, mNonBondedContactRestraints);
 	double densityScore = mDensityRestraint ? mDensityRestraint->f(loc) : 0;
 
-	std::cerr << "  Bonds:              " << bondScore << std::endl
-			  << "  Angles:             " << angleScore << std::endl
-			  << "  Torsion:            " << torsionScore << std::endl
-			  << "  Chirality:          " << chiralityVolumeScore << std::endl
-			  << "  Planarity:          " << planarityScore << std::endl
-			  << "  Transpeptide:       " << transpeptideScore << std::endl
-			  << "  Non-Bonded-Contact: " << nbcScore << std::endl
-			  << "  Density:            " << densityScore << std::endl;
+	std::cerr << "  Bonds:              " << bondScore << '\n'
+			  << "  Angles:             " << angleScore << '\n'
+			  << "  Torsion:            " << torsionScore << '\n'
+			  << "  Chirality:          " << chiralityVolumeScore << '\n'
+			  << "  Planarity:          " << planarityScore << '\n'
+			  << "  Transpeptide:       " << transpeptideScore << '\n'
+			  << "  Non-Bonded-Contact: " << nbcScore << '\n'
+			  << "  Density:            " << densityScore << '\n';
 }
 
 double Minimizer::score()
@@ -838,12 +847,12 @@ double Minimizer::score(const AtomLocationProvider &loc)
 	{
 		if (cif::VERBOSE > 2)
 			r->print(loc);
-		
+					
 		result += r->f(loc);
 	}
 
 	if (cif::VERBOSE > 3)
-		std::cout << "score: " << result << std::endl;
+		std::cout << "score: " << result << '\n';
 
 	return result;
 }
@@ -879,7 +888,7 @@ class GSLAtomLocation : public AtomLocationProvider
 					gsl_vector_get(mV, ri * 3 + 2)
 				};
 
-				std::cout << mAtoms[i] << p << std::endl;
+				std::cout << mAtoms[i] << p << '\n';
 			}
 		}
 	}
@@ -970,8 +979,8 @@ GSLDFCollector::~GSLDFCollector()
 {
 	if (cif::VERBOSE > 2)
 	{
-		std::cerr << std::string(19, '-') << std::endl
-				  << "Collected gradient: " << std::endl;
+		std::cerr << std::string(19, '-') << '\n'
+				  << "Collected gradient: \n";
 
 		for (size_t i = 0; i < mAtoms.size(); ++i)
 		{
@@ -983,10 +992,10 @@ GSLDFCollector::~GSLDFCollector()
 			double dy = gsl_vector_get(mDF, ix * 3 + 1);
 			double dz = gsl_vector_get(mDF, ix * 3 + 2);
 
-			std::cerr << "atom: " << label(i) << " d: " << std::setprecision(10) << dx << " " << dy << " " << dz << std::endl;
+			std::cerr << "atom: " << label(i) << " d: " << std::setprecision(10) << dx << " " << dy << " " << dz << '\n';
 		}
 
-		std::cerr << std::string(19, '-') << std::endl;
+		std::cerr << std::string(19, '-') << '\n';
 	}
 }
 
@@ -1002,7 +1011,7 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 		gsl_vector_set(mDF, ix * 3 + 2, gsl_vector_get(mDF, ix * 3 + 2) + dz);
 
 		if (cif::VERBOSE > 4)
-			std::cerr << "atom: " << label(atom) << " d: " << std::setprecision(10) << dx << ", " << dy << ", " << dz << std::endl;
+			std::cerr << "atom: " << label(atom) << " d: " << std::setprecision(10) << dx << ", " << dy << ", " << dz << '\n';
 	}
 }
 
@@ -1103,16 +1112,16 @@ double GSLMinimizer::refine(bool storeAtoms)
 
 				ix += 3;
 
-				std::cerr << a << " l: " << l << " => p: " << p << " d = " << (p - l) << std::endl;
+				std::cerr << a << " l: " << l << " => p: " << p << " d = " << (p - l) << '\n';
 			}
 		}
 
 		if (status != 0)
 		{
 			if (status != GSL_ENOPROG)
-				std::cerr << "Unexpected result from gsl_multimin_fdfminimizer_iterate: " << status << std::endl;
+				std::cerr << "Unexpected result from gsl_multimin_fdfminimizer_iterate: " << status << '\n';
 			else if (cif::VERBOSE > 1)
-				std::cerr << "Minimizer stopped at iteration " << i << " at " << m_s->f << std::endl;
+				std::cerr << "Minimizer stopped at iteration " << i << " at " << m_s->f << '\n';
 			break;
 		}
 
@@ -1123,13 +1132,13 @@ double GSLMinimizer::refine(bool storeAtoms)
 			double norm = gsl_blas_dnrm2(m_s->gradient);
 			std::cout << "iteration number " << i << " with f: " << m_s->f
 					  << " status from gsl_multimin_test_gradient() " << status << " for norm "
-					  << norm << std::endl;
+					  << norm << '\n';
 		}
 
 		if (status == GSL_SUCCESS)
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "Minimum found at iteration " << i << " at " << m_s->f << std::endl;
+				std::cerr << "Minimum found at iteration " << i << " at " << m_s->f << '\n';
 			break;
 		}
 
@@ -1191,7 +1200,7 @@ void GSLMinimizer::Fdf(const gsl_vector *v, void *params, double *f, gsl_vector 
 	self->Fdf(v, f, df);
 
 	if (cif::VERBOSE > 2)
-		std::cout << "FDF => " << std::setprecision(10) << *f << std::endl;
+		std::cout << "FDF => " << std::setprecision(10) << *f << '\n';
 }
 
 double GSLMinimizer::F(const gsl_vector *v)
@@ -1201,7 +1210,7 @@ double GSLMinimizer::F(const gsl_vector *v)
 	//	return score(loc);
 	auto F = score(loc);
 	if (cif::VERBOSE > 2)
-		std::cout << "F => " << std::setprecision(10) << F << std::endl;
+		std::cout << "F => " << std::setprecision(10) << F << '\n';
 	return F;
 }
 

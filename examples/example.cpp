@@ -34,7 +34,7 @@ int main()
 	for (auto& ri: r)
 	{
 		// and do something with the data
-		std::cout << ri.EDIAm << std::endl;
+		std::cout << ri.EDIAm << '\n';
 	}
 
 	return 0;

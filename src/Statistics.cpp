@@ -459,7 +459,7 @@ void StatsCollector::initialize()
 		if (cif::VERBOSE > 2)
 			std::cerr << (atomData.size() + 1) << '\t'
 					  << atom_type_traits(atom.get_type()).symbol() << '\t'
-					  << radius << std::endl;
+					  << radius << '\n';
 
 		atomData.emplace_back(atom, radius);
 	}
@@ -523,19 +523,19 @@ void StatsCollector::initialize()
 			if (cif::VERBOSE > 1)
 			{
 				swys = dd * (swys - (qa * swy + qb * swxy)) / (ns - 2);
-				std::cerr << std::endl
-						  << "Intercept & gradient before LS: " << qa << " (" << std::sqrt(swys * swxs) << ") " << qb << " (" << std::sqrt(swys * sw) << ')' << std::endl;
+				std::cerr << '\n'
+						  << "Intercept & gradient before LS: " << qa << " (" << std::sqrt(swys * swxs) << ") " << qb << " (" << std::sqrt(swys * sw) << ')' << '\n';
 			}
 
 			qb += 1.0;
 
 			if (cif::VERBOSE > 1)
 			{
-				std::cerr << std::endl
-						  << "Rescale SD(delta-rho) using Q-Q plot for asym " << zsc.first << ':' << std::endl
-						  << std::string(54, '=') << std::endl
-						  << "Input & updated SD(delta-rho): " << mRMSDensityFd << " ; " << qb * mRMSDensityFd << std::endl
-						  << std::endl;
+				std::cerr << '\n'
+						  << "Rescale SD(delta-rho) using Q-Q plot for asym " << zsc.first << ':' << '\n'
+						  << std::string(54, '=') << '\n'
+						  << "Input & updated SD(delta-rho): " << mRMSDensityFd << " ; " << qb * mRMSDensityFd << '\n'
+						  << '\n';
 			}
 		}
 
@@ -680,7 +680,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 		if (cif::VERBOSE > 2)
 			std::cerr << (atomData.size() + 1) << '\t'
 					  << atom_type_traits(atom.get_type()).symbol() << '\t'
-					  << radius << std::endl;
+					  << radius << '\n';
 
 		atomData.emplace_back(atom, radius);
 	}
@@ -741,8 +741,8 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 		}
 		catch (const BondMapException &ex)
 		{
-			std::cerr << "Missing information for compound '" << compID << '\'' << std::endl
-					  << ex.what() << std::endl;
+			std::cerr << "Missing information for compound '" << compID << '\'' << '\n'
+					  << ex.what() << '\n';
 
 			missing.insert(compID);
 		}
@@ -902,7 +902,7 @@ ResidueStatistics StatsCollector::collect(const std::vector<cif::mm::atom> &atom
 		if (cif::VERBOSE > 2)
 			std::cerr << (atomData.size() + 1) << '\t'
 					  << atom_type_traits(atom.get_type()).symbol() << '\t'
-					  << radius << std::endl;
+					  << radius << '\n';
 
 		atomData.emplace_back(atom, radius);
 	}
@@ -1111,7 +1111,7 @@ EDIAStatsCollector::EDIAStatsCollector(const MapMaker<float> &mm, cif::mm::struc
 		ediaBFactor = kAverageBFactors[i];
 
 	if (cif::VERBOSE > 1)
-		std::cerr << "Calculating radii with B Factor " << ediaBFactor << std::endl;
+		std::cerr << "Calculating radii with B Factor " << ediaBFactor << '\n';
 
 	for (auto atom : mStructure.atoms())
 	{
@@ -1122,7 +1122,7 @@ EDIAStatsCollector::EDIAStatsCollector(const MapMaker<float> &mm, cif::mm::struc
 		mRadii[atom.get_type()] = shape.radius();
 
 		if (cif::VERBOSE > 1)
-			std::cerr << "Radius for atom with type " << atom_type_traits(atom.get_type()).symbol() << " is " << mRadii[atom.get_type()] << std::endl;
+			std::cerr << "Radius for atom with type " << atom_type_traits(atom.get_type()).symbol() << " is " << mRadii[atom.get_type()] << '\n';
 	}
 }
 

@@ -97,7 +97,7 @@ BOOST_AUTO_TEST_CASE(skip_1)
 
 		BOOST_CHECK(skiplist.size() == 10);
 
-		// std::cout << ss.str() << std::endl;
+		// std::cout << ss.str() << '\n';
 
 		SkipList list2 = readSkipList(ss);
 		
@@ -348,7 +348,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 			BOOST_TEST(std::abs(ri.EDIAm - t.EDIAm) <= 0.1, tt::tolerance(0.1));
 
 			if (std::abs(ri.EDIAm - t.EDIAm) > 0.1)
-				std::cerr << ri << std::endl;
+				std::cerr << ri << '\n';
 
 			BOOST_TEST(std::abs(ri.OPIA - t.OPIA) <= 0.1, tt::tolerance(0.1));
 		}

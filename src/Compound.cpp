@@ -121,7 +121,7 @@ Compound::Compound(const std::string &file, const std::string &id,
 			else
 			{
 				if (cif::VERBOSE > 0)
-					std::cerr << "Unimplemented chem_comp_bond.type " << type << " in " << id << std::endl;
+					std::cerr << "Unimplemented chem_comp_bond.type " << type << " in " << id << '\n';
 				b.type = singleBond;
 			}
 
@@ -171,7 +171,7 @@ Compound::Compound(const std::string &file, const std::string &id,
 			else
 			{
 				if (cif::VERBOSE > 0)
-					std::cerr << "Unimplemented chem_comp_chir.volume_sign " << volumeSign << " in " << id << std::endl;
+					std::cerr << "Unimplemented chem_comp_chir.volume_sign " << volumeSign << " in " << id << '\n';
 				continue;
 			}
 
@@ -197,7 +197,7 @@ Compound::Compound(const std::string &file, const std::string &id,
 	}
 	catch (const std::exception &ex)
 	{
-		std::cerr << "Error loading ccp4 file for " << id << " from file " << file << std::endl;
+		std::cerr << "Error loading ccp4 file for " << id << " from file " << file << '\n';
 		throw;
 	}
 }
@@ -432,7 +432,7 @@ float Compound::atomBondValue(const std::string &atomId_1, const std::string &at
 // 		if (cif::VERBOSE and result)
 // 		{
 // 			for (auto &m : mapping)
-// 				std::cerr << "  " << std::get<0>(m) << " => " << std::get<1>(m) << std::endl;
+// 				std::cerr << "  " << std::get<0>(m) << " => " << std::get<1>(m) << '\n';
 // 		}
 
 // 		break;
@@ -569,7 +569,7 @@ Link::Link(cif::datablock &db)
 		else
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Unimplemented chem_link_bond.type " << type << " in " << mID << std::endl;
+				std::cerr << "Unimplemented chem_link_bond.type " << type << " in " << mID << '\n';
 			b.type = singleBond;
 		}
 
@@ -631,7 +631,7 @@ Link::Link(cif::datablock &db)
 		else
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Unimplemented chem_link_chir.volume_sign " << volumeSign << " in " << mID << std::endl;
+				std::cerr << "Unimplemented chem_link_chir.volume_sign " << volumeSign << " in " << mID << '\n';
 			continue;
 		}
 
@@ -1082,7 +1082,7 @@ CompoundFactory::CompoundFactory()
 	if (mImpl == nullptr)
 	{
 		if (cif::VERBOSE > 0)
-			std::cerr << "Could not load the mon_lib_list.cif file from CCP4, please make sure you have installed CCP4 and sourced the environment." << std::endl;
+			std::cerr << "Could not load the mon_lib_list.cif file from CCP4, please make sure you have installed CCP4 and sourced the environment.\n";
 
 		mImpl = new CompoundFactoryImpl();
 	}
@@ -1110,7 +1110,7 @@ void CompoundFactory::pushDictionary(const fs::path &inDictFile)
 	}
 	catch (const std::exception &ex)
 	{
-		std::cerr << "Error loading dictionary " << inDictFile << std::endl;
+		std::cerr << "Error loading dictionary " << inDictFile << '\n';
 		throw;
 	}
 }

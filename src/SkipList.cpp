@@ -166,7 +166,7 @@ SkipList readSkipList(std::istream &is)
 	catch (const std::exception &e)
 	{
 		if (cif::VERBOSE > 0)
-			std::cerr << e.what() << std::endl;
+			std::cerr << e.what() << '\n';
 		is.rdbuf()->pubseekpos(0);
 	}
 

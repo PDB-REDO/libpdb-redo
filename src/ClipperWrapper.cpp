@@ -106,7 +106,7 @@ clipper::Spacegroup getSpacegroup(const cif::datablock &db)
 	}
 	catch (const clipper::Message_fatal &m)
 	{
-		// std::cout << m.text() << std::endl;
+		// std::cout << m.text() << '\n';
 	}
 
 	try
@@ -115,7 +115,7 @@ clipper::Spacegroup getSpacegroup(const cif::datablock &db)
 	}
 	catch (const clipper::Message_fatal &e)
 	{
-		std::cerr << e.text() << std::endl;
+		std::cerr << e.text() << '\n';
 	}
 
 	throw std::runtime_error("Unsupported spacegroup: " + spacegroup);

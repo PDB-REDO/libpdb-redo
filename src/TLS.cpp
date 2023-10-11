@@ -80,20 +80,20 @@ void dump_selection(const std::vector<tls_residue> &selected, size_t indentLevel
 			break;
 
 		if (first)
-			std::cout << indent << "PDB:" << std::endl;
+			std::cout << indent << "PDB:\n";
 		first = false;
 
 		auto e = find_if(b, selected.end(), [b](auto s) -> bool
 			{ return s.chainID != b->chainID or not s.selected; });
 
-		std::cout << indent << " >> " << b->chainID << ' ' << b->seqNr << ':' << (e - 1)->seqNr << std::endl;
+		std::cout << indent << " >> " << b->chainID << ' ' << b->seqNr << ':' << (e - 1)->seqNr << '\n';
 		i = e;
 	}
 
 	// Then in mmCIF space
 
 	if (not first)
-		std::cout << indent << "mmCIF:" << std::endl;
+		std::cout << indent << "mmCIF:\n";
 
 	i = selected.begin();
 	while (i != selected.end())
@@ -116,18 +116,18 @@ void dump_selection(const std::vector<tls_residue> &selected, size_t indentLevel
 			else if (j->seqID != to) // probably an insertion code
 			{
 				if (from == kNoSeqNum or to == kNoSeqNum)
-					std::cout << indent << " >> " << asymID << std::endl;
+					std::cout << indent << " >> " << asymID << '\n';
 				else
-					std::cout << indent << " >> " << asymID << ' ' << from << ':' << to << std::endl;
+					std::cout << indent << " >> " << asymID << ' ' << from << ':' << to << '\n';
 				asymID = b->asymID;
 				from = to = b->seqID;
 			}
 		}
 
 		if (from == kNoSeqNum or to == kNoSeqNum)
-			std::cout << indent << " >> " << asymID << std::endl;
+			std::cout << indent << " >> " << asymID << '\n';
 		else
-			std::cout << indent << " >> " << asymID << ' ' << from << ':' << to << std::endl;
+			std::cout << indent << " >> " << asymID << ' ' << from << ':' << to << '\n';
 
 		i = e;
 	}
@@ -135,7 +135,7 @@ void dump_selection(const std::vector<tls_residue> &selected, size_t indentLevel
 	if (first)
 	{
 		using namespace cif::colour;
-		std::cout << indent << cif::coloured("Empty selection", white, red, bold) << std::endl;
+		std::cout << indent << cif::coloured("Empty selection", white, red, bold) << '\n';
 	}
 }
 
@@ -318,7 +318,7 @@ struct tls_selection_not : public tls_selection
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "NOT" << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "NOT\n";
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -337,7 +337,7 @@ struct tls_selection_all : public tls_selection
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "ALL" << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "ALL\n";
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -359,7 +359,7 @@ struct tls_selection_chain : public tls_selection_all
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "CHAIN " << m_chain << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "CHAIN " << m_chain << '\n';
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -382,7 +382,7 @@ struct tls_selection_res_id : public tls_selection_all
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "ResID " << m_seq_nr << (m_icode ? std::string{ m_icode } : "") << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "ResID " << m_seq_nr << (m_icode ? std::string{ m_icode } : "") << '\n';
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -409,7 +409,7 @@ struct tls_selection_range_seq : public tls_selection_all
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "Range " << m_first << ':' << m_last << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "Range " << m_first << ':' << m_last << '\n';
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -459,7 +459,7 @@ struct tls_selection_range_id : public tls_selection_all
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "Through " << m_first << ':' << m_last << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "Through " << m_first << ':' << m_last << '\n';
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -500,7 +500,7 @@ struct tls_selection_union : public tls_selection
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "Union" << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "Union\n";
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -541,7 +541,7 @@ struct tls_selection_intersection : public tls_selection
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "Intersection" << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "Intersection\n";
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -565,7 +565,7 @@ struct tls_selection_by_name : public tls_selection_all
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "Name " << m_name << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "Name " << m_name << '\n';
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -593,7 +593,7 @@ struct tls_selection_by_element : public tls_selection_all
 
 		if (cif::VERBOSE > 0)
 		{
-			std::cout << std::string(indentLevel * 2, ' ') << "Element " << m_element << std::endl;
+			std::cout << std::string(indentLevel * 2, ' ') << "Element " << m_element << '\n';
 			dump_selection(residues, indentLevel);
 		}
 	}
@@ -997,7 +997,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::Parse()
 	match(pt_EOLN);
 
 	if (extraParenthesis)
-		std::cerr << "WARNING: too many closing parenthesis in TLS selection statement" << std::endl;
+		std::cerr << "WARNING: too many closing parenthesis in TLS selection statement\n";
 
 	return result;
 }
@@ -1038,7 +1038,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 			match('(');
 			result = ParseAtomSelection();
 			if (m_lookahead == pt_EOLN)
-				std::cerr << "WARNING: missing closing parenthesis in TLS selection statement" << std::endl;
+				std::cerr << "WARNING: missing closing parenthesis in TLS selection statement\n";
 			else
 				match(')');
 			break;
@@ -1140,7 +1140,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 				else
 				{
 					if (cif::VERBOSE and (icode_from or icode_to))
-						std::cerr << "Warning, ignoring insertion codes" << std::endl;
+						std::cerr << "Warning, ignoring insertion codes\n";
 
 					result.reset(new tls_selection_range_seq(from, to));
 				}
@@ -1343,7 +1343,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBuster::ParseGroup()
 				std::tie(chain2, seqNr2) = ParseAtom();
 				if (chain1 != chain2)
 				{
-					std::cerr << "Warning, ranges over multiple chains detected" << std::endl;
+					std::cerr << "Warning, ranges over multiple chains detected\n";
 
 					std::unique_ptr<tls_selection> sc1(new tls_selection_chain(chain1));
 					std::unique_ptr<tls_selection> sr1(new tls_selection_range_seq(seqNr1, kResidueNrWildcard));
@@ -1401,7 +1401,7 @@ std::tuple<std::string, int> TLSSelectionParserImplBuster::ParseAtom()
 			std::string atom = m_value_s;
 
 			if (cif::VERBOSE > 0)
-				std::cerr << "Warning: ignoring atom ID '" << atom << "' in TLS selection" << std::endl;
+				std::cerr << "Warning: ignoring atom ID '" << atom << "' in TLS selection\n";
 
 			match(bt_IDENT);
 		}
@@ -1931,7 +1931,7 @@ class TLSSelectionParser
 		}
 		catch (const std::exception &ex)
 		{
-			std::cerr << "ParseError: " << ex.what() << std::endl;
+			std::cerr << "ParseError: " << ex.what() << '\n';
 		}
 
 		return result;
@@ -1955,14 +1955,14 @@ std::unique_ptr<tls_selection> parse_tls_selection_details(const std::string &pr
 		if (not result)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Falling back to old BUSTER" << std::endl;
+				std::cerr << "Falling back to old BUSTER\n";
 			result = busterOld.Parse(selection);
 		}
 
 		if (not result)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Falling back to PHENIX" << std::endl;
+				std::cerr << "Falling back to PHENIX\n";
 			result = phenix.Parse(selection);
 		}
 	}
@@ -1973,35 +1973,35 @@ std::unique_ptr<tls_selection> parse_tls_selection_details(const std::string &pr
 		if (not result)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Falling back to BUSTER" << std::endl;
+				std::cerr << "Falling back to BUSTER\n";
 			result = buster.Parse(selection);
 		}
 
 		if (not result)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Falling back to old BUSTER" << std::endl;
+				std::cerr << "Falling back to old BUSTER\n";
 			result = busterOld.Parse(selection);
 		}
 	}
 	else
 	{
 		if (cif::VERBOSE > 0)
-			std::cerr << "No known program specified, trying PHENIX" << std::endl;
+			std::cerr << "No known program specified, trying PHENIX\n";
 
 		result = phenix.Parse(selection);
 
 		if (not result)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Falling back to BUSTER" << std::endl;
+				std::cerr << "Falling back to BUSTER\n";
 			result = buster.Parse(selection);
 		}
 
 		if (not result)
 		{
 			if (cif::VERBOSE > 0)
-				std::cerr << "Falling back to old BUSTER" << std::endl;
+				std::cerr << "Falling back to old BUSTER\n";
 			result = busterOld.Parse(selection);
 		}
 	}

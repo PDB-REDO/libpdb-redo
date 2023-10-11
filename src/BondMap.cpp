@@ -118,7 +118,7 @@ bool CompoundBondMap::bonded(const std::string &compoundID, const std::string &a
 	if (not compound)
 	{
 		if (cif::VERBOSE >= 0)
-			std::cerr << "Missing compound bond info for " << compoundID << std::endl;
+			std::cerr << "Missing compound bond info for " << compoundID << '\n';
 	}
 	else
 	{
@@ -221,7 +221,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 			continue;
 
 		if (cif::VERBOSE > 1)
-			std::cerr << "Warning: mon_id " << mon_id << " is missing in the chem_comp category" << std::endl;
+			std::cerr << "Warning: mon_id " << mon_id << " is missing in the chem_comp category\n";
 		compounds.insert(mon_id);
 	}
 
@@ -289,7 +289,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 		if (c == "HOH" or c == "H2O" or c == "WAT")
 		{
 			if (cif::VERBOSE > 1)
-				std::cerr << "skipping water in bond map calculation" << std::endl;
+				std::cerr << "skipping water in bond map calculation\n";
 			continue;
 		}
 

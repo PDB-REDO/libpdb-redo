@@ -479,7 +479,7 @@ struct AtomShapeImpl
 		auto bIso = clipper::Util::u2b(uIso);
 
 		if (bIso == 0 and cif::VERBOSE >= 0)
-			std::cerr << "Zero b-factor?" << std::endl;
+			std::cerr << "Zero b-factor?\n";
 
 		float as = mIntegrator.a() * mIntegrator.a();
 		float bs = mIntegrator.b() * mIntegrator.b();

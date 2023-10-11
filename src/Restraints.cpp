@@ -49,7 +49,7 @@ double BondRestraint::f(const AtomLocationProvider &atoms) const
 	if (cif::VERBOSE > 2)
 		std::cerr << "bond::f() = " << atoms.atom(mA) << " <> " << atoms.atom(mB)
 				  << " " << atoms[mA] << " <> " << atoms[mB]
-				  << " => " << result << std::endl;
+				  << " => " << result << '\n';
 
 	return result;
 }
@@ -66,7 +66,7 @@ void BondRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 
 	if (cif::VERBOSE > 2)
 		std::cerr << "bond::df(): " << atoms.atom(mA) << " <> " << atoms.atom(mB) << ' '
-				  << bi << ' ' << mDist << ' ' << mDistESD << std::endl;
+				  << bi << ' ' << mDist << ' ' << mDistESD << '\n';
 
 	df.add(mA, (a1 - a2) * c);
 	df.add(mB, (a2 - a1) * c);
@@ -74,7 +74,7 @@ void BondRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 
 void BondRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "bond " << atoms.atom(mA) << " to " << atoms.atom(mB) << " => " << mDist << " / " << mDistESD << std::endl;
+	std::cout << "bond " << atoms.atom(mA) << " to " << atoms.atom(mB) << " => " << mDist << " / " << mDistESD << '\n';
 }
 
 // --------------------------------------------------------------------
@@ -90,7 +90,7 @@ double AngleRestraint::f(const AtomLocationProvider &atoms) const
 	double result = (d * d) / (mESD * mESD);
 
 	if (cif::VERBOSE > 2)
-		std::cerr << "angle::f() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << " = " << result << std::endl;
+		std::cerr << "angle::f() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << " = " << result << '\n';
 
 	return result;
 }
@@ -100,7 +100,7 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 	const double kRadToDegree = 180.0 / cif::kPI, kDegreeToRad = 1 / kRadToDegree;
 
 	if (cif::VERBOSE > 2)
-		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ": " << std::endl;
+		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ": \n";
 
 	DPoint k = atoms[mA], l = atoms[mB], m = atoms[mC];
 
@@ -146,7 +146,7 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 
 void AngleRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "angle " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " => " << mAngle << " / " << mESD << std::endl;
+	std::cout << "angle " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " => " << mAngle << " / " << mESD << '\n';
 }
 
 // --------------------------------------------------------------------
@@ -237,7 +237,7 @@ double TorsionRestraint::f(const AtomLocationProvider &atoms) const
 					  << " diff: " << diff
 					  << " target: " << mTarget << " sigma: " << mESD
 					  << " atoms: " << atoms.atom(mA) << ", " << atoms.atom(mB) << ", " << atoms.atom(mC) << ", " << atoms.atom(mD)
-					  << std::endl;
+					  << '\n';
 	}
 
 	return result;
@@ -246,7 +246,7 @@ double TorsionRestraint::f(const AtomLocationProvider &atoms) const
 void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
 	if (cif::VERBOSE > 2)
-		std::cerr << "torsion::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << "/" << atoms.atom(mD) << ' ' << ": " << std::endl;
+		std::cerr << "torsion::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << "/" << atoms.atom(mD) << ' ' << ": \n";
 
 	double cos_a1 = cosinus_angle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
 	double cos_a2 = cosinus_angle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
@@ -281,7 +281,7 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 void TorsionRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "torsion " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " ; " << atoms.atom(mD) << " => " << mPeriodicity << " / " << mESD << std::endl;
+	std::cout << "torsion " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " ; " << atoms.atom(mD) << " => " << mPeriodicity << " / " << mESD << '\n';
 }
 
 // --------------------------------------------------------------------
@@ -295,7 +295,7 @@ double ChiralVolumeRestraint::f(const AtomLocationProvider &atoms) const
 	double result = (d * d) / (mESD * mESD);
 
 	if (cif::VERBOSE > 2)
-		std::cerr << "chiral::f() = " << result << std::endl;
+		std::cerr << "chiral::f() = " << result << '\n';
 
 	return result;
 }
@@ -303,7 +303,7 @@ double ChiralVolumeRestraint::f(const AtomLocationProvider &atoms) const
 void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
 	if (cif::VERBOSE > 2)
-		std::cerr << "chiral::df(): " << std::endl;
+		std::cerr << "chiral::df(): \n";
 
 	DPoint centre = atoms[mCentre];
 	DPoint a = atoms[mA1] - centre;
@@ -327,7 +327,7 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &d
 
 void ChiralVolumeRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << mESD << std::endl;
+	std::cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << mESD << '\n';
 }
 
 // --------------------------------------------------------------------
@@ -415,7 +415,7 @@ double PlanarityRestraint::f(const AtomLocationProvider &atoms) const
 				return s.str();
 			});
 
-		std::cerr << "plane::f() = " << result << " for " << mAtoms.size() << " atoms " << cif::join(as, ", ") << std::endl;
+		std::cerr << "plane::f() = " << result << " for " << mAtoms.size() << " atoms " << cif::join(as, ", ") << '\n';
 	}
 
 	return result;
@@ -434,7 +434,7 @@ void PlanarityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) 
 				return s.str();
 			});
 
-		std::cerr << "plane::df() for " << mAtoms.size() << " atoms " << cif::join(as, ", ") << std::endl;
+		std::cerr << "plane::df() for " << mAtoms.size() << " atoms " << cif::join(as, ", ") << '\n';
 	}
 
 	double abcd[4];
@@ -457,7 +457,7 @@ void PlanarityRestraint::print(const AtomLocationProvider &atoms) const
 	for (auto &a : mAtoms)
 		std::cout << atoms.atom(a) << ' ';
 
-	std::cout << "=> " << 0 << " / " << mESD << std::endl;
+	std::cout << "=> " << 0 << " / " << mESD << '\n';
 }
 
 // --------------------------------------------------------------------
@@ -474,8 +474,8 @@ double NonBondedContactRestraint::f(const AtomLocationProvider &atoms) const
 
 		if (cif::VERBOSE > 2)
 			std::cerr << "non-bonded-contact::f() = " << result << " min-dist is " << mMinDist << " and dist is " << std::sqrt(distance)
-					<< " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << std::endl
-					<< " a1: " << atoms[mA] << " a2: " << atoms[mB] << std::endl;
+					<< " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << '\n'
+					<< " a1: " << atoms[mA] << " a2: " << atoms[mB] << '\n';
 	}
 
 
@@ -496,7 +496,7 @@ void NonBondedContactRestraint::df(const AtomLocationProvider &atoms, DFCollecto
 		if (cif::VERBOSE > 2)
 			std::cerr << "non-bonded::df(): " << atoms.atom(mA) << " and " << atoms.atom(mB) << " "
 					  << "distance: " << bi << " "
-					  << "target: " << mMinDist << std::endl;
+					  << "target: " << mMinDist << '\n';
 
 		double c = 2 * (1 - mMinDist / bi) / (mDistESD * mDistESD);
 
@@ -508,7 +508,7 @@ void NonBondedContactRestraint::df(const AtomLocationProvider &atoms, DFCollecto
 void NonBondedContactRestraint::print(const AtomLocationProvider &atoms) const
 {
 	std::cout << "nbc " << atoms.atom(mA) << " " << atoms.atom(mB)
-			  << " => " << distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << std::endl;
+			  << " => " << distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << '\n';
 }
 
 // --------------------------------------------------------------------
@@ -534,7 +534,7 @@ double DensityRestraint::f(const AtomLocationProvider &atoms) const
 	}
 
 	if (cif::VERBOSE > 2)
-		std::cerr << "density::f() = " << -result << std::endl;
+		std::cerr << "density::f() = " << -result << '\n';
 
 	return mMapWeight * -result;
 }
@@ -542,7 +542,7 @@ double DensityRestraint::f(const AtomLocationProvider &atoms) const
 void DensityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
 	if (cif::VERBOSE > 2)
-		std::cerr << "density::df(): " << std::endl;
+		std::cerr << "density::df(): \n";
 
 	for (auto &a : mAtoms)
 	{
@@ -564,7 +564,7 @@ void DensityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 void DensityRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "density " << std::endl;
+	std::cout << "density \n";
 }
 
 } // namespace pdb_redo
