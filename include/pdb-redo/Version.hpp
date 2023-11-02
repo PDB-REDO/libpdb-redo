@@ -24,6 +24,8 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include "pdb-redo/exports.hpp"
+
 #include <string>
 
 namespace pdb_redo
@@ -31,7 +33,7 @@ namespace pdb_redo
 
 // To force link the version code in pdb-redo, assign a value
 // to the following global variable somewhere in your code.
-extern int force_link;
+extern PDB_REDO_EXPORT int force_link;
 
 std::string get_version();
 

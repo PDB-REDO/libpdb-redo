@@ -36,7 +36,7 @@
 namespace pdb_redo
 {
 
-int force_link = 1;
+PDB_REDO_EXPORT int force_link = 1;
 
 std::string get_version()
 {

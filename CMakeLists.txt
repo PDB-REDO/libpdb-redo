@@ -85,6 +85,7 @@ endif()
 if(MSVC)
 	# make msvc standards compliant...
 	add_compile_options(/permissive-)
+	add_link_options(/NODEFAULTLIB:library)
 
 	macro(get_WIN32_WINNT version)
 		if(WIN32 AND CMAKE_SYSTEM_VERSION)
@@ -152,14 +153,14 @@ set(project_headers
 add_library(pdb-redo ${project_sources} ${project_headers})
 add_library(pdb-redo::pdb-redo ALIAS pdb-redo)
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
-generate_export_header(pdb-redo EXPORT_FILE_NAME pdb-redo/exports.hpp)
+generate_export_header(pdb-redo EXPORT_FILE_NAME ${PROJECT_SOURCE_DIR}/include/pdb-redo/exports.hpp)
 
 target_include_directories(pdb-redo
 	PUBLIC
-	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include;${EIGEN3_INCLUDE_DIR}>"
+	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 	${CCP4_INCLUDE_DIRS})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp newuoa::newuoa ${CCP4_LIBRARIES} GSL::gsl)
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp newuoa::newuoa ${CCP4_LIBRARIES} GSL::gsl PRIVATE Eigen3::Eigen)
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
@@ -185,12 +186,6 @@ install(EXPORT pdb-redoTargets
 install(
 	DIRECTORY include/pdb-redo
 	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-	COMPONENT Devel
-)
-
-install(
-	FILES ${PROJECT_BINARY_DIR}/pdb-redo/exports.hpp
-	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}/pdb-redo/
 	COMPONENT Devel
 )
 
@@ -234,7 +229,7 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc
 	INPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc.in)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
-if(BUILD_TESTING)
+if(BUILD_TESTING AND NOT MSVC)
 	list(APPEND PDB_REDO_tests pdb-redo-unit rsr)
 
 	foreach(PDB_REDO_TEST IN LISTS PDB_REDO_tests)

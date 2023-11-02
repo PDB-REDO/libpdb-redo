@@ -34,6 +34,7 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 if(MSVC)
     # make msvc standards compliant...
     add_compile_options(/permissive-)
+	add_link_options(/NODEFAULTLIB:library)
 
 	macro(get_WIN32_WINNT version)
 		if (WIN32 AND CMAKE_SYSTEM_VERSION)
