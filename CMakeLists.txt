@@ -206,6 +206,10 @@ install(
 	COMPONENT Devel
 )
 
+if(BUILD_MINIMIZER)
+	set(FIND_DEPENDENCY_GSL "find_dependency(GSL REQUIRED)")
+endif()
+
 configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/pdb-redoConfig.cmake.in
 	${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfig.cmake
 	INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pdb-redo

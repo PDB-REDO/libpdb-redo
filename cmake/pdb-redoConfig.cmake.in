@@ -4,7 +4,7 @@ include(CMakeFindDependencyMacro)
 find_dependency(newuoa 0.1.2 REQUIRED)
 find_dependency(cifpp 5.0.4 REQUIRED)
 find_dependency(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
-find_dependency(GSL REQUIRED)
+@FIND_DEPENDENCY_GSL@
 
 INCLUDE("${CMAKE_CURRENT_LIST_DIR}/pdb-redoTargets.cmake")
 
