@@ -57,6 +57,9 @@ set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 # Optionally build a version to be installed inside CCP4
 option(BUILD_FOR_CCP4 "Build a version to be installed in CCP4" OFF)
 
+# Optionally leave out the minimizer
+option(BUILD_MINIMIZER "Build the minimizer code" ON)
+
 if(BUILD_FOR_CCP4)
 	if("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
 		message(FATAL_ERROR "A CCP4 built was requested but CCP4 was not sourced")
@@ -104,7 +107,10 @@ endif()
 # Libraries
 find_package(Eigen3 REQUIRED)
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
-find_package(GSL REQUIRED)
+
+if(BUILD_MINIMIZER)
+	find_package(GSL REQUIRED)
+endif()
 
 if(NOT PDB_REDO_META)
 	find_package(newuoa REQUIRED)
@@ -116,7 +122,7 @@ include(VersionString)
 write_version_header("${PROJECT_SOURCE_DIR}/src" LIB_NAME "LibPDBREDO")
 
 # Sources
-set(project_sources
+list(APPEND project_sources
 	${PROJECT_SOURCE_DIR}/src/AtomShape.cpp
 	${PROJECT_SOURCE_DIR}/src/BondMap.cpp
 	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
@@ -127,13 +133,11 @@ set(project_sources
 	${PROJECT_SOURCE_DIR}/src/ResolutionCalculator.cpp
 	${PROJECT_SOURCE_DIR}/src/SkipList.cpp
 	${PROJECT_SOURCE_DIR}/src/Statistics.cpp
-	${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
-	${PROJECT_SOURCE_DIR}/src/Restraints.cpp
 	${PROJECT_SOURCE_DIR}/src/TLS.cpp
 	${PROJECT_SOURCE_DIR}/src/Version.cpp
 )
 
-set(project_headers
+list(APPEND project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/AtomShape.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/BondMap.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/ClipperWrapper.hpp
@@ -144,11 +148,21 @@ set(project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/ResolutionCalculator.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/SkipList.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Statistics.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/TLS.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Version.hpp
 )
+
+if(BUILD_MINIMIZER)
+	list(APPEND project_sources
+		${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
+		${PROJECT_SOURCE_DIR}/src/Restraints.cpp
+	)
+
+	list(APPEND project_headers
+		${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
+		${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp
+	)
+endif()
 
 add_library(pdb-redo ${project_sources} ${project_headers})
 add_library(pdb-redo::pdb-redo ALIAS pdb-redo)
