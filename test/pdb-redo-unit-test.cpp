@@ -291,23 +291,23 @@ BOOST_AUTO_TEST_CASE(stats_1)
 
 	while (std::getline(testFile, line))
 	{
-		auto fields = cif::split<std::string>(line, "\t");
+		auto items = cif::split<std::string>(line, "\t");
 
-		BOOST_ASSERT(fields.size() == 7);
+		BOOST_ASSERT(items.size() == 7);
 
-		auto id = cif::split<std::string>(fields[0], "_");
+		auto id = cif::split<std::string>(items[0], "_");
 		BOOST_ASSERT(id.size() == 3);
 
 		test.push_back({
 			id[0],
 			id[1],
 			std::stoi(id[2]),
-			std::stod(fields[1]),
-			std::stod(fields[2]),
-			std::stod(fields[3]),
-			static_cast<size_t>(std::stoi(fields[4])),
-			std::stod(fields[5]),
-			std::stod(fields[6])
+			std::stod(items[1]),
+			std::stod(items[2]),
+			std::stod(items[3]),
+			static_cast<size_t>(std::stoi(items[4])),
+			std::stod(items[5]),
+			std::stod(items[6])
 		});
 	}
 
