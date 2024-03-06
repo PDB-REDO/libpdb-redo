@@ -39,8 +39,8 @@ namespace fs = std::filesystem;
 namespace pdb_redo
 {
 
-using cif::kPI;
 using cif::atom_type_traits;
+using cif::kPI;
 
 // --------------------------------------------------------------------
 // Compound helper classes
@@ -94,7 +94,7 @@ Compound::Compound(const std::string &file, const std::string &id,
 
 			cif::tie(atom_id, symbol, energy, charge) = row.get("atom_id", "type_symbol", "type_energy", "partial_charge");
 
-			mAtoms.push_back({atom_id, atom_type_traits(symbol).type(), energy, charge});
+			mAtoms.push_back({ atom_id, atom_type_traits(symbol).type(), energy, charge });
 		}
 		sort(mAtoms.begin(), mAtoms.end(), CompoundAtomLess());
 
@@ -190,7 +190,7 @@ Compound::Compound(const std::string &file, const std::string &id,
 			auto i = find_if(mPlanes.begin(), mPlanes.end(), [&](auto &p)
 				{ return p.id == plane_id; });
 			if (i == mPlanes.end())
-				mPlanes.emplace_back(CompoundPlane{plane_id, {atom_id}, esd});
+				mPlanes.emplace_back(CompoundPlane{ plane_id, { atom_id }, esd });
 			else
 				i->atomID.push_back(atom_id);
 		}
@@ -651,11 +651,11 @@ Link::Link(cif::datablock &db)
 			{ return p.id == planeID; });
 		if (i == mPlanes.end())
 		{
-			std::vector<LinkAtom> atoms{LinkAtom{compID, atomID}};
-			mPlanes.emplace_back(LinkPlane{planeID, move(atoms), esd});
+			std::vector<LinkAtom> atoms{ LinkAtom{ compID, atomID } };
+			mPlanes.emplace_back(LinkPlane{ planeID, move(atoms), esd });
 		}
 		else
-			i->atoms.push_back({compID, atomID});
+			i->atoms.push_back({ compID, atomID });
 	}
 }
 
@@ -710,7 +710,7 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 		{
 			if (a.compID != b.compID)
 				throw std::runtime_error("cannot calculate chiral volume since bond lengths are missing");
-			
+
 			auto cmp = Compound::create(a.compID == 1 ? compound_id_1 : compound_id_2);
 
 			if (cmp == nullptr)
@@ -730,7 +730,7 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 		{
 			if (a.compID != b.compID or a.compID != c.compID)
 				throw std::runtime_error("cannot calculate chiral volume since bond lengths are missing");
-			
+
 			auto cmp = Compound::create(a.compID == 1 ? compound_id_1 : compound_id_2);
 
 			if (cmp == nullptr)
@@ -780,39 +780,41 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 // a factory class to generate compounds
 
 const std::map<std::string, char> kAAMap{
-	{"ALA", 'A'},
-	{"ARG", 'R'},
-	{"ASN", 'N'},
-	{"ASP", 'D'},
-	{"CYS", 'C'},
-	{"GLN", 'Q'},
-	{"GLU", 'E'},
-	{"GLY", 'G'},
-	{"HIS", 'H'},
-	{"ILE", 'I'},
-	{"LEU", 'L'},
-	{"LYS", 'K'},
-	{"MET", 'M'},
-	{"PHE", 'F'},
-	{"PRO", 'P'},
-	{"SER", 'S'},
-	{"THR", 'T'},
-	{"TRP", 'W'},
-	{"TYR", 'Y'},
-	{"VAL", 'V'},
-	{"GLX", 'Z'},
-	{"ASX", 'B'}};
+	{ "ALA", 'A' },
+	{ "ARG", 'R' },
+	{ "ASN", 'N' },
+	{ "ASP", 'D' },
+	{ "CYS", 'C' },
+	{ "GLN", 'Q' },
+	{ "GLU", 'E' },
+	{ "GLY", 'G' },
+	{ "HIS", 'H' },
+	{ "ILE", 'I' },
+	{ "LEU", 'L' },
+	{ "LYS", 'K' },
+	{ "MET", 'M' },
+	{ "PHE", 'F' },
+	{ "PRO", 'P' },
+	{ "SER", 'S' },
+	{ "THR", 'T' },
+	{ "TRP", 'W' },
+	{ "TYR", 'Y' },
+	{ "VAL", 'V' },
+	{ "GLX", 'Z' },
+	{ "ASX", 'B' }
+};
 
 const std::map<std::string, char> kBaseMap{
-	{"A", 'A'},
-	{"C", 'C'},
-	{"G", 'G'},
-	{"T", 'T'},
-	{"U", 'U'},
-	{"DA", 'A'},
-	{"DC", 'C'},
-	{"DG", 'G'},
-	{"DT", 'T'}};
+	{ "A", 'A' },
+	{ "C", 'C' },
+	{ "G", 'G' },
+	{ "T", 'T' },
+	{ "U", 'U' },
+	{ "DA", 'A' },
+	{ "DC", 'C' },
+	{ "DG", 'G' },
+	{ "DT", 'T' }
+};
 
 // --------------------------------------------------------------------
 
@@ -908,18 +910,113 @@ CompoundFactoryImpl::CompoundFactoryImpl(const std::filesystem::path &file, Comp
 {
 	const std::regex peptideRx("(?:[lmp]-)?peptide", std::regex::icase);
 
-	auto &cat = mFile["comp_list"]["chem_comp"];
+	auto &cf = cif::compound_factory::instance();
 
-	for (auto chemComp : cat)
+	for (const auto &[id, name, threeLetterCode, group] :
+		mFile["comp_list"]["chem_comp"].rows<std::string, std::string, std::string, std::string>("id", "name", "three_letter_code", "group"))
 	{
-		std::string group, threeLetterCode;
-
-		cif::tie(group, threeLetterCode) = chemComp.get("group", "three_letter_code");
-
 		if (std::regex_match(group, peptideRx))
 			mKnownPeptides.insert(threeLetterCode);
 		else if (cif::iequals(group, "DNA") or cif::iequals(group, "RNA"))
 			mKnownBases.insert(threeLetterCode);
+		
+		// Test if this compound is known in CCD
+		if (not cf.create(id))
+		{
+			auto &rdb = mFile["comp_" + id];
+			if (rdb.empty())
+			{
+				std::cerr << "Missing data in restraint file for id " + id + '\n';
+				continue;
+			}
+
+			cif::file f;
+			auto &db = f.emplace_back(id);
+
+			float formula_weight = 0;
+			int formal_charge = 0;
+			std::map<std::string,size_t> formula_data;
+
+			for (size_t ord = 1; const auto &[atom_id, type_symbol, type, charge, x, y, z] :
+				rdb["chem_comp_atom"].rows<std::string, std::string, std::string, int, float, float, float>(
+					"atom_id", "type_symbol", "type", "charge", "x", "y", "z"))
+			{
+				auto atom = cif::atom_type_traits(type_symbol);
+				formula_weight += atom.weight();
+
+				formula_data[type_symbol] += 1;
+
+				db["chem_comp_atom"].emplace({
+					{ "comp_id", id },
+					{ "atom_id", atom_id },
+					{ "type_symbol", type_symbol },
+					{ "charge", charge },
+					{ "model_Cartn_x",  x, 3 },
+					{ "model_Cartn_y",  y, 3 },
+					{ "model_Cartn_z",  z, 3 },
+					{ "pdbx_ordinal", ord++ }
+				});
+
+				formal_charge += charge;
+			}
+
+			for (size_t ord = 1; const auto &[atom_id_1, atom_id_2, type, aromatic] :
+				rdb["chem_comp_bond"].rows<std::string, std::string, std::string, bool>("atom_id_1", "atom_id_2", "type", "aromatic"))
+			{
+				std::string value_order("SING");
+
+				if (cif::iequals(type, "single") or cif::iequals(type, "sing"))
+					value_order = "SING";
+				else if (cif::iequals(type, "double") or cif::iequals(type, "doub"))
+					value_order = "DOUB";
+				else if (cif::iequals(type, "triple") or cif::iequals(type, "trip"))
+					value_order = "TRIP";
+
+				db["chem_comp_bond"].emplace({
+					{ "comp_id", id },
+					{ "atom_id_1", atom_id_1 },
+					{ "atom_id_2", atom_id_2 },
+					{ "value_order", value_order },
+					{ "pdbx_aromatic_flag", aromatic },
+					// TODO: fetch stereo_config info from chem_comp_chir
+					{ "pdbx_ordinal", ord++ }
+				});
+			}
+
+			db.emplace_back(rdb["pdbx_chem_comp_descriptor"]);
+
+			std::string formula;
+			for (bool first = true; const auto &[symbol, count]: formula_data)
+			{
+				if (std::exchange(first, false))
+					formula += ' ';
+				formula += symbol;
+				if (count > 1)
+					formula += std::to_string(count);
+			}
+
+			std::string type;
+			if (cif::iequals(group, "peptide") or cif::iequals(group, "l-peptide") or cif::iequals(group, "l-peptide linking"))
+				type = "L-PEPTIDE LINKING";
+			else if (cif::iequals(group, "dna"))
+				type = "DNA LINKING";
+			else if (cif::iequals(group, "rna"))
+				type = "RNA LINKING";
+			else
+				type = "NON-POLYMER";
+
+			db["chem_comp"].emplace({
+				{ "id", id },
+				{ "name", name },
+				{ "type", type },
+				{ "formula", formula },
+				{ "pdbx_formal_charge", formal_charge },
+				{ "formula_weight", formula_weight },
+				{ "three_letter_code", threeLetterCode }
+			});
+	
+			cf.push_dictionary(f);
+		}
 	}
 }
 
