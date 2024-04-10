@@ -391,7 +391,7 @@ float Compound::atomBondValue(const std::string &atomId_1, const std::string &at
 // 			break;
 
 // 		// same number of atoms of each type?
-// 		std::map<AtomType, int> aTypeCount, bTypeCount;
+// 		std::map<cif::atom_type, int> aTypeCount, bTypeCount;
 
 // 		bool sameAtomNames = true;
 // 		for (size_t i = 0; i < mAtoms.size(); ++i)
