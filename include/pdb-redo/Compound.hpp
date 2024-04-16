@@ -141,23 +141,8 @@ struct CompoundChiralCentre
 class Compound
 {
   public:
-	Compound(const std::string &file, const std::string &id, const std::string &name,
+	Compound(const cif::datablock &db, const std::string &id, const std::string &name,
 		const std::string &group);
-
-	// factory method, create a Compound based on the three letter code
-	// (for amino acids) or the one-letter code (for bases) or the
-	// code as it is known in the CCP4 monomer library.
-
-	static const Compound *create(const std::string &id);
-
-	// // this second factory method can create a Compound even if it is not
-	// // recorded in the library. It will take the values from the CCP4 lib
-	// // unless the value passed to this function is not empty.
-	// static const Compound *create(const std::string &id, const std::string &name,
-	// 	const std::string &type, const std::string &formula);
-
-	// add an additional path to the monomer library.
-	static void addMonomerLibraryPath(const std::string &dir);
 
 	// accessors
 	std::string id() const { return mID; }
@@ -192,7 +177,7 @@ class Compound
 	// std::vector<std::tuple<std::string, std::string>> mapToIsomer(const Compound &c) const;
 
   private:
-	cif::file mCF;
+	cif::datablock mCF;
 	std::string mID;
 	std::string mName;
 	std::string mGroup;
@@ -200,8 +185,7 @@ class Compound
 	std::vector<CompoundBond> mBonds;
 	std::vector<CompoundAngle> mAngles;
 	std::vector<CompoundTorsion> mTorsions;
-	std::vector<CompoundChiralCentre>
-		mChiralCentres;
+	std::vector<CompoundChiralCentre> mChiralCentres;
 	std::vector<CompoundPlane> mPlanes;
 };
 
@@ -279,9 +263,6 @@ class Link
 {
   public:
 	Link(cif::datablock &db);
-
-	// Factory method.
-	static const Link &create(const std::string &id);
 
 	// accessors
 	std::string id() const { return mID; }

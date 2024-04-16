@@ -97,7 +97,7 @@ Minimizer::Minimizer(const cif::mm::structure &structure)
 
 void Minimizer::addResidue(const cif::mm::residue &res)
 {
-	auto compound = Compound::create(res.get_compound_id()); // r.get_compound();
+	auto compound = CompoundFactory::instance().create(res.get_compound_id()); // r.get_compound();
 	if (not compound)
 		throw std::runtime_error("Missing compound information for " + res.get_compound_id());
 
@@ -424,8 +424,8 @@ void Minimizer::Finish(const cif::crystal &crystal)
 		{
 			try
 			{
-				auto c1 = Compound::create(a1.get_label_comp_id());
-				auto c2 = Compound::create(a2.get_label_comp_id());
+				auto c1 = CompoundFactory::instance().create(a1.get_label_comp_id());
+				auto c2 = CompoundFactory::instance().create(a2.get_label_comp_id());
 
 				std::string et1 = c1->get_atom_by_atom_id(a1.get_label_atom_id()).typeEnergy;
 				std::string et2 = c2->get_atom_by_atom_id(a2.get_label_atom_id()).typeEnergy;
