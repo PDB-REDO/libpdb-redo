@@ -112,8 +112,11 @@ if(BUILD_MINIMIZER)
 	find_package(GSL REQUIRED)
 endif()
 
-if(NOT PDB_REDO_META)
+if(NOT (newuoa_FOUND OR TARGET newuoa))
 	find_package(newuoa REQUIRED)
+endif()
+
+if(NOT (cifpp_FOUND OR TARGET cifpp))
 	find_package(cifpp 5.0.8 REQUIRED)
 endif()
 
