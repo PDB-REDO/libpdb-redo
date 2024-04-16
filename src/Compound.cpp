@@ -1060,20 +1060,13 @@ CompoundFactory::CompoundFactory()
 	: mImpl(nullptr)
 {
 	const char *clibdMon = getenv("CLIBD_MON");
-	if (clibdMon != nullptr)
+	if (clibdMon == nullptr)
 	{
-		fs::path db = fs::path(clibdMon) / "list" / "mon_lib_list.cif";
-		if (fs::exists(db))
-			pushDictionary(db);
+		std::cerr << "Could not load the mon_lib_list.cif file from CCP4, please make sure you have installed CCP4 and sourced the environment.\n";
+		exit(1);
 	}
 
-	if (mImpl == nullptr)
-	{
-		if (cif::VERBOSE > 0)
-			std::cerr << "Could not load the mon_lib_list.cif file from CCP4, please make sure you have installed CCP4 and sourced the environment.\n";
-
-		mImpl = new CompoundFactoryImpl();
-	}
+	mImpl = new CompoundFactoryImpl();
 }
 
 CompoundFactory::~CompoundFactory()
