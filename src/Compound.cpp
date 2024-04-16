@@ -885,7 +885,7 @@ const Compound *RestraintCompoundFactoryImpl::createSelf(std::string id)
 		}
 	}
 
-	return result;	
+	return result;
 }
 
 // --------------------------------------------------------------------
@@ -909,7 +909,12 @@ const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 	const Compound *result = nullptr;
 	if (not mFile.empty() and not mMissing.contains(id))
 	{
-		auto &cat = mFile["comp_list"]["chem_comp"];
+		auto clibd_mon = fs::path(getenv("CLIBD_MON"));
+
+		fs::path resFile = clibd_mon / cif::to_lower_copy(id.substr(0, 1)) / (id + ".cif");
+		cif::file cifFile(resFile);
+
+		auto &cat = cifFile["comp_list"]["chem_comp"];
 
 		auto rs = cat.find(cif::key("three_letter_code") == id);
 
@@ -925,20 +930,9 @@ const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 			cif::trim(name);
 			cif::trim(group);
 
-			auto clibd_mon = fs::path(getenv("CLIBD_MON"));
-
-			fs::path resFile = clibd_mon / cif::to_lower_copy(id.substr(0, 1)) / (id + ".cif");
-
-			if (not fs::exists(resFile) and (id == "COM" or id == "CON" or "PRN")) // seriously...
-				resFile = clibd_mon / cif::to_lower_copy(id.substr(0, 1)) / (id + '_' + id + ".cif");
-
-			if (not fs::exists(resFile))
-				mMissing.insert(id);
-			else
+			if (cifFile.contains("comp_" + id))
 			{
-				cif::file cf(resFile);
-
-				mCompounds.emplace_back(new Compound(cf["comp_" + id], id, name, group));
+				mCompounds.emplace_back(new Compound(cifFile["comp_" + id], id, name, group));
 				result = mCompounds.back().get();
 			}
 		}
@@ -988,7 +982,7 @@ void CompoundFactory::pushDictionary(const fs::path &inDictFile)
 		std::ifstream file(inDictFile);
 		if (not file.is_open())
 			throw std::system_error(errno, std::generic_category(), inDictFile.string());
-		
+
 		mImpl = new RestraintCompoundFactoryImpl(file, mImpl);
 	}
 	catch (const std::exception &ex)
