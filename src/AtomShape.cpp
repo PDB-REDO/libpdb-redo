@@ -337,7 +337,7 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 		double t = 4 * cif::kPI * rt;
 		y = 0;
 
-		for (size_t i = 0; i < mST.size(); ++i)
+		for (std::size_t i = 0; i < mST.size(); ++i)
 			y += fst[i] * sineIntegration(t * mST[i]);
 
 		if (r < 0)
@@ -376,7 +376,7 @@ double DensityIntegration::integrateRadius(float perc, float occupancy, double y
 	const double initial_trust_region_radius = 1e-3;
 	const double final_trust_region_radius = 1e3;
 	const long max_function_calls_count = 100;
-	const size_t working_space_size = NEWUOA_WORKING_SPACE_SIZE(variables_count,
+	const std::size_t working_space_size = NEWUOA_WORKING_SPACE_SIZE(variables_count,
 		number_of_interpolation_conditions);
 	double working_space[working_space_size];
 
@@ -490,7 +490,7 @@ struct AtomShapeImpl
 			mYi += D.a[i] * (std::exp(-bi * as) - std::exp(-bi * bs)) / bi;
 		}
 
-		for (size_t i = 0; i < st.size(); ++i)
+		for (std::size_t i = 0; i < st.size(); ++i)
 		{
 			double t = 0;
 			for (int j = 0; j < 6; ++j)
@@ -502,7 +502,7 @@ struct AtomShapeImpl
 			mFst[i] = occupancy * wa[i] * t * st[i];
 		}
 
-		for (size_t i = 0; i < 6; ++i)
+		for (std::size_t i = 0; i < 6; ++i)
 		{
 			mBW[i] = static_cast<float>(-4 * kPI * kPI / (D.b[i] + bIso));
 			mAW[i] = static_cast<float>(D.a[i] * std::pow(-mBW[i] / kPI, 1.5));

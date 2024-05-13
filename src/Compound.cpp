@@ -381,7 +381,7 @@ float Compound::atomBondValue(const std::string &atomId_1, const std::string &at
 // 		std::map<cif::atom_type, int> aTypeCount, bTypeCount;
 
 // 		bool sameAtomNames = true;
-// 		for (size_t i = 0; i < mAtoms.size(); ++i)
+// 		for (std::size_t i = 0; i < mAtoms.size(); ++i)
 // 		{
 // 			auto &a = mAtoms[i];
 // 			auto &b = c.mAtoms[i];
@@ -397,7 +397,7 @@ float Compound::atomBondValue(const std::string &atomId_1, const std::string &at
 // 			break;
 
 // 		bool sameBonds = sameAtomNames;
-// 		for (size_t i = 0; sameBonds and i < mBonds.size(); ++i)
+// 		for (std::size_t i = 0; sameBonds and i < mBonds.size(); ++i)
 // 		{
 // 			sameBonds =
 // 				mBonds[i].atomID[0] == c.mBonds[i].atomID[0] and
@@ -639,7 +639,7 @@ Link::Link(cif::datablock &db)
 		if (i == mPlanes.end())
 		{
 			std::vector<LinkAtom> atoms{ LinkAtom{ compID, atomID } };
-			mPlanes.emplace_back(LinkPlane{ planeID, move(atoms), esd });
+			mPlanes.emplace_back(LinkPlane{ planeID, std::move(atoms), esd });
 		}
 		else
 			i->atoms.push_back({ compID, atomID });

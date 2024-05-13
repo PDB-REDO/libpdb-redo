@@ -38,7 +38,7 @@ using cif::point;
 
 // --------------------------------------------------------------------
 
-std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<size_t,point>> &atoms)
+std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<std::size_t,point>> &atoms)
 {
 	std::vector<point> pts;
 	for (const auto &[ix, pt] : atoms)
@@ -89,7 +89,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 	{
 		const auto &[id, x, y, z] = atom.get<std::string, float, float, float>("id", "Cartn_x", "Cartn_y", "Cartn_z");
 
-		size_t ix = index.size();
+		std::size_t ix = index.size();
 		index[id] = ix;
 		rIndex[ix] = id;
 
@@ -116,13 +116,13 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 
 	DistMap dist;
 
-	std::vector<std::tuple<cif::point, float, std::vector<std::tuple<size_t,point>>>> residues;
+	std::vector<std::tuple<cif::point, float, std::vector<std::tuple<std::size_t,point>>>> residues;
 
 	// loop over poly_seq_scheme
 	for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].rows<std::string, int>("asym_id", "seq_id"))
 	{
-		std::vector<std::tuple<size_t,point>> rAtoms;
-		for (size_t i = 0; i < dim; ++i)
+		std::vector<std::tuple<std::size_t,point>> rAtoms;
+		for (std::size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asymID and atoms[i]["label_seq_id"] == seqID)
 				rAtoms.emplace_back(i, locations[i]);
@@ -138,12 +138,12 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 	auto water_entity_id = db["entity"].find1<std::optional<std::string>>("type"_key == "water", "id");
 	if (water_entity_id.has_value())
 	{
-		for (size_t i = 0; i < dim; ++i)
+		for (std::size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_entity_id"] == *water_entity_id)
 			{
 				auto pt = locations[i];
-				residues.emplace_back(pt, 0.f, std::vector<std::tuple<size_t,point>>{ { i, pt } });
+				residues.emplace_back(pt, 0.f, std::vector<std::tuple<std::size_t,point>>{ { i, pt } });
 			}
 		}
 	}
@@ -154,8 +154,8 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 		if (water_entity_id.has_value() and entityID == *water_entity_id)
 			continue;
 
-		std::vector<std::tuple<size_t,point>> rAtoms;
-		for (size_t i = 0; i < dim; ++i)
+		std::vector<std::tuple<std::size_t,point>> rAtoms;
+		for (std::size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asymID)
 				rAtoms.emplace_back(i, locations[i]);
@@ -170,8 +170,8 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 	// loop over pdbx_branch_scheme
 	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].rows<std::string, std::string>("asym_id", "num"))
 	{
-		std::vector<std::tuple<size_t,point>> rAtoms;
-		for (size_t i = 0; i < dim; ++i)
+		std::vector<std::tuple<std::size_t,point>> rAtoms;
+		for (std::size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asym_id and atoms[i]["auth_seq_id"] == pdb_seq_num)
 				rAtoms.emplace_back(i, locations[i]);
@@ -185,11 +185,11 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 
 	cif::progress_bar progress_bar((residues.size() * (residues.size() - 1)) / 2, "Creating distance map");
 
-	for (size_t i = 0; i + 1 < residues.size(); ++i)
+	for (std::size_t i = 0; i + 1 < residues.size(); ++i)
 	{
 		const auto &[centerI, radiusI, atomsI] = residues[i];
 
-		for (size_t j = i + 1; j < residues.size(); ++j)
+		for (std::size_t j = i + 1; j < residues.size(); ++j)
 		{
 			progress_bar.consumed(1);
 
@@ -211,22 +211,22 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 
 	// Store as a sparse CSR compressed matrix
 
-	size_t nnz = dist.size();
+	std::size_t nnz = dist.size();
 	mA.reserve(nnz);
 	mIA.reserve(dim + 1);
 	mJA.reserve(nnz);
 
-	size_t lastR = 0;
+	std::size_t lastR = 0;
 	mIA.push_back(0);
 
 	for (const auto &[key, value] : dist)
 	{
-		size_t col, row;
+		std::size_t col, row;
 		std::tie(row, col) = key;
 
 		if (row != lastR) // new row
 		{
-			for (size_t ri = lastR; ri < row; ++ri)
+			for (std::size_t ri = lastR; ri < row; ++ri)
 				mIA.push_back(mA.size());
 			lastR = row;
 		}
@@ -235,13 +235,13 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 		mJA.push_back(col);
 	}
 
-	for (size_t ri = lastR; ri < dim; ++ri)
+	for (std::size_t ri = lastR; ri < dim; ++ri)
 		mIA.push_back(mA.size());
 }
 
 // --------------------------------------------------------------------
 
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b, DistMap &dm)
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,point>> &a, const std::vector<std::tuple<std::size_t,point>> &b, DistMap &dm)
 {
 	for (const auto &[ixa, loc_a] : a)
 	{
@@ -263,7 +263,7 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 	}
 }
 
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point>> &a, const std::vector<std::tuple<size_t,point>> &b,
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,point>> &a, const std::vector<std::tuple<std::size_t,point>> &b,
 	DistMap &dm, cif::sym_op symop)
 {
 	for (const auto &[ixa, loc_a] : a)
@@ -288,7 +288,7 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<size_t,point
 
 float DistanceMap::operator()(const std::string &a, const std::string &b) const
 {
-	size_t ixa, ixb;
+	std::size_t ixa, ixb;
 
 	try
 	{
@@ -311,12 +311,12 @@ float DistanceMap::operator()(const std::string &a, const std::string &b) const
 	//	if (ixb < ixa)
 	//		std::swap(ixa, ixb);
 
-	size_t L = mIA[ixa];
-	size_t R = mIA[ixa + 1] - 1;
+	std::size_t L = mIA[ixa];
+	std::size_t R = mIA[ixa + 1] - 1;
 
 	while (L <= R)
 	{
-		size_t i = (L + R) / 2;
+		std::size_t i = (L + R) / 2;
 
 		if (mJA[i] == ixb)
 			return std::get<0>(mA[i]);
@@ -341,7 +341,7 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 	std::string a_id = atom.id();
 	std::string alta = atom.get_label_alt_id();
 
-	size_t ixa;
+	std::size_t ixa;
 	try
 	{
 		ixa = index.at(a_id);
@@ -355,14 +355,14 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 	auto &atom_site = atom.get_row().get_category();
 
-	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
+	for (std::size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
 	{
 		const auto &[d, symop, inverse] = mA[i];
 
 		if (d > maxDistance)
 			continue;
 
-		size_t ixb = mJA[i];
+		std::size_t ixb = mJA[i];
 
 		std::string b_id = rIndex.at(ixb);
 		auto altb = atom_site.find_first<std::string>("id"_key == b_id, "label_alt_id");

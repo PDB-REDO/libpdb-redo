@@ -197,7 +197,7 @@ class Minimizer
 	const cif::mm::structure &mStructure;
 
 	std::vector<cif::mm::atom> mAtoms, mReferencedAtoms;
-	std::vector<size_t> mRef2AtomIndex;
+	std::vector<std::size_t> mRef2AtomIndex;
 	std::map<std::string, AtomRef> mRefIndex;
 
 	std::vector<BondRestraint> mBondRestraints;

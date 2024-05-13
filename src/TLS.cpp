@@ -64,7 +64,7 @@ struct tls_residue
 	}
 };
 
-void dump_selection(const std::vector<tls_residue> &selected, size_t indentLevel)
+void dump_selection(const std::vector<tls_residue> &selected, std::size_t indentLevel)
 {
 	std::string indent(indentLevel * 2, ' ');
 
@@ -309,7 +309,7 @@ struct tls_selection_not : public tls_selection
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		selection->collect_residues(db, residues, indentLevel + 1);
 
@@ -330,7 +330,7 @@ struct tls_selection_all : public tls_selection
 {
 	tls_selection_all() {}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		for (auto &r : residues)
 			r.selected = true;
@@ -350,7 +350,7 @@ struct tls_selection_chain : public tls_selection_all
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		bool allChains = m_chain == "*";
 
@@ -375,7 +375,7 @@ struct tls_selection_res_id : public tls_selection_all
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		for (auto &r : residues)
 			r.selected = r.seqNr == m_seq_nr and r.iCode == m_icode;
@@ -399,7 +399,7 @@ struct tls_selection_range_seq : public tls_selection_all
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		for (auto &r : residues)
 		{
@@ -427,7 +427,7 @@ struct tls_selection_range_id : public tls_selection_all
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		// need to do this per chain
 		std::set<std::string> chains;
@@ -482,7 +482,7 @@ struct tls_selection_union : public tls_selection
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		auto a = residues;
 		for_each(a.begin(), a.end(), [](auto &r)
@@ -523,7 +523,7 @@ struct tls_selection_intersection : public tls_selection
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		auto a = residues;
 		for_each(a.begin(), a.end(), [](auto &r)
@@ -558,7 +558,7 @@ struct tls_selection_by_name : public tls_selection_all
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		for (auto &r : residues)
 			r.selected = r.name == m_name;
@@ -581,7 +581,7 @@ struct tls_selection_by_element : public tls_selection_all
 	{
 	}
 
-	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, size_t indentLevel) const override
+	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		// rationale... We want to select residues only. So we select
 		// residues that have just a single atom of type m_element.

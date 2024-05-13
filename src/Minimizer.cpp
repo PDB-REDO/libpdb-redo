@@ -244,7 +244,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 			}
 
 			if (atoms.size() > 3)
-				mPlanarityRestraints.emplace_back(move(atoms), p.esd);
+				mPlanarityRestraints.emplace_back(std::move(atoms), p.esd);
 		}
 		catch (const std::exception &ex)
 		{
@@ -305,7 +305,7 @@ void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last
 						ref(r.get_atom_by_atom_id("CA"))
 					};
 
-					mPlanarityRestraints.emplace_back(PlanarityRestraint{ move(atoms), kDefaultPlane5ESD });
+					mPlanarityRestraints.emplace_back(PlanarityRestraint{ std::move(atoms), kDefaultPlane5ESD });
 				}
 			}
 			catch (const std::exception &ex)
@@ -348,7 +348,7 @@ void Minimizer::addDensityMap(const XMap &xMap, float mapWeight)
 			return std::make_pair(ref(a), z * weight * occupancy);
 		});
 
-	mDensityRestraint.reset(new DensityRestraint(move(densityAtoms), xMap, mapWeight));
+	mDensityRestraint.reset(new DensityRestraint(std::move(densityAtoms), xMap, mapWeight));
 }
 
 void Minimizer::Finish(const cif::crystal &crystal)
@@ -548,8 +548,8 @@ void Minimizer::Finish(const cif::crystal &crystal)
 	}
 
 	// create reverse index (for dfcollector)
-	mRef2AtomIndex = std::vector<size_t>(mReferencedAtoms.size(), kRefSentinel);
-	for (size_t i = 0; i < mAtoms.size(); ++i)
+	mRef2AtomIndex = std::vector<std::size_t>(mReferencedAtoms.size(), kRefSentinel);
+	for (std::size_t i = 0; i < mAtoms.size(); ++i)
 	{
 		AtomRef ar = ref(mAtoms[i]);
 		assert(ar < mRef2AtomIndex.size());
@@ -797,7 +797,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			}
 
 			if (atoms.size() > 3)
-				mPlanarityRestraints.emplace_back(PlanarityRestraint{ move(atoms), plane.esd });
+				mPlanarityRestraints.emplace_back(PlanarityRestraint{ std::move(atoms), plane.esd });
 		}
 		catch (const std::exception &ex)
 		{
@@ -866,7 +866,7 @@ class GSLAtomLocation : public AtomLocationProvider
 {
   public:
 	GSLAtomLocation(std::vector<cif::mm::atom> &atoms, const std::vector<cif::point> &fixedAtoms,
-		const std::vector<size_t> &index, const gsl_vector *v)
+		const std::vector<std::size_t> &index, const gsl_vector *v)
 		: AtomLocationProvider(atoms)
 		, mFixedLocations(fixedAtoms)
 		, mIndex(index)
@@ -876,9 +876,9 @@ class GSLAtomLocation : public AtomLocationProvider
 
 		if (cif::VERBOSE > 2)
 		{
-			for (size_t i = 0; i < mIndex.size(); ++i)
+			for (std::size_t i = 0; i < mIndex.size(); ++i)
 			{
-				size_t ri = mIndex[i];
+				std::size_t ri = mIndex[i];
 				if (ri == kRefSentinel)
 					continue;
 
@@ -899,7 +899,7 @@ class GSLAtomLocation : public AtomLocationProvider
 
   private:
 	const std::vector<cif::point> &mFixedLocations;
-	const std::vector<size_t> &mIndex;
+	const std::vector<std::size_t> &mIndex;
 	const gsl_vector *mV;
 };
 
@@ -907,7 +907,7 @@ DPoint GSLAtomLocation::operator[](AtomRef atomID) const
 {
 	assert(atomID < mIndex.size());
 
-	size_t ix = mIndex.at(atomID);
+	std::size_t ix = mIndex.at(atomID);
 
 	if (ix == kRefSentinel)
 		return mFixedLocations.at(atomID);
@@ -920,9 +920,9 @@ DPoint GSLAtomLocation::operator[](AtomRef atomID) const
 
 void GSLAtomLocation::storeLocations()
 {
-	for (size_t i = 0; i < mIndex.size(); ++i)
+	for (std::size_t i = 0; i < mIndex.size(); ++i)
 	{
-		size_t ri = mIndex[i];
+		std::size_t ri = mIndex[i];
 		if (ri == kRefSentinel)
 			continue;
 
@@ -941,12 +941,12 @@ void GSLAtomLocation::storeLocations()
 class GSLDFCollector : public DFCollector
 {
   public:
-	GSLDFCollector(const std::vector<cif::mm::atom> &atoms, const std::vector<size_t> &index, gsl_vector *df)
+	GSLDFCollector(const std::vector<cif::mm::atom> &atoms, const std::vector<std::size_t> &index, gsl_vector *df)
 		: mAtoms(atoms)
 		, mIndex(index)
 		, mDF(df)
 	{
-		for (size_t ix : mIndex)
+		for (std::size_t ix : mIndex)
 		{
 			if (ix == kRefSentinel)
 				continue;
@@ -971,7 +971,7 @@ class GSLDFCollector : public DFCollector
 	}
 
 	const std::vector<cif::mm::atom> &mAtoms;
-	const std::vector<size_t> &mIndex;
+	const std::vector<std::size_t> &mIndex;
 	gsl_vector *mDF;
 };
 
@@ -982,9 +982,9 @@ GSLDFCollector::~GSLDFCollector()
 		std::cerr << std::string(19, '-') << '\n'
 				  << "Collected gradient: \n";
 
-		for (size_t i = 0; i < mAtoms.size(); ++i)
+		for (std::size_t i = 0; i < mAtoms.size(); ++i)
 		{
-			size_t ix = mIndex[i];
+			std::size_t ix = mIndex[i];
 			if (ix == kRefSentinel)
 				continue;
 
@@ -1003,7 +1003,7 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 {
 	assert(atom < mIndex.size());
 
-	size_t ix = mIndex[atom];
+	std::size_t ix = mIndex[atom];
 	if (ix != kRefSentinel)
 	{
 		gsl_vector_set(mDF, ix * 3 + 0, gsl_vector_get(mDF, ix * 3 + 0) + dx);
@@ -1058,7 +1058,7 @@ class GSLMinimizer : public Minimizer
 
 double GSLMinimizer::refine(bool storeAtoms)
 {
-	const size_t iterations = 4000;
+	const std::size_t iterations = 4000;
 
 	gsl_multimin_function_fdf fdf = {};
 	fdf.f = &GSLMinimizer::F;
@@ -1071,7 +1071,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 	auto T = gsl_multimin_fdfminimizer_vector_bfgs2;
 	auto x = gsl_vector_alloc(3 * mAtoms.size());
 
-	size_t ix = 0;
+	std::size_t ix = 0;
 	for (auto &a : mAtoms)
 	{
 		auto l = a.get_location();
@@ -1093,7 +1093,7 @@ double GSLMinimizer::refine(bool storeAtoms)
 	if (gradLim < 0.3)
 		gradLim = 0.3;
 
-	for (size_t i = 0; i < iterations; ++i)
+	for (std::size_t i = 0; i < iterations; ++i)
 	{
 		int status = gsl_multimin_fdfminimizer_iterate(m_s);
 
@@ -1158,9 +1158,9 @@ std::vector<std::pair<std::string, cif::point>> GSLMinimizer::getAtoms() const
 {
 	std::vector<std::pair<std::string, cif::point>> result;
 
-	for (size_t i = 0; i < mRef2AtomIndex.size(); ++i)
+	for (std::size_t i = 0; i < mRef2AtomIndex.size(); ++i)
 	{
-		size_t ri = mRef2AtomIndex[i];
+		std::size_t ri = mRef2AtomIndex[i];
 		if (ri == kRefSentinel)
 			continue;
 

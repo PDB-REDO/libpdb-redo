@@ -49,7 +49,7 @@ class DFCollector;
 
 // --------------------------------------------------------------------
 
-typedef size_t AtomRef;
+typedef std::size_t AtomRef;
 typedef typename Map<float>::Xmap Xmap;
 
 // --------------------------------------------------------------------

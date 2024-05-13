@@ -183,8 +183,8 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 
 	const float kResHi = 1.80009, kResLo = 7.99918; 
 
-	const size_t N = sizeof(kTestRadii) / sizeof(TestRadius);
-	size_t i = 0;
+	const std::size_t N = sizeof(kTestRadii) / sizeof(TestRadius);
+	std::size_t i = 0;
 
 	for (auto& atom: structure.atoms())
 	{
@@ -206,11 +206,11 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 
 // --------------------------------------------------------------------
 
-cif::file operator""_cf(const char* text, size_t length)
+cif::file operator""_cf(const char* text, std::size_t length)
 {
     struct membuf : public std::streambuf
     {
-        membuf(char* text, size_t length)
+        membuf(char* text, std::size_t length)
         {
             this->setg(text, text, text + length);
         }
@@ -270,7 +270,7 @@ struct TestResidue
 	std::string		asymID;
 	int				seqID;
 	double			RSR, SRSR, RSCCS;
-	size_t			NGRID;
+	std::size_t			NGRID;
 	double			EDIAm, OPIA;
 };
 
@@ -305,7 +305,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 			std::stod(items[1]),
 			std::stod(items[2]),
 			std::stod(items[3]),
-			static_cast<size_t>(std::stoi(items[4])),
+			static_cast<std::size_t>(std::stoi(items[4])),
 			std::stod(items[5]),
 			std::stod(items[6])
 		});
@@ -438,11 +438,11 @@ BOOST_AUTO_TEST_CASE(bond_map_1)
 	using key_type = std::tuple<std::string,std::string>;
 	std::map<key_type,bool> bonded;
 	
-	for (size_t i = 0; i + 1 < atom_ids.size(); ++i)
+	for (std::size_t i = 0; i + 1 < atom_ids.size(); ++i)
 	{
 		auto a = atom_ids[i];
 
-		for (size_t j = i + 1; j < atom_ids.size(); ++j)
+		for (std::size_t j = i + 1; j < atom_ids.size(); ++j)
 		{
 			auto b = atom_ids[j];
 			
@@ -453,12 +453,12 @@ BOOST_AUTO_TEST_CASE(bond_map_1)
 	cif::point c = atom_locs.front();
 	BondMap bm2(db, std::make_tuple(c, 6.0f));
 
-	for (size_t i = 0; i + 1 < atom_ids.size(); ++i)
+	for (std::size_t i = 0; i + 1 < atom_ids.size(); ++i)
 	{
 		auto a = atom_ids[i];
 		auto pa = atom_locs[i];
 
-		for (size_t j = i + 1; j < atom_ids.size(); ++j)
+		for (std::size_t j = i + 1; j < atom_ids.size(); ++j)
 		{
 			auto b = atom_ids[j];
 			auto pb = atom_locs[j];

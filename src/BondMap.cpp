@@ -161,7 +161,7 @@ BondMap &BondMap::operator=(BondMap &&bm)
 	return *this;
 }
 
-BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,float>> around, size_t model_nr)
+BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,float>> around, std::size_t model_nr)
 {
 	using namespace cif::literals;
 
@@ -390,9 +390,9 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 		for (auto j = a.first; j != a.second; ++j)
 			s.push_back(j->second);
 
-		for (size_t si1 = 0; si1 + 1 < s.size(); ++si1)
+		for (std::size_t si1 = 0; si1 + 1 < s.size(); ++si1)
 		{
-			for (size_t si2 = si1 + 1; si2 < s.size(); ++si2)
+			for (std::size_t si2 = si1 + 1; si2 < s.size(); ++si2)
 			{
 				uint32_t x = s[si1];
 				uint32_t y = s[si2];

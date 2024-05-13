@@ -75,7 +75,7 @@ BOOST_AUTO_TEST_CASE(refine_0)
 
 	double d_sum = 0;
 
-	for (size_t i = 0; i < atoms3.size(); ++i)
+	for (std::size_t i = 0; i < atoms3.size(); ++i)
 	{
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
@@ -127,7 +127,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 
 	BOOST_ASSERT(atoms3.size() == refAtoms3.size());
 
-	for (size_t i = 0; i < atoms3.size(); ++i)
+	for (std::size_t i = 0; i < atoms3.size(); ++i)
 	{
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
@@ -149,7 +149,7 @@ BOOST_AUTO_TEST_CASE(refine_1)
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 
-	for (size_t i = 0; i < atoms3.size(); ++i)
+	for (std::size_t i = 0; i < atoms3.size(); ++i)
 	{
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
@@ -220,7 +220,7 @@ BOOST_AUTO_TEST_CASE(refine_2)
 
 	BOOST_ASSERT(atomsRea.size() == refAtomsRea.size());
 
-	for (size_t i = 0; i < atomsRea.size(); ++i)
+	for (std::size_t i = 0; i < atomsRea.size(); ++i)
 	{
 		auto a1 = atomsRea.at(i);
 		auto a2 = refAtomsRea.at(i);
@@ -249,7 +249,7 @@ BOOST_AUTO_TEST_CASE(refine_2)
 
 	double d_sum = 0;
 
-	for (size_t i = 0; i < atomsRea.size(); ++i)
+	for (std::size_t i = 0; i < atomsRea.size(); ++i)
 	{
 		auto a1 = atomsRea.at(i);
 		auto a2 = refAtomsRea.at(i);
