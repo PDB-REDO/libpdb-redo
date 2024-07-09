@@ -33,6 +33,7 @@
 #include <cif++.hpp>
 
 #include <pdb-redo/BondMap.hpp>
+#include <pdb-redo/Compound.hpp>
 
 namespace pdb_redo
 {
@@ -114,7 +115,7 @@ bool CompoundBondMap::bonded(const std::string &compoundID, const std::string &a
 	// not found in our cache, calculate
 	CompoundBondInfo bondInfo{id};
 
-	auto compound = cif::compound_factory::instance().create(compoundID);
+	auto compound = CompoundFactory::instance().create(compoundID);
 	if (not compound)
 	{
 		if (cif::VERBOSE >= 0)
@@ -124,8 +125,8 @@ bool CompoundBondMap::bonded(const std::string &compoundID, const std::string &a
 	{
 		for (auto &atom : compound->bonds())
 		{
-			uint32_t ca1 = getAtomID(atom.atom_id[0]);
-			uint32_t ca2 = getAtomID(atom.atom_id[1]);
+			uint32_t ca1 = getAtomID(atom.atomID[0]);
+			uint32_t ca2 = getAtomID(atom.atomID[1]);
 			if (ca1 > ca2)
 				std::swap(ca1, ca2);
 

@@ -534,15 +534,9 @@ void Minimizer::Finish(const cif::crystal &crystal)
 
 			if (symop != cif::sym_op() and d < kMaxNonBondedContactDistance)
 			{
-				AtomRef ra1 = ref(a1);
-				AtomRef ra2 = ref(cif::mm::atom(a2, p, symop.string()));
-
-				if (not nbc.count(std::make_tuple(ra1, ra2)))
-				{
-					mNonBondedContactRestraints.emplace_back(ra1, ra2, 2.8, 0.02);
-					nbc.insert(std::make_tuple(ra1, ra2));
-					nbc.insert(std::make_tuple(ra2, ra1));
-				}
+				cif::mm::atom a2s(a2, p, symop.string());
+				
+				add_nbc(a1, a2s);
 			}
 		}
 	}
