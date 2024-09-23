@@ -353,7 +353,8 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 	std::vector<cif::mm::atom> result;
 
-	auto &atom_site = atom.get_row().get_category();
+	auto rh = atom.get_row();
+	auto &atom_site = rh.get_category();
 
 	for (size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
 	{

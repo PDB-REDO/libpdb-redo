@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(libpdb-redo VERSION 3.1.2 LANGUAGES CXX C)
+project(libpdb-redo VERSION 3.1.3 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -114,7 +114,7 @@ endif()
 
 if(NOT PDB_REDO_META)
 	find_package(newuoa REQUIRED)
-	find_package(cifpp 5.0.8 REQUIRED)
+	find_package(cifpp 7.0.6 REQUIRED)
 endif()
 
 # Create a revision file, containing the current git version info
