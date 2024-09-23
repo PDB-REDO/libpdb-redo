@@ -474,7 +474,7 @@ struct AtomShapeImpl
 		mYi = 0;
 		mFst = std::vector<double>(st.size(), 0);
 
-		auto &D =
+		auto D =
 			mElectronScattering ? atom_type_traits(symbol).elsf() : atom_type_traits(symbol).wksf(charge);
 		auto bIso = clipper::Util::u2b(uIso);
 
@@ -551,7 +551,7 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 		: AtomShapeImpl(location, symbol, charge, static_cast<float>(anisou.u_iso()), occupancy, resHigh, resLow, electronScattering)
 		, mAnisoU(anisou)
 	{
-		auto &D =
+		auto D =
 			mElectronScattering ? atom_type_traits(symbol).elsf() : atom_type_traits(symbol).wksf(charge);
 
 		const float fourpi2 = static_cast<float>(4 * kPI * kPI);
