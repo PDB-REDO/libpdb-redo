@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(libpdb-redo VERSION 3.1.3 LANGUAGES CXX C)
+project(libpdb-redo VERSION 3.1.4 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -253,7 +253,10 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc DESTINATION ${CMAKE_INS
 if(BUILD_TESTING AND NOT MSVC)
 	add_subdirectory(examples)
 
-	list(APPEND PDB_REDO_tests pdb-redo-unit rsr)
+	list(APPEND PDB_REDO_tests pdb-redo-unit)
+	if(BUILD_MINIMIZER)
+		list(APPEND PDB_REDO_tests rsr)
+	endif()
 
 	foreach(PDB_REDO_TEST IN LISTS PDB_REDO_tests)
 		set(PDB_REDO_TEST "${PDB_REDO_TEST}-test")
