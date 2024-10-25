@@ -53,7 +53,7 @@ endif()
 # Libraries
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 
-if(NOT (TARGET pdb-redo OR CMAKE_PARENT_LIST_FILE))
+if(NOT TARGET pdb-redo)
 	find_package(pdb-redo ${PROJECT_VERSION} REQUIRED)
 endif()
 
