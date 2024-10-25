@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(pdb-redo-example VERSION 3.1.4 LANGUAGES CXX C)
+project(pdb-redo-example VERSION 3.1.5 LANGUAGES CXX C)
 
 set(CXX_EXTENSIONS OFF)
 set(CMAKE_CXX_STANDARD 20)
