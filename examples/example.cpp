@@ -24,11 +24,8 @@ int main()
 	float samplingRate = 0.75;
 	mm.loadMTZ("1cbs_map.mtz", samplingRate);
 
-	// create a map for the bonds in this structure
-	pdb_redo::BondMap bm(structure);
-
 	// and finally collect the statistics
-	pdb_redo::EDIAStatsCollector collector(mm, structure, false, bm);
+	pdb_redo::EDIAStatsCollector collector(mm, structure, false);
 	auto r = collector.collect();
 
 	for (auto& ri: r)

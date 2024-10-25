@@ -251,6 +251,8 @@ file(GENERATE OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/libpdb-redo.pc DESTINATION ${CMAKE_INSTALL_LIBDIR}/pkgconfig)
 
 if(BUILD_TESTING AND NOT MSVC)
+	add_subdirectory(examples)
+
 	list(APPEND PDB_REDO_tests pdb-redo-unit rsr)
 
 	foreach(PDB_REDO_TEST IN LISTS PDB_REDO_tests)
