@@ -176,6 +176,10 @@ class Compound
 	// bool isIsomerOf(const Compound &c) const;
 	// std::vector<std::tuple<std::string, std::string>> mapToIsomer(const Compound &c) const;
 
+	/// @brief Return the content of this restraint compound in a CCD format
+	/// @return Datablock containing the CCD information for this compound
+	cif::datablock generateCCDCompound() const;
+
   private:
 	cif::datablock mCF;
 	std::string mID;

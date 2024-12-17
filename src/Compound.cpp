@@ -943,6 +943,17 @@ const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 
 // --------------------------------------------------------------------
 
+cif::datablock Compound::generateCCDCompound() const
+{
+	cif::datablock result{ mName };
+
+	
+
+	return result;
+}
+
+// --------------------------------------------------------------------
+
 CompoundFactory::CompoundFactory()
 	: mImpl(nullptr)
 {
