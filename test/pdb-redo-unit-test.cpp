@@ -24,8 +24,10 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define BOOST_TEST_ALTERNATIVE_INIT_API
-#include <boost/test/included/unit_test.hpp>
+#define CATCH_CONFIG_RUNNER
+
+#include <catch2/catch_all.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
@@ -44,34 +46,45 @@
 #include <cif++/text.hpp>
 
 namespace fs = std::filesystem;
-namespace tt = boost::test_tools;
-namespace utf = boost::unit_test;
 
 using namespace pdb_redo;
 
 // --------------------------------------------------------------------
 
-fs::path gTestDir = fs::current_path();
+// --------------------------------------------------------------------
 
-bool init_unit_test()
+std::filesystem::path gTestDir = std::filesystem::current_path();
+
+int main(int argc, char *argv[])
 {
-	// not a test, just initialize test dir
+	Catch::Session session; // There must be exactly one instance
 
-	if (boost::unit_test::framework::master_test_suite().argc == 2)
-	{
-		gTestDir = boost::unit_test::framework::master_test_suite().argv[1];
+	// Build a new parser on top of Catch2's
+	using namespace Catch::Clara;
 
-		if (fs::exists(gTestDir / "minimal-components.cif"))
-			cif::compound_factory::instance().push_dictionary(gTestDir / "minimal-components.cif");
-	}
+	auto cli = session.cli()                                // Get Catch2's command line parser
+	           | Opt(gTestDir, "data-dir")                  // bind variable to a new option, with a hint string
+	                 ["-D"]["--data-dir"]                   // the option names it will respond to
+	           ("The directory containing the data files"); // description string for the help output
 
-	return true;
+	// Now pass the new composite back to Catch2 so it uses that
+	session.cli(cli);
+
+	// Let Catch2 (using Clara) parse the command line
+	int returnCode = session.applyCommandLine(argc, argv);
+	if (returnCode != 0) // Indicates a command line error
+		return returnCode;
+
+	if (fs::exists(gTestDir / "minimal-components.cif"))
+		cif::compound_factory::instance().push_dictionary(gTestDir / "minimal-components.cif");
+
+	return session.run();
 }
 
 // --------------------------------------------------------------------
 // skip list test
 
-BOOST_AUTO_TEST_CASE(skip_1)
+TEST_CASE("skip_1")
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	cif::file file(example.string());
@@ -95,22 +108,22 @@ BOOST_AUTO_TEST_CASE(skip_1)
 		std::stringstream ss;
 		writeSkipList(ss, skiplist, fmt);
 
-		BOOST_CHECK(skiplist.size() == 10);
+		CHECK(skiplist.size() == 10);
 
 		// std::cout << ss.str() << '\n';
 
 		SkipList list2 = readSkipList(ss);
 		
-		BOOST_CHECK(list2.size() == skiplist.size());
+		CHECK(list2.size() == skiplist.size());
 
 		if (list2.size() != skiplist.size())
 			continue;
 
 		for (std::size_t i = 0; i < skiplist.size(); ++i)
 		{
-			BOOST_CHECK(skiplist[i].auth_asym_id == list2[i].auth_asym_id);
-			BOOST_CHECK(skiplist[i].auth_seq_id == list2[i].auth_seq_id);
-			BOOST_CHECK(skiplist[i].pdbx_PDB_ins_code == list2[i].pdbx_PDB_ins_code);
+			CHECK(skiplist[i].auth_asym_id == list2[i].auth_asym_id);
+			CHECK(skiplist[i].auth_seq_id == list2[i].auth_seq_id);
+			CHECK(skiplist[i].pdbx_PDB_ins_code == list2[i].pdbx_PDB_ins_code);
 		}
 	}
 }
@@ -174,7 +187,7 @@ struct TestRadius {
 	{ "C", 0.9176003932952880859f }
 };
 
-BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
+TEST_CASE("atom_shape_1")
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 
@@ -193,12 +206,12 @@ BOOST_AUTO_TEST_CASE(atom_shape_1, *utf::tolerance(0.0001f))
 
 		pdb_redo::AtomShape shape(atom, kResHi, kResLo, false);
 
-		BOOST_CHECK_EQUAL(cif::atom_type_traits(atom.get_type()).symbol(), kTestRadii[i].type);
+		CHECK(cif::atom_type_traits(atom.get_type()).symbol() == kTestRadii[i].type);
 
 		float radius = shape.radius();
 		float test = kTestRadii[i].radius;
 
-		BOOST_TEST(radius == test);
+		REQUIRE_THAT(radius, Catch::Matchers::WithinAbs(test, 0.0001f));
 
 		++i;
 	}
@@ -222,7 +235,7 @@ cif::file operator""_cf(const char* text, std::size_t length)
 
 // --------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE(map_maker_1)
+TEST_CASE("map_maker_1")
 {
 	pdb_redo::MapMaker<float> mm;
 	
@@ -230,11 +243,11 @@ BOOST_AUTO_TEST_CASE(map_maker_1)
 
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	BOOST_TEST(mm.resHigh() == 1.8, tt::tolerance(0.01));
-	BOOST_TEST(mm.resLow() == 8.0, tt::tolerance(0.01));
+	REQUIRE_THAT(mm.resHigh(), Catch::Matchers::WithinAbs(1.8, 0.01));
+	REQUIRE_THAT(mm.resLow(), Catch::Matchers::WithinAbs(8.0, 0.01));
 }
 
-BOOST_AUTO_TEST_CASE(map_maker_2)
+TEST_CASE("map_maker_2")
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 
@@ -256,8 +269,8 @@ BOOST_AUTO_TEST_CASE(map_maker_2)
 		
 	mm.calculate(gTestDir / ".." / "examples" / "1cbs_map.mtz", structure, false, aniso, samplingRate, false);
 
-	BOOST_TEST(mm.resHigh() == 1.8, tt::tolerance(0.01));
-	BOOST_TEST(mm.resLow() == 8.0, tt::tolerance(0.01));
+	REQUIRE_THAT(mm.resHigh(), Catch::Matchers::WithinAbs(1.8, 0.01));
+	REQUIRE_THAT(mm.resLow(), Catch::Matchers::WithinAbs(8.0, 0.01));
 }
 
 // --------------------------------------------------------------------
@@ -270,11 +283,11 @@ struct TestResidue
 	std::string		asymID;
 	int				seqID;
 	double			RSR, SRSR, RSCCS;
-	std::size_t			NGRID;
+	int				NGRID;
 	double			EDIAm, OPIA;
 };
 
-BOOST_AUTO_TEST_CASE(stats_1)
+TEST_CASE("stats_1")
 {
 	cif::VERBOSE = 2;
 
@@ -283,20 +296,20 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	std::vector<TestResidue> test;
 	std::ifstream testFile(gTestDir / "1cbs-test.eds");
 
-	BOOST_ASSERT(testFile.is_open());
+	REQUIRE(testFile.is_open());
 
 	std::string line;
 	std::getline(testFile, line);
-	BOOST_ASSERT(line.substr(0, 7) == "RESIDUE");
+	REQUIRE(line.substr(0, 7) == "RESIDUE");
 
 	while (std::getline(testFile, line))
 	{
 		auto items = cif::split<std::string>(line, "\t");
 
-		BOOST_ASSERT(items.size() == 7);
+		REQUIRE(items.size() == 7);
 
 		auto id = cif::split<std::string>(items[0], "_");
-		BOOST_ASSERT(id.size() == 3);
+		REQUIRE(id.size() == 3);
 
 		test.push_back({
 			id[0],
@@ -305,7 +318,7 @@ BOOST_AUTO_TEST_CASE(stats_1)
 			std::stod(items[1]),
 			std::stod(items[2]),
 			std::stod(items[3]),
-			static_cast<std::size_t>(std::stoi(items[4])),
+			std::stoi(items[4]),
 			std::stod(items[5]),
 			std::stod(items[6])
 		});
@@ -325,51 +338,51 @@ BOOST_AUTO_TEST_CASE(stats_1)
 	auto ti = test.begin();
 	for (auto& ri: r)
 	{
-		BOOST_ASSERT(ti != test.end());
+		REQUIRE(ti != test.end());
 
 		auto t = *ti++;
 
 		if (std::isnan(t.RSCCS))
 			continue;
 
-		BOOST_TEST(ri.asymID == t.asymID);
-		BOOST_TEST(ri.compID == t.compID);
+		CHECK(ri.asymID == t.asymID);
+		CHECK(ri.compID == t.compID);
 
-		BOOST_TEST(std::abs(ri.RSR - t.RSR) <= 0.01, tt::tolerance(0.01));
-		BOOST_TEST(std::abs(ri.SRSR - t.SRSR) <= 0.01, tt::tolerance(0.01));
+		REQUIRE_THAT(std::abs(ri.RSR - t.RSR), Catch::Matchers::WithinAbs(0.01, 0.01));
+		REQUIRE_THAT(std::abs(ri.SRSR - t.SRSR), Catch::Matchers::WithinAbs(0.01, 0.01));
 
 		if (not (std::isnan(ri.RSCCS) and std::isnan(t.RSCCS)))
-			BOOST_TEST(std::abs(ri.RSCCS - t.RSCCS) <= 0.1, tt::tolerance(0.1));
+			REQUIRE_THAT(std::abs(ri.RSCCS - t.RSCCS), Catch::Matchers::WithinAbs(0.1, 0.1));
 		else
-			BOOST_CHECK(std::isnan(ri.RSCCS) == std::isnan(t.RSCCS));
+			CHECK(std::isnan(ri.RSCCS) == std::isnan(t.RSCCS));
 
 		if (not (std::isnan(ri.EDIAm) or std::isnan(t.EDIAm)))
 		{
-			BOOST_TEST(std::abs(ri.EDIAm - t.EDIAm) <= 0.1, tt::tolerance(0.1));
+			REQUIRE_THAT(std::abs(ri.EDIAm - t.EDIAm), Catch::Matchers::WithinAbs(0.1, 0.1));
 
 			if (std::abs(ri.EDIAm - t.EDIAm) > 0.1)
 				std::cerr << ri << '\n';
 
-			BOOST_TEST(std::abs(ri.OPIA - t.OPIA) <= 0.1, tt::tolerance(0.1));
+			REQUIRE_THAT(std::abs(ri.OPIA - t.OPIA), Catch::Matchers::WithinAbs(0.1, 0.1));
 		}
 		else
 		{
-			BOOST_CHECK(std::isnan(ri.EDIAm) == std::isnan(t.EDIAm));
+			CHECK(std::isnan(ri.EDIAm) == std::isnan(t.EDIAm));
 		}
 
-		BOOST_TEST(ri.ngrid == t.NGRID);
+		CHECK(ri.ngrid == t.NGRID);
 	}
 }
 
 // --------------------------------------------------------------------
 // test stats on a file with an unkown residue, should give nan's for EDIA
 
-BOOST_AUTO_TEST_CASE(stats_2)
+TEST_CASE("stats_2")
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	cif::file file = cif::pdb::read(example.string());
 	
-	BOOST_CHECK(file.is_valid());
+	CHECK(file.is_valid());
 
 	auto &db = file.front();
 	
@@ -399,28 +412,28 @@ BOOST_AUTO_TEST_CASE(stats_2)
 
 	for (auto& ri: r)
 	{
-		BOOST_CHECK(ri.compID != "ALA");
+		CHECK(ri.compID != "ALA");
 
 		if (ri.compID != "U_K")
 			continue;
 
-		BOOST_CHECK(not std::isnan(ri.RSR));
-		BOOST_CHECK(not std::isnan(ri.SRSR));
-		BOOST_CHECK(not std::isnan(ri.RSCCS));
+		CHECK(not std::isnan(ri.RSR));
+		CHECK(not std::isnan(ri.SRSR));
+		CHECK(not std::isnan(ri.RSCCS));
 
-		BOOST_CHECK(std::isnan(ri.EDIAm));
-		BOOST_CHECK(std::isnan(ri.OPIA));
+		CHECK(std::isnan(ri.EDIAm));
+		CHECK(std::isnan(ri.OPIA));
 	}
 }
 
 // --------------------------------------------------------------------
 
-BOOST_AUTO_TEST_CASE(bond_map_1)
+TEST_CASE("bond_map_1")
 {
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	cif::file file = cif::pdb::read(example.string());
 	
-	BOOST_CHECK(file.is_valid());
+	CHECK(file.is_valid());
 
 	auto &db = file.front();
 	auto &atom_site = db["atom_site"];
@@ -464,10 +477,10 @@ BOOST_AUTO_TEST_CASE(bond_map_1)
 			auto pb = atom_locs[j];
 
 			if (distance(pa, c) < 6 and distance(pb, c) < 6)
-				BOOST_TEST(bm2(a, b) == bonded[std::make_tuple(a, b)]);
+				CHECK(bm2(a, b) == bonded[std::make_tuple(a, b)]);
 			else
-				// BOOST_CHECK_THROW(bm2(a, b), std::out_of_range);
-				BOOST_TEST(bm2(a, b) == false);
+				// CHECK_THROW(bm2(a, b), std::out_of_range);
+				CHECK(bm2(a, b) == false);
 		}
 	}
 }

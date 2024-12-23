@@ -808,7 +808,15 @@ const Compound *CompoundFactoryImpl::create(std::string id)
 	}
 
 	if (result == nullptr)
-		result = createSelf(id);
+	{
+		try
+		{
+			result = createSelf(id);
+		}
+		catch (...)
+		{
+		}
+	}
 
 	if (result == nullptr and mNext != nullptr)
 		result = mNext->create(id);
@@ -945,9 +953,16 @@ const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 
 cif::datablock Compound::generateCCDCompound() const
 {
+	using namespace cif::literals;
+
 	cif::datablock result{ mName };
 
-	
+	auto &chem_comp_ccd = result["chem_comp"];
+	auto &chem_comp_r = mCF["chem_comp"];
+
+	auto &r = chem_comp_r.find1("id"_key == mName);
+
+	chem_comp_ccd.emplace({ { "id", mName } });
 
 	return result;
 }
