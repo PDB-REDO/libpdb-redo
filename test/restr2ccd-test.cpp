@@ -48,6 +48,8 @@ std::filesystem::path gTestDir = std::filesystem::current_path();
 
 int main(int argc, char *argv[])
 {
+	cif::VERBOSE = 1;
+
 	Catch::Session session; // There must be exactly one instance
 
 	// Build a new parser on top of Catch2's
@@ -82,5 +84,30 @@ int main(int argc, char *argv[])
 
 TEST_CASE("een")
 {
-	
+	auto &cf = pdb_redo::CompoundFactory::instance();
+
+	for (fs::directory_iterator i(gTestDir / "restr2ccd"); i != fs::directory_iterator(); ++i)
+	{
+		auto fn = i->path().filename().string();
+
+		if (fn.length() != 7 or not fn.ends_with(".cif"))
+			continue;
+		
+		auto comp_id = fn.substr(0, 3);
+
+		cf.pushDictionary(i->path());
+
+		auto compound = cf.create(comp_id);
+
+		REQUIRE(compound != nullptr);
+		CHECK(compound->id() == comp_id);
+
+		auto ccompound = cif::compound_factory::instance().create(comp_id);
+
+		REQUIRE(ccompound != nullptr);
+		CHECK(ccompound->id() == comp_id);
+		
+
+		cf.popDictionary();
+	}
 }

@@ -53,6 +53,7 @@ enum BondType
 	singleBond,
 	doubleBond,
 	tripleBond,
+	aromaticBond,
 	delocalizedBond
 };
 
@@ -76,6 +77,7 @@ struct CompoundBond
 {
 	std::string atomID[2];
 	BondType type;
+	bool aromatic;
 	float distance;
 	float esd;
 };

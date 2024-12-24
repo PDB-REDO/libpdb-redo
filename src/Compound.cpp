@@ -74,7 +74,8 @@ struct CompoundBondLess
 
 Compound::Compound(const cif::datablock &db, const std::string &id,
 	const std::string &name, const std::string &group)
-	: mID(id)
+	: mCF(db)
+	, mID(id)
 	, mName(name)
 	, mGroup(group)
 {
@@ -98,25 +99,48 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 		for (auto row : compBonds)
 		{
 			CompoundBond b;
-			std::string type, aromatic;
+			std::optional<std::string> valueOrder, aromatic;
 
-			cif::tie(b.atomID[0], b.atomID[1], type, b.distance, b.esd) =
-				row.get("atom_id_1", "atom_id_2", "type", "value_dist", "value_dist_esd");
+			cif::tie(b.atomID[0], b.atomID[1], valueOrder, aromatic, b.distance, b.esd) =
+				row.get("atom_id_1", "atom_id_2", "value_order", "pdbx_aromatic_flag", "value_dist", "value_dist_esd");
+
+			// Such a briliant idea, to rename columns in an CIF file...
+
+			if (not valueOrder)
+				cif::tie(valueOrder) = row.get("type");
+
+			if (not aromatic)
+				cif::tie(aromatic) = row.get("aromatic");
+			
+			b.aromatic = cif::iequals(aromatic.value_or("N"), "Y");
+
+			// ... and not only once, but even multiple times
+
+			if (not aromatic)
+				cif::tie(aromatic) = row.get("aromat");
 
 			using cif::iequals;
 
-			if (iequals(type, "single") or iequals(type, "sing"))
+			if (not valueOrder)
+			{
+				if (cif::VERBOSE > 0)
+					std::cerr << "Missing value_order in chem_comp_bond for " << mID << '\n';
 				b.type = singleBond;
-			else if (iequals(type, "double") or iequals(type, "doub"))
+			}
+			else if (iequals(*valueOrder, "single"))
+				b.type = singleBond;
+			else if (iequals(*valueOrder, "double"))
 				b.type = doubleBond;
-			else if (iequals(type, "triple") or iequals(type, "trip"))
+			else if (iequals(*valueOrder, "triple"))
 				b.type = tripleBond;
-			else if (iequals(type, "deloc") or iequals(type, "aromat") or iequals(type, "aromatic"))
+			else if (b.aromatic)
+				b.type = aromaticBond;
+			else if (iequals(*valueOrder, "deloc"))
 				b.type = delocalizedBond;
 			else
 			{
 				if (cif::VERBOSE > 0)
-					std::cerr << "Unimplemented chem_comp_bond.type " << type << " in " << id << '\n';
+					std::cerr << "Unimplemented chem_comp_bond.value_order " << *valueOrder << " in " << mID << '\n';
 				b.type = singleBond;
 			}
 
@@ -541,7 +565,7 @@ Link::Link(cif::datablock &db)
 		cif::tie(b.atom[0].compID, b.atom[0].atomID,
 			b.atom[1].compID, b.atom[1].atomID, type, b.distance, b.esd) =
 			row.get("atom_1_comp_id", "atom_id_1", "atom_2_comp_id", "atom_id_2",
-				"type", "value_dist", "value_dist_esd");
+				"value_order", "value_dist", "value_dist_esd");
 
 		using cif::iequals;
 
@@ -858,6 +882,17 @@ class RestraintCompoundFactoryImpl : public CompoundFactoryImpl
 	RestraintCompoundFactoryImpl(std::istream &inData, CompoundFactoryImpl *inNext)
 		: CompoundFactoryImpl(inData, inNext)
 	{
+		cif::file cf;
+
+		for (auto &c : mCompounds)
+			cf.emplace_back(c->generateCCDCompound());
+		
+		cif::compound_factory::instance().push_dictionary(cf);
+	}
+
+	~RestraintCompoundFactoryImpl()
+	{
+		cif::compound_factory::instance().pop_dictionary();
 	}
 
 	const Compound *createSelf(std::string id) override;
@@ -951,18 +986,151 @@ const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 
 // --------------------------------------------------------------------
 
+struct TypeMapping
+{
+	std::string restr_type, ccd_type;
+};
+const TypeMapping kTypeMap[] = {
+	{"DNA", "DNA linking" },
+	{"furanose", "saccharide" },
+	{"ketopyranose", "saccharide" },
+	{"M-peptide", "peptide linking" },
+	{"NON-POLYMER", "non-polymer" },
+	{"peptide", "peptide linking" },
+	{"P-peptide", "peptide linking" },
+	{"pyranose", "saccharide" },
+	{"RNA", "RNA linking" }
+};
+
 cif::datablock Compound::generateCCDCompound() const
 {
 	using namespace cif::literals;
 
-	cif::datablock result{ mName };
+	cif::datablock result{ mID };
 
-	auto &chem_comp_ccd = result["chem_comp"];
-	auto &chem_comp_r = mCF["chem_comp"];
+	auto &chemCompCCD = result["chem_comp"];
+	auto &chemCompAtomCCD = result["chem_comp_atom"];
+	auto &chemCompBondCCD = result["chem_comp_bond"];
 
-	auto &r = chem_comp_r.find1("id"_key == mName);
+	std::string compType;
+	for (auto &[restrType, ccdType] : kTypeMap)
+	{
+		if (cif::iequals(restrType, mGroup))
+		{
+			compType = ccdType;
+			break;
+		}
+	}
 
-	chem_comp_ccd.emplace({ { "id", mName } });
+	if (compType.empty())
+		throw std::runtime_error("Unknown type in restraint file: " + mGroup);
+
+	std::optional<std::string> unknown;
+	std::optional<std::string> oneLetterCode;
+	if (auto i = cif::compound_factory::kAAMap.find(mID); i != cif::compound_factory::kAAMap.end())
+		oneLetterCode = { i->second };
+
+	std::optional<std::string> threeLetterCode;
+	if (mID.length() == 3)
+		threeLetterCode = mID;
+	
+	bool pdbx_ideal_coordinates_missing_flag = true;
+
+	// --------------------------------------------------------------------
+	int formalCharge = 0;
+
+	auto &chemCompAtom = mCF["chem_comp_atom"];
+	for (int nr = 1; auto row : chemCompAtom)
+	{
+		std::string atom_id, type_symbol;
+		std::optional<int> atom_charge;
+		float atom_x, atom_y, atom_z;
+
+		cif::tie(atom_id, type_symbol, atom_charge, atom_x, atom_y, atom_z) =
+			row.get("atom_id", "type_symbol", "charge", "x", "y", "z");
+
+		chemCompAtomCCD.emplace({
+			{ "comp_id", mID },
+			{ "atom_id", atom_id },
+			{ "alt_atom_id", atom_id },
+			{ "type_symbol", type_symbol },
+			{ "charge", atom_charge },
+			{ "pdbx_align", unknown },
+			{ "pdbx_aromatic_flag", unknown },
+			{ "pdbx_leaving_atom_flag", unknown },
+			{ "pdbx_stereo_config", unknown },
+			{ "pdbx_backbone_atom_flag", unknown },
+			{ "pdbx_n_terminal_atom_flag", unknown },
+			{ "pdbx_c_terminal_atom_flag", unknown },
+			{ "model_Cartn_x", atom_x },
+			{ "model_Cartn_y", atom_y },
+			{ "model_Cartn_z", atom_z },
+			{ "pdbx_model_Cartn_x_ideal", unknown },
+			{ "pdbx_model_Cartn_y_ideal", unknown },
+			{ "pdbx_model_Cartn_z_ideal", unknown },
+			{ "pdbx_component_atom_id", unknown },
+			{ "pdbx_component_comp_id", unknown },
+			{ "pdbx_ordinal", nr++ }
+		});
+
+		if (atom_charge)
+			formalCharge += *atom_charge;
+	}
+
+	for (int nr = 1; auto bond : mBonds)
+	{
+		std::string valueOrder;
+		switch (bond.type)
+		{
+			case singleBond: valueOrder = "SING"; break;
+			case doubleBond: valueOrder = "DOUB"; break;
+			case tripleBond: valueOrder = "TRIP"; break;
+			case aromaticBond: valueOrder = "AROM"; break;
+			case delocalizedBond: valueOrder = "DELO"; break;
+		}
+
+		chemCompBondCCD.emplace({
+			{ "comp_id", mID },
+			{ "atom_id_1", bond.atomID[0] },
+			{ "atom_id_2", bond.atomID[1] },
+			{ "value_order", valueOrder },
+			{ "pdbx_aromatic_flag", bond.aromatic },
+			{ "pdbx_stereo_config", unknown },			
+			{ "pdbx_ordinal", nr++ }
+		});
+	}
+
+	// --------------------------------------------------------------------
+
+	chemCompCCD.emplace({
+		// clang-format off
+		{ "id", mID },
+		{ "name", mName },
+		{ "type", compType },
+		{ "pdbx_type", unknown },
+		{ "formula", formula() },
+		{ "mon_nstd_parent_comp_id", unknown },
+		{ "pdbx_synonyms", unknown },
+		{ "pdbx_formal_charge", formalCharge },
+		{ "pdbx_initial_date", unknown },
+		{ "pdbx_modified_date", unknown },
+		{ "pdbx_ambiguous_flag", unknown },
+		{ "pdbx_release_status", unknown },
+		{ "pdbx_replaced_by", unknown },
+		{ "pdbx_replaces", unknown },
+		{ "formula_weight", formulaWeight() },
+		{ "one_letter_code", oneLetterCode },
+		{ "three_letter_code", threeLetterCode },
+		{ "pdbx_model_coordinates_details", unknown },
+		{ "pdbx_model_coordinates_missing_flag", false },
+		{ "pdbx_ideal_coordinates_details", unknown },
+		{ "pdbx_ideal_coordinates_missing_flag", pdbx_ideal_coordinates_missing_flag },
+		{ "pdbx_model_coordinates_db_code", unknown },
+		{ "pdbx_subcomponent_list", unknown },
+		{ "pdbx_processing_site", unknown },
+		{ "pdbx_pcm", unknown },
+		// clang-format on
+	});
 
 	return result;
 }
