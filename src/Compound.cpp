@@ -782,8 +782,13 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 class CompoundFactoryImpl
 {
   public:
-	CompoundFactoryImpl(std::istream &inData, CompoundFactoryImpl *inNext = nullptr)
+	CompoundFactoryImpl(CompoundFactoryImpl *inNext = nullptr)
 		: mNext(inNext)
+	{
+	}
+
+	CompoundFactoryImpl(std::istream &inData, CompoundFactoryImpl *inNext = nullptr)
+		: CompoundFactoryImpl(inNext)
 	{
 		mFile.load(inData);
 	}
@@ -807,7 +812,7 @@ class CompoundFactoryImpl
 	}
 
   protected:
-	CompoundFactoryImpl *mNext;
+	CompoundFactoryImpl *mNext = nullptr;
 	std::mutex mMutex;
 	cif::file mFile;
 	std::vector<std::unique_ptr<const Compound>> mCompounds;
@@ -942,6 +947,10 @@ const Compound *RestraintCompoundFactoryImpl::createSelf(std::string id)
 class CLibdMonCompoundFactoryImpl : public CompoundFactoryImpl
 {
   public:
+	CLibdMonCompoundFactoryImpl()
+	{
+	}
+
 	CLibdMonCompoundFactoryImpl(std::istream &inData, CompoundFactoryImpl *inNext)
 		: CompoundFactoryImpl(inData, inNext)
 	{
@@ -1154,11 +1163,12 @@ CompoundFactory::CompoundFactory()
 
 	if (mon_lib_list.empty() or not fs::exists(mon_lib_list) or not file.is_open())
 	{
-		std::cerr << "Could not load the mon_lib_list.cif file from CCP4, please make sure you have installed CCP4 and sourced the environment.\n";
-		exit(1);
+		if (cif::VERBOSE > 0)
+			std::cerr << cif::coloured("Could not load the mon_lib_list.cif file from CCP4, please make sure you have installed CCP4 and sourced the environment.", cif::colour::white, cif::colour::red) << '\n';
+		mImpl = new CLibdMonCompoundFactoryImpl();
 	}
-
-	mImpl = new CLibdMonCompoundFactoryImpl(file, nullptr);
+	else
+		mImpl = new CLibdMonCompoundFactoryImpl(file, nullptr);
 }
 
 CompoundFactory::~CompoundFactory()
