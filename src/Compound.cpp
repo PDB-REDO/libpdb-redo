@@ -885,7 +885,13 @@ class RestraintCompoundFactoryImpl : public CompoundFactoryImpl
 		cif::file cf;
 
 		for (auto &c : mCompounds)
+		{
+			// Only forward compounds that are not known yet
+			if (cif::compound_factory::instance().create(c->id()) != nullptr)
+				continue;
+
 			cf.emplace_back(c->generateCCDCompound());
+		}
 		
 		cif::compound_factory::instance().push_dictionary(cf);
 	}
