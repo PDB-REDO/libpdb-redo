@@ -117,7 +117,7 @@ if(NOT (newuoa_FOUND OR TARGET newuoa))
 endif()
 
 if(NOT (cifpp_FOUND OR TARGET cifpp))
-	find_package(cifpp 7.0.6 REQUIRED)
+	find_package(cifpp 7.0.9 REQUIRED)
 endif()
 
 # Create a revision file, containing the current git version info

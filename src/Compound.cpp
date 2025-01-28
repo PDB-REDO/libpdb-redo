@@ -829,7 +829,7 @@ const Compound *CompoundFactoryImpl::create(std::string id)
 
 	for (auto &cmp : mCompounds)
 	{
-		if (cmp->id() == id)
+		if (cif::iequals(cmp->id(), id))
 		{
 			result = cmp.get();
 			break;
@@ -889,10 +889,12 @@ class RestraintCompoundFactoryImpl : public CompoundFactoryImpl
 	{
 		cif::file cf;
 
-		for (auto &c : mCompounds)
+		for (auto &&id : mFile["comp_list"]["chem_comp"].rows<std::string>("id"))
 		{
+			auto c = createSelf(id);
+
 			// Only forward compounds that are not known yet
-			if (cif::compound_factory::instance().create(c->id()) != nullptr)
+			if (cif::compound_factory::instance().create(id) != nullptr)
 				continue;
 
 			cf.emplace_back(c->generateCCDCompound());

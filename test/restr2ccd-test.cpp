@@ -90,24 +90,23 @@ TEST_CASE("een")
 	{
 		auto fn = i->path().filename().string();
 
-		if (fn.length() != 7 or not fn.ends_with(".cif"))
+		if (not fn.ends_with(".cif"))
 			continue;
 		
-		auto comp_id = fn.substr(0, 3);
+		auto comp_id = i->path().filename().stem().string();
 
 		cf.pushDictionary(i->path());
 
 		auto compound = cf.create(comp_id);
 
 		REQUIRE(compound != nullptr);
-		CHECK(compound->id() == comp_id);
+		CHECK(cif::iequals(compound->id(), comp_id));
 
 		auto ccompound = cif::compound_factory::instance().create(comp_id);
 
 		REQUIRE(ccompound != nullptr);
 		CHECK(ccompound->id() == comp_id);
 		
-
 		cf.popDictionary();
 	}
 }
