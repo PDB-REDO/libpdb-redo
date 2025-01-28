@@ -1,11 +1,15 @@
-include(FetchContent)
+find_package(Catch2 3 QUIET)
 
-FetchContent_Declare(
-	Catch2
-	GIT_REPOSITORY https://github.com/catchorg/Catch2.git
-	GIT_TAG GIT_TAG v3.5.2)
+if(NOT Catch2_FOUND)
+	include(FetchContent)
 
-FetchContent_MakeAvailable(Catch2)
+	FetchContent_Declare(
+		Catch2
+		GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+		GIT_TAG GIT_TAG v3.5.2)
+
+	FetchContent_MakeAvailable(Catch2)
+endif()
 
 list(APPEND PDB_REDO_tests pdb-redo-unit rsr restr2ccd)
 
