@@ -1,3 +1,6 @@
+Version 3.2.1
+- Fix bondmap to use the correct compound factory
+
 Version 3.2.0
 - New way of loading dictionaries, passing data to cifpp
   if not known.
