@@ -362,7 +362,7 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 	auto ev = es.eigenvalues();
 
 	float b_ev = std::numeric_limits<float>::max();
-	for (size_t i = 0; i < 3; ++i)
+	for (std::size_t i = 0; i < 3; ++i)
 	{
 		if (ev[i].real() > b_ev)
 			continue;
@@ -515,7 +515,7 @@ void NonBondedContactRestraint::print(const AtomLocationProvider &atoms) const
 
 DensityRestraint::DensityRestraint(std::vector<std::pair<AtomRef, double>> &&atoms,
 	const Xmap &xMap, double mapWeight)
-	: mAtoms(move(atoms))
+	: mAtoms(std::move(atoms))
 	, mXMap(xMap)
 	, mMapWeight(mapWeight)
 {

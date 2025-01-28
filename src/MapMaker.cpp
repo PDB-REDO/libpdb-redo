@@ -145,7 +145,7 @@ std::tuple<FTYPE, FTYPE, FTYPE, FTYPE> CalculateMapStatistics(const clipper::Xma
 	amin = std::numeric_limits<FTYPE>::max(),
 	amax = std::numeric_limits<FTYPE>::min();
 	long double asum = 0, asum2 = 0;
-	size_t n = 0;
+	std::size_t n = 0;
 
 	clipper::Xmap_base::Map_reference_coord c(xmap);
 	for (int g0 = r.min()[0]; g0 <= r.max()[0]; ++g0)
@@ -212,7 +212,7 @@ void writeCCP4MapFile(std::ostream &os, clipper::Xmap<FTYPE> &xmap, clipper::Gri
 		gridFMSMax[orderXYZ[i]] = range.max()[i];
 	}
 
-	for (size_t i = 0; i < 3; ++i)
+	for (std::size_t i = 0; i < 3; ++i)
 		dim[i] = gridFMSMax[i] - gridFMSMin[i] + 1;
 
 	auto cellDescription = xmap.cell().descr();
@@ -220,7 +220,7 @@ void writeCCP4MapFile(std::ostream &os, clipper::Xmap<FTYPE> &xmap, clipper::Gri
 	CCP4MapFileHeader h = {};
 
 	int r = snprintf(h.LABEL, sizeof(h.LABEL), "%s", "Map created with map-maker from the PDB-REDO suite of applications");
-	for (size_t i = r; i < sizeof(h.LABEL); ++i)
+	for (std::size_t i = r; i < sizeof(h.LABEL); ++i)
 		h.LABEL[i] = ' ';
 
 	h.NC = dim[0];

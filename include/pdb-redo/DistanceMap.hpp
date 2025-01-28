@@ -56,27 +56,27 @@ class DistanceMap
 	std::vector<cif::mm::atom> near(const cif::mm::atom &atom, float maxDistance = 3.5f) const;
 
   private:
-	using DistKeyType = std::tuple<size_t, size_t>;
+	using DistKeyType = std::tuple<std::size_t, std::size_t>;
 	using DistValueType = std::tuple<float, cif::sym_op, bool>;
 	using DistMap = std::map<DistKeyType, DistValueType>;
 
-	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
-		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm);
-	void AddDistancesForAtoms(const std::vector<std::tuple<size_t,cif::point>> &a,
-		const std::vector<std::tuple<size_t,cif::point>> &b, DistMap &dm, cif::sym_op symop);
+	void AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,cif::point>> &a,
+		const std::vector<std::tuple<std::size_t,cif::point>> &b, DistMap &dm);
+	void AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,cif::point>> &a,
+		const std::vector<std::tuple<std::size_t,cif::point>> &b, DistMap &dm, cif::sym_op symop);
 
 	cif::point offsetToOrigin(const cif::point &p) const;
 
 	const cif::mm::structure &mStructure;
 	cif::crystal crystal;
-	size_t dim;
-	std::unordered_map<std::string, size_t> index;
-	std::map<size_t, std::string> rIndex;
+	std::size_t dim;
+	std::unordered_map<std::string, std::size_t> index;
+	std::map<std::size_t, std::string> rIndex;
 
 	float mMaxDistance, mMaxDistanceSQ;
 
 	std::vector<std::tuple<float, cif::sym_op, bool>> mA;
-	std::vector<size_t> mIA, mJA;
+	std::vector<std::size_t> mIA, mJA;
 };
 
 } // namespace pdb_redo

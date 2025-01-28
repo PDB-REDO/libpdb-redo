@@ -242,7 +242,7 @@ struct AtomGridData
 
 struct AtomDataSums
 {
-	size_t ngrid = 0;
+	std::size_t ngrid = 0;
 	double rfSums[2] = {}; // sums for R-Factor
 	double edSums[2] = {}; // Sums for ED1 and ED3
 	double ccSums[3] = {}; // Sums for CC calculation
@@ -481,15 +481,15 @@ void StatsCollector::initialize()
 
 		double qa = 0, qb = 1;
 
-		size_t nd = z.size();
-		size_t n = static_cast<size_t>(round(vf * nd));
+		std::size_t nd = z.size();
+		std::size_t n = static_cast<std::size_t>(round(vf * nd));
 
 		if (n > 100)
 		{
-			size_t i1 = static_cast<size_t>((n + 1) * anorm(-1.5)) + 1;
-			size_t i2 = static_cast<size_t>((n + 1) * anorm(1.5));
+			std::size_t i1 = static_cast<std::size_t>((n + 1) * anorm(-1.5)) + 1;
+			std::size_t i2 = static_cast<std::size_t>((n + 1) * anorm(1.5));
 
-			size_t ns = i2 - i1 + 1;
+			std::size_t ns = i2 - i1 + 1;
 
 			double vr = (nd - 1) / (n - 1.0);
 			double sw = 0, swx = 0, swxs = 0, swy = 0, swxy = 0, swys = 0;
@@ -498,7 +498,7 @@ void StatsCollector::initialize()
 			{
 				double qx = phinvs(static_cast<double>(i) / (n + 1));
 				double x = vr * i;
-				size_t j = static_cast<size_t>(x);
+				std::size_t j = static_cast<std::size_t>(x);
 				x -= j;
 
 				//		assert(j < z.size());
@@ -557,7 +557,7 @@ std::vector<ResidueStatistics> StatsCollector::collect() const
 
 		if (residues.empty() or residues.back() != k)
 		{
-			residues.emplace_back(move(k));
+			residues.emplace_back(std::move(k));
 			atoms.emplace_back(std::move(atom));
 		}
 	}
@@ -579,7 +579,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 
 		if (residues.empty() or residues.back() != k)
 		{
-			residues.emplace_back(move(k));
+			residues.emplace_back(std::move(k));
 			atoms.emplace_back(std::move(atom));
 		}
 	}
@@ -642,7 +642,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id());
 
 		if (residues.empty() or residues.back() != k)
-			residues.emplace_back(move(k));
+			residues.emplace_back(std::move(k));
 	}
 
 	for (const auto &[asymID, seqID, authSeqID] : residues)
@@ -766,7 +766,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 		for (auto alt : alts)
 		{
 			double ediaSum = 0, occSum = 0;
-			size_t n = 0, m = 0;
+			std::size_t n = 0, m = 0;
 
 			for (const auto &d : atomData)
 			{
@@ -910,7 +910,7 @@ ResidueStatistics StatsCollector::collect(const std::vector<cif::mm::atom> &atom
 	calculate(atomData);
 
 	AtomDataSums sums;
-	size_t n = 0, m = 0;
+	std::size_t n = 0, m = 0;
 	double ediaSum = 0;
 
 	for (auto &atom : atoms)
@@ -1193,7 +1193,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 				}
 			}
 			
-			for (size_t i = 0; i < atomsNearBy.size(); ++i)
+			for (std::size_t i = 0; i < atomsNearBy.size(); ++i)
 			{
 				float wpi = wn[i](p);
 				if (wpi == 0)

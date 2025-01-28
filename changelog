@@ -1,3 +1,7 @@
+Version 3.2.0
+- New way of loading dictionaries, passing data to cifpp
+  if not known.
+
 Version 3.1.5
 - Fix usage specification of Eigen3
 

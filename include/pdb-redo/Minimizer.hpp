@@ -161,7 +161,11 @@ class Minimizer
 	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b,
 		const std::string &atom_id_a, const std::string &atom_id_b, const std::string &linkName)
 	{
-		addLinkRestraints(a, b, atom_id_a, atom_id_b, Link::create(linkName));
+		auto link = CompoundFactory::instance().createLink(linkName);
+		if (not link)
+			throw std::runtime_error("Failed to load link data for " + linkName);
+
+		addLinkRestraints(a, b, atom_id_a, atom_id_b, *link);
 	}
 
 	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b,
@@ -193,7 +197,7 @@ class Minimizer
 	const cif::mm::structure &mStructure;
 
 	std::vector<cif::mm::atom> mAtoms, mReferencedAtoms;
-	std::vector<size_t> mRef2AtomIndex;
+	std::vector<std::size_t> mRef2AtomIndex;
 	std::map<std::string, AtomRef> mRefIndex;
 
 	std::vector<BondRestraint> mBondRestraints;

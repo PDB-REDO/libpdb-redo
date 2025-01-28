@@ -232,13 +232,13 @@ int getSpacegroupNumber(const clipper::Spacegroup &sg)
 		while (t->spacegroup() == s->spacegroup())
 			++t;
 		
-		if (static_cast<size_t>(t - s) != sg_ops.size())
+		if (static_cast<std::size_t>(t - s) != sg_ops.size())
 		{
 			s = t;
 			continue;
 		}
 
-		size_t seen = 0;
+		std::size_t seen = 0;
 
 		for (auto &k : sg_ops)
 		{

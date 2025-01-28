@@ -3,6 +3,7 @@
 include(CMakeFindDependencyMacro)
 find_dependency(newuoa 0.1.2 REQUIRED)
 find_dependency(cifpp 5.0.4 REQUIRED)
+find_dependency(Eigen3 REQUIRED)
 find_dependency(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 @FIND_DEPENDENCY_GSL@
 
