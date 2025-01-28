@@ -11,7 +11,10 @@ if(NOT Catch2_FOUND)
 	FetchContent_MakeAvailable(Catch2)
 endif()
 
-list(APPEND PDB_REDO_tests pdb-redo-unit rsr restr2ccd)
+list(APPEND PDB_REDO_tests pdb-redo-unit restr2ccd)
+if(BUILD_MINIMIZER)
+	list(APPEND PDB_REDO_tests rsr)
+endif()
 
 foreach(PDB_REDO_TEST IN LISTS PDB_REDO_tests)
 	set(PDB_REDO_TEST "${PDB_REDO_TEST}-test")
