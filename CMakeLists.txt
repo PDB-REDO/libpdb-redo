@@ -35,6 +35,7 @@ include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(CheckCXXSourceCompiles)
+include(FindOrFetch)
 include(GenerateExportHeader)
 include(CTest)
 
@@ -116,8 +117,11 @@ if(NOT (newuoa_FOUND OR TARGET newuoa))
 	find_package(newuoa REQUIRED)
 endif()
 
+# find_package(BLAS REQUIRED)
+# find_package(dlib REQUIRED)
+
 if(NOT (cifpp_FOUND OR TARGET cifpp))
-	find_package(cifpp 7.0.9 REQUIRED)
+	find_or_fetch_package(cifpp VERSION 7.0.9 GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git GIT_TAG v7.0.9 VARIABLES "CIFPP_SHARE_DIR")
 endif()
 
 # Create a revision file, containing the current git version info
@@ -177,7 +181,7 @@ target_include_directories(pdb-redo
 	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 	${CCP4_INCLUDE_DIRS})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp newuoa::newuoa ${CCP4_LIBRARIES})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp dlib::dlib BLAS::BLAS ${CCP4_LIBRARIES})
 target_include_directories(pdb-redo PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 if(BUILD_MINIMIZER)

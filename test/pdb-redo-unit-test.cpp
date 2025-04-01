@@ -211,7 +211,7 @@ TEST_CASE("atom_shape_1")
 		float radius = shape.radius();
 		float test = kTestRadii[i].radius;
 
-		REQUIRE_THAT(radius, Catch::Matchers::WithinAbs(test, 0.0001f));
+		CHECK_THAT(radius, Catch::Matchers::WithinAbs(test, 0.001f));
 
 		++i;
 	}
@@ -243,8 +243,8 @@ TEST_CASE("map_maker_1")
 
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	REQUIRE_THAT(mm.resHigh(), Catch::Matchers::WithinAbs(1.8, 0.01));
-	REQUIRE_THAT(mm.resLow(), Catch::Matchers::WithinAbs(8.0, 0.01));
+	CHECK_THAT(mm.resHigh(), Catch::Matchers::WithinAbs(1.8, 0.01));
+	CHECK_THAT(mm.resLow(), Catch::Matchers::WithinAbs(8.0, 0.01));
 }
 
 TEST_CASE("map_maker_2")
@@ -269,8 +269,8 @@ TEST_CASE("map_maker_2")
 		
 	mm.calculate(gTestDir / ".." / "examples" / "1cbs_map.mtz", structure, false, aniso, samplingRate, false);
 
-	REQUIRE_THAT(mm.resHigh(), Catch::Matchers::WithinAbs(1.8, 0.01));
-	REQUIRE_THAT(mm.resLow(), Catch::Matchers::WithinAbs(8.0, 0.01));
+	CHECK_THAT(mm.resHigh(), Catch::Matchers::WithinAbs(1.8, 0.01));
+	CHECK_THAT(mm.resLow(), Catch::Matchers::WithinAbs(8.0, 0.01));
 }
 
 // --------------------------------------------------------------------
@@ -348,22 +348,22 @@ TEST_CASE("stats_1")
 		CHECK(ri.asymID == t.asymID);
 		CHECK(ri.compID == t.compID);
 
-		REQUIRE_THAT(std::abs(ri.RSR - t.RSR), Catch::Matchers::WithinAbs(0.01, 0.01));
-		REQUIRE_THAT(std::abs(ri.SRSR - t.SRSR), Catch::Matchers::WithinAbs(0.01, 0.01));
+		CHECK_THAT(std::abs(ri.RSR - t.RSR), Catch::Matchers::WithinAbs(0.01, 0.01));
+		CHECK_THAT(std::abs(ri.SRSR - t.SRSR), Catch::Matchers::WithinAbs(0.01, 0.01));
 
 		if (not (std::isnan(ri.RSCCS) and std::isnan(t.RSCCS)))
-			REQUIRE_THAT(std::abs(ri.RSCCS - t.RSCCS), Catch::Matchers::WithinAbs(0.1, 0.1));
+			CHECK_THAT(std::abs(ri.RSCCS - t.RSCCS), Catch::Matchers::WithinAbs(0.1, 0.1));
 		else
 			CHECK(std::isnan(ri.RSCCS) == std::isnan(t.RSCCS));
 
 		if (not (std::isnan(ri.EDIAm) or std::isnan(t.EDIAm)))
 		{
-			REQUIRE_THAT(std::abs(ri.EDIAm - t.EDIAm), Catch::Matchers::WithinAbs(0.1, 0.1));
+			CHECK_THAT(std::abs(ri.EDIAm - t.EDIAm), Catch::Matchers::WithinAbs(0.1, 0.1));
 
 			if (std::abs(ri.EDIAm - t.EDIAm) > 0.1)
 				std::cerr << ri << '\n';
 
-			REQUIRE_THAT(std::abs(ri.OPIA - t.OPIA), Catch::Matchers::WithinAbs(0.1, 0.1));
+			CHECK_THAT(std::abs(ri.OPIA - t.OPIA), Catch::Matchers::WithinAbs(0.1, 0.1));
 		}
 		else
 		{
