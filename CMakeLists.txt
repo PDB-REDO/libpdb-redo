@@ -181,7 +181,7 @@ target_include_directories(pdb-redo
 	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 	${CCP4_INCLUDE_DIRS})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp dlib::dlib BLAS::BLAS ${CCP4_LIBRARIES})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp newuoa::newuoa ${CCP4_LIBRARIES})
 target_include_directories(pdb-redo PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 if(BUILD_MINIMIZER)
