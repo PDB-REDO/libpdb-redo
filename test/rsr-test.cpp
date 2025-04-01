@@ -130,7 +130,7 @@ TEST_CASE("refine_0")
 
 	auto rmsd = std::sqrt(d_sum / atoms3.size());
 	std::cout << "RMSd: " << rmsd << '\n';
-	REQUIRE_THAT(rmsd, Catch::Matchers::WithinAbs(0.125, 0.125));
+	CHECK_THAT(rmsd, Catch::Matchers::WithinAbs(0.125, 0.125));
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << '\n';
 }
@@ -204,7 +204,7 @@ TEST_CASE("refine_1")
 
 	auto rmsd = std::sqrt(d_sum / atoms3.size());
 	std::cout << "RMSd: " << rmsd << '\n';
-	REQUIRE_THAT(rmsd, Catch::Matchers::WithinAbs(0.27 / 2, 0.27 / 2));
+	CHECK_THAT(rmsd, Catch::Matchers::WithinAbs(0.27 / 2, 0.27 / 2));
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << '\n';
 }
@@ -306,7 +306,7 @@ TEST_CASE("refine_2")
 
 	auto rmsd = std::sqrt(d_sum / atomsRea.size());
 	std::cout << "RMSd: " << rmsd << '\n';
-	REQUIRE_THAT(rmsd, Catch::Matchers::WithinAbs(0.35 / 2, 0.35 / 2));
+	CHECK_THAT(rmsd, Catch::Matchers::WithinAbs(0.35 / 2, 0.35 / 2));
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 }
