@@ -30,6 +30,7 @@ jobs:
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
         -DCMAKE_BUILD_TYPE=Release
         -DBUILD_TESTING=ON
+        -DBUILD_MINIMIZER=OFF
         -S ${{ github.workspace }}
         
     - name: Build
