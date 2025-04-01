@@ -37,7 +37,6 @@ jobs:
 
     - name: Test
       working-directory: ${{ steps.strings.outputs.build-output-dir }}
-	  # skip rsr test for now since CCP4 is not available anyway
       run: ctest --build-config Release --output-on-failure -R 'pdb-redo-unit-test|restr2ccd-test'
       env:
         LIBCIFPP_DATA_DIR: ${{ steps.strings.outputs.build-output-dir }}/_deps/cifpp-src/rsrc
