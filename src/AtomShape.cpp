@@ -24,28 +24,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <mutex>
-#include <thread>
-
-#include <cif++.hpp>
-
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 
-#if __has_include(<newuoa.h>)
+#include <cif++.hpp>
 
-#include <newuoa.h>
-#define HAVE_NEWUOA 1
+#include <gsl/gsl_blas.h> // for debugging norm of gradient
+#include <gsl/gsl_multimin.h>
 
-#elif __has_include(<dlib/global_optimization.h>)
-
-#include <dlib/global_optimization.h>
-
-#define HAVE_DLIB 1
-
-#else
-#error "Should have either newuoa or dlib"
-#endif
+#include <mutex>
+#include <thread>
 
 namespace pdb_redo
 {
@@ -242,6 +230,19 @@ class DensityIntegration
 	float mA, mB;
 	int mM;
 
+	struct CallbackParams
+	{
+		const DensityIntegration *self;
+		const std::vector<double> &fst;
+	};
+
+	double findMinGlobal(DensityIntegration::CallbackParams &params) const;
+	static double integrateDensityCallback(double r, void *param)
+	{
+		CallbackParams *params = reinterpret_cast<CallbackParams *>(param);
+		return params->self->integrateDensity(r, 1, params->fst);
+	}
+
 	// Gauss-Legendre quadrature weights and abscissae
 	std::vector<double> mWA, mST, mSTS;
 	static std::list<DensityIntegration> sInstances;
@@ -347,75 +348,70 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 	return ks * y;
 }
 
-#if HAVE_NEWUOA
-template <class F>
-NewuoaClosure make_closure(F &function)
+double DensityIntegration::findMinGlobal(DensityIntegration::CallbackParams &params) const
 {
-	struct Wrap
+	int status;
+	int iter = 0, max_iter = 100;
+	double m = 2.0, m_expected = 0;
+	double a = 0.0, b = 1e3;
+	gsl_function F{ .function = &DensityIntegration::integrateDensityCallback, .params = &params };
+
+	const gsl_min_fminimizer_type *T = gsl_min_fminimizer_brent;
+	gsl_min_fminimizer *s = gsl_min_fminimizer_alloc(T);
+	gsl_min_fminimizer_set(s, &F, m, a, b);
+
+	printf("using %s method\n",
+		gsl_min_fminimizer_name(s));
+
+	printf("%5s [%9s, %9s] %9s %10s %9s\n",
+		"iter", "lower", "upper", "min",
+		"err", "err(est)");
+
+	printf("%5d [%.7f, %.7f] %.7f %+.7f %.7f\n",
+		iter, a, b,
+		m, m - m_expected, b - a);
+
+	do
 	{
-		static double call(void *data, long n, const double *values)
-		{
-			return reinterpret_cast<F *>(data)->operator()(n, values);
-		}
-	};
-	return NewuoaClosure{ &function, &Wrap::call };
+		iter++;
+		status = gsl_min_fminimizer_iterate(s);
+
+		m = gsl_min_fminimizer_x_minimum(s);
+		a = gsl_min_fminimizer_x_lower(s);
+		b = gsl_min_fminimizer_x_upper(s);
+
+		status = gsl_min_test_interval(a, b, 0.001, 0.0);
+
+		if (status == GSL_SUCCESS)
+			printf("Converged:\n");
+
+		printf("%5d [%.7f, %.7f] "
+			   "%.7f %+.7f %.7f\n",
+			iter, a, b,
+			m, m - m_expected, b - a);
+	} while (status == GSL_CONTINUE && iter < max_iter);
+
+	gsl_min_fminimizer_free(s);
+
+	return m;
 }
-#endif
 
 double DensityIntegration::integrateRadius(float perc, float occupancy, double yi, const std::vector<double> &fst) const
 {
 	double yt = perc * 0.25 * cif::kPI * occupancy * yi;
 
-#if HAVE_NEWUOA
-	double initialValue = 0.25;
+	CallbackParams params{ this, fst };
 
-	// code from newuoa-example
-	const long variables_count = 1;
-	const long number_of_interpolation_conditions = (variables_count + 1) * (variables_count + 2) / 2;
-	double variables_values[] = { initialValue };
-	const double initial_trust_region_radius = 1e-3;
-	const double final_trust_region_radius = 1e3;
-	const long max_function_calls_count = 100;
-	const std::size_t working_space_size = NEWUOA_WORKING_SPACE_SIZE(variables_count,
-		number_of_interpolation_conditions);
-	double working_space[working_space_size];
+	auto r = findMinGlobal(params);
 
-	auto function = [&](long n, const double *x)
-	{
-		assert(n == 1);
-		return this->integrateDensity(x[0], -1, fst);
-	};
-	auto closure = make_closure(function);
+	// auto r = dlib::find_min_global(function, { 1e-3 }, { 1e3 }, { false }, dlib::max_function_calls(10));
 
-	double result = newuoa_closure(
-		&closure,
-		variables_count,
-		number_of_interpolation_conditions,
-		variables_values,
-		initial_trust_region_radius,
-		final_trust_region_radius,
-		max_function_calls_count,
-		working_space);
+	double result = -r; //r.x(0);
 
-	double y1 = 0;
-	double y2 = -result;
-	double x1 = 0;
-	double x2 = variables_values[0];
-#else
-	auto function = [&](const double x)
-	{
-		return this->integrateDensity(x, -1, fst);
-	};
-
-	auto r = dlib::find_min_global(function, { 1e-3 }, { 1e3 }, { false }, dlib::max_function_calls(10));
-
-	double result = r.x(0);
-
-	double y1 = 0;
-	double y2 = -r.y;
 	double x1 = 0;
 	double x2 = result;
-#endif
+	double y1 = 0;
+	double y2 = integrateDensity(x2, -1, fst);
 
 	const double kRE = 5e-5;
 
@@ -638,7 +634,8 @@ AtomShape::AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float res
 			iso = *b_iso / static_cast<float>(8 * kPI * kPI);
 
 		if (iso == 0)
-			iso = 2.0f / static_cast<float>(8 * kPI * kPI);;
+			iso = 2.0f / static_cast<float>(8 * kPI * kPI);
+		;
 
 		mImpl = new AtomShapeImpl({ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering);
 	}
