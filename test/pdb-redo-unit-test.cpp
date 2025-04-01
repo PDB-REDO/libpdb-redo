@@ -130,7 +130,7 @@ TEST_CASE("skip_1")
 
 // --------------------------------------------------------------------
 
-// atom radii calculated with AtomShape and NEWUOA
+// atom radii calculated with AtomShape and a minimizer from GSL
 struct TestRadius {
 	std::string		type;
 	float			radius;

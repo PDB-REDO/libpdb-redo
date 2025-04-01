@@ -16,8 +16,6 @@ the 2019 version of MSVC.
 Other requirements are:
 
 - The clipper library, either the latest from CCP4 or version 2020-11-09
-- [newuoa-cpp](https://github.com/elsid/newuoa-cpp), required to
-  calculate atom radii
 - [libcifpp](https://github.com/PDB-REDO/libcifpp.git), a library containing
   code to read and manipulate macro molecular models in mmCIF and PDB format.
 - [gsl](https://www.gnu.org/software/gsl/), the GNU Scientific Library.

@@ -240,7 +240,7 @@ class DensityIntegration
 	static double integrateDensityCallback(const gsl_vector *v, void *param)
 	{
 		CallbackParams *params = reinterpret_cast<CallbackParams *>(param);
-		return params->self->integrateDensity(gsl_vector_get(v, 0), 1, params->fst);
+		return params->self->integrateDensity(gsl_vector_get(v, 0), -1, params->fst);
 	}
 
 	// Gauss-Legendre quadrature weights and abscissae
@@ -411,7 +411,7 @@ double DensityIntegration::findMinGlobal(DensityIntegration::CallbackParams &par
 
 	/* Set initial step sizes to 1 */
 	ss = gsl_vector_alloc(2);
-	gsl_vector_set_all(ss, 1e-3);
+	gsl_vector_set_all(ss, 1);
 
 	/* Initialize method and iterate */
 	minex_func.n = 2;
@@ -432,15 +432,15 @@ double DensityIntegration::findMinGlobal(DensityIntegration::CallbackParams &par
 		size = gsl_multimin_fminimizer_size(s);
 		status = gsl_multimin_test_size(size, 1e-2);
 
-		if (status == GSL_SUCCESS)
-		{
-			printf("converged to minimum at\n");
-		}
+		// if (status == GSL_SUCCESS)
+		// {
+		// 	printf("converged to minimum at\n");
+		// }
 
-		printf("%5d %10.3e f() = %7.3f size = %.3f\n",
-			iter,
-			gsl_vector_get(s->x, 0),
-			s->fval, size);
+		// printf("%5d %10.3e f() = %7.3f size = %.3f\n",
+		// 	iter,
+		// 	gsl_vector_get(s->x, 0),
+		// 	s->fval, size);
 	} while (status == GSL_CONTINUE && iter < 100);
 
 	double result = gsl_vector_get(s->x, 0);
@@ -462,12 +462,12 @@ double DensityIntegration::integrateRadius(float perc, float occupancy, double y
 
 	// auto r = dlib::find_min_global(function, { 1e-3 }, { 1e3 }, { false }, dlib::max_function_calls(10));
 
-	double result = -r; // r.x(0);
+	double result = r; // r.x(0);
 
 	double x1 = 0;
 	double x2 = result;
 	double y1 = 0;
-	double y2 = integrateDensity(x2, -1, fst);
+	double y2 = integrateDensity(x2, 1, fst);
 
 	const double kRE = 5e-5;
 

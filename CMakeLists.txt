@@ -108,17 +108,7 @@ endif()
 # Libraries
 find_package(Eigen3 REQUIRED)
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
-
-if(BUILD_MINIMIZER)
-	find_package(GSL REQUIRED)
-endif()
-
-if(NOT (newuoa_FOUND OR TARGET newuoa))
-	find_package(newuoa REQUIRED)
-endif()
-
-# find_package(BLAS REQUIRED)
-# find_package(dlib REQUIRED)
+find_package(GSL REQUIRED)
 
 if(NOT (cifpp_FOUND OR TARGET cifpp))
 	find_or_fetch_package(cifpp VERSION 7.0.9 GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git GIT_TAG v7.0.9 VARIABLES "CIFPP_SHARE_DIR")
@@ -181,12 +171,8 @@ target_include_directories(pdb-redo
 	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 	${CCP4_INCLUDE_DIRS})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp newuoa::newuoa ${CCP4_LIBRARIES})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp GSL::gsl ${CCP4_LIBRARIES})
 target_include_directories(pdb-redo PRIVATE ${EIGEN3_INCLUDE_DIR})
-
-if(BUILD_MINIMIZER)
-	target_link_libraries(pdb-redo PUBLIC GSL::gsl)
-endif()
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
 	target_link_options(pdb-redo PRIVATE -undefined dynamic_lookup)
@@ -214,10 +200,6 @@ install(
 	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
 	COMPONENT Devel
 )
-
-if(BUILD_MINIMIZER)
-	set(FIND_DEPENDENCY_GSL "find_dependency(GSL REQUIRED)")
-endif()
 
 configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/pdb-redoConfig.cmake.in
 	${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfig.cmake
