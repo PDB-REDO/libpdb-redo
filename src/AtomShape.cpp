@@ -237,10 +237,10 @@ class DensityIntegration
 	};
 
 	double findMinGlobal(DensityIntegration::CallbackParams &params) const;
-	static double integrateDensityCallback(double r, void *param)
+	static double integrateDensityCallback(const gsl_vector *v, void *param)
 	{
 		CallbackParams *params = reinterpret_cast<CallbackParams *>(param);
-		return params->self->integrateDensity(r, 1, params->fst);
+		return params->self->integrateDensity(gsl_vector_get(v, 0), 1, params->fst);
 	}
 
 	// Gauss-Legendre quadrature weights and abscissae
@@ -350,50 +350,106 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 
 double DensityIntegration::findMinGlobal(DensityIntegration::CallbackParams &params) const
 {
+	// int status;
+	// int iter = 0, max_iter = 100;
+	// double m = 2.0, m_expected = 0;
+	// double a = 0.0, b = 1e3;
+	// gsl_function F{ .function = &DensityIntegration::integrateDensityCallback, .params = &params };
+
+	// const gsl_min_fminimizer_type *T = gsl_min_fminimizer_brent;
+	// gsl_min_fminimizer *s = gsl_min_fminimizer_alloc(T);
+	// gsl_min_fminimizer_set(s, &F, m, a, b);
+
+	// printf("using %s method\n",
+	// 	gsl_min_fminimizer_name(s));
+
+	// printf("%5s [%9s, %9s] %9s %10s %9s\n",
+	// 	"iter", "lower", "upper", "min",
+	// 	"err", "err(est)");
+
+	// printf("%5d [%.7f, %.7f] %.7f %+.7f %.7f\n",
+	// 	iter, a, b,
+	// 	m, m - m_expected, b - a);
+
+	// do
+	// {
+	// 	iter++;
+	// 	status = gsl_min_fminimizer_iterate(s);
+
+	// 	m = gsl_min_fminimizer_x_minimum(s);
+	// 	a = gsl_min_fminimizer_x_lower(s);
+	// 	b = gsl_min_fminimizer_x_upper(s);
+
+	// 	status = gsl_min_test_interval(a, b, 0.001, 0.0);
+
+	// 	if (status == GSL_SUCCESS)
+	// 		printf("Converged:\n");
+
+	// 	printf("%5d [%.7f, %.7f] "
+	// 		   "%.7f %+.7f %.7f\n",
+	// 		iter, a, b,
+	// 		m, m - m_expected, b - a);
+	// } while (status == GSL_CONTINUE && iter < max_iter);
+
+	// gsl_min_fminimizer_free(s);
+
+	// return m;
+
+	const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
+	gsl_multimin_fminimizer *s = NULL;
+	gsl_vector *ss, *x;
+	gsl_multimin_function minex_func;
+
+	size_t iter = 0;
 	int status;
-	int iter = 0, max_iter = 100;
-	double m = 2.0, m_expected = 0;
-	double a = 0.0, b = 1e3;
-	gsl_function F{ .function = &DensityIntegration::integrateDensityCallback, .params = &params };
+	double size;
 
-	const gsl_min_fminimizer_type *T = gsl_min_fminimizer_brent;
-	gsl_min_fminimizer *s = gsl_min_fminimizer_alloc(T);
-	gsl_min_fminimizer_set(s, &F, m, a, b);
+	/* Starting point */
+	x = gsl_vector_alloc(2);
+	gsl_vector_set(x, 0, 0.25);
+	gsl_vector_set(x, 1, 0);
 
-	printf("using %s method\n",
-		gsl_min_fminimizer_name(s));
+	/* Set initial step sizes to 1 */
+	ss = gsl_vector_alloc(2);
+	gsl_vector_set_all(ss, 1e-3);
 
-	printf("%5s [%9s, %9s] %9s %10s %9s\n",
-		"iter", "lower", "upper", "min",
-		"err", "err(est)");
+	/* Initialize method and iterate */
+	minex_func.n = 2;
+	minex_func.f = &DensityIntegration::integrateDensityCallback;
+	minex_func.params = &params;
 
-	printf("%5d [%.7f, %.7f] %.7f %+.7f %.7f\n",
-		iter, a, b,
-		m, m - m_expected, b - a);
+	s = gsl_multimin_fminimizer_alloc(T, 2);
+	gsl_multimin_fminimizer_set(s, &minex_func, x, ss);
 
 	do
 	{
 		iter++;
-		status = gsl_min_fminimizer_iterate(s);
+		status = gsl_multimin_fminimizer_iterate(s);
 
-		m = gsl_min_fminimizer_x_minimum(s);
-		a = gsl_min_fminimizer_x_lower(s);
-		b = gsl_min_fminimizer_x_upper(s);
+		if (status)
+			break;
 
-		status = gsl_min_test_interval(a, b, 0.001, 0.0);
+		size = gsl_multimin_fminimizer_size(s);
+		status = gsl_multimin_test_size(size, 1e-2);
 
 		if (status == GSL_SUCCESS)
-			printf("Converged:\n");
+		{
+			printf("converged to minimum at\n");
+		}
 
-		printf("%5d [%.7f, %.7f] "
-			   "%.7f %+.7f %.7f\n",
-			iter, a, b,
-			m, m - m_expected, b - a);
-	} while (status == GSL_CONTINUE && iter < max_iter);
+		printf("%5d %10.3e f() = %7.3f size = %.3f\n",
+			iter,
+			gsl_vector_get(s->x, 0),
+			s->fval, size);
+	} while (status == GSL_CONTINUE && iter < 100);
 
-	gsl_min_fminimizer_free(s);
+	double result = gsl_vector_get(s->x, 0);
 
-	return m;
+	gsl_vector_free(x);
+	gsl_vector_free(ss);
+	gsl_multimin_fminimizer_free(s);
+
+	return result;
 }
 
 double DensityIntegration::integrateRadius(float perc, float occupancy, double yi, const std::vector<double> &fst) const
@@ -406,7 +462,7 @@ double DensityIntegration::integrateRadius(float perc, float occupancy, double y
 
 	// auto r = dlib::find_min_global(function, { 1e-3 }, { 1e3 }, { false }, dlib::max_function_calls(10));
 
-	double result = -r; //r.x(0);
+	double result = -r; // r.x(0);
 
 	double x1 = 0;
 	double x2 = result;
