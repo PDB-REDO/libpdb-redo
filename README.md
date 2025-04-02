@@ -1,6 +1,8 @@
 libpdb-redo
 ===========
 
+[![github CI](https://github.com/PDB-REDO/libpdb-redo/actions/workflows/cmake-multi-platform.yml/badge.svg)](https://github.com/PDB-REDO/libpdb-redo/actions)
+
 This is the README file for libpdb-redo. This library contains code
 shared by the various tools we develop at the NKI for the
 [PDB-REDO](https://pdb-redo.eu/) project.
