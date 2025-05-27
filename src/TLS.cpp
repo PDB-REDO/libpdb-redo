@@ -51,8 +51,8 @@ struct tls_residue
 	std::string name;
 	bool selected;
 
-	std::string asymID;
-	int seqID = 0;
+	// std::string asymID;
+	// int seqID = 0;
 
 	bool operator==(const tls_residue &rhs) const
 	{
@@ -103,31 +103,53 @@ void dump_selection(const std::vector<tls_residue> &selected, std::size_t indent
 		if (b == selected.end())
 			break;
 
-		auto e = find_if(b, selected.end(), [b](auto s) -> bool
-			{ return s.asymID != b->asymID or not s.selected; });
+		// auto e = find_if(b, selected.end(), [b](auto s) -> bool
+		// 	{ return s.asymID != b->asymID or not s.selected; });
 
-		std::string asymID = b->asymID;
-		int from = b->seqID, to = from;
+		// std::string asymID = b->asymID;
+		// int from = b->seqID, to = from;
+
+		// for (auto j = b + 1; j != e; ++j)
+		// {
+		// 	if (j->seqID == to + 1)
+		// 		to = j->seqID;
+		// 	else if (j->seqID != to) // probably an insertion code
+		// 	{
+		// 		if (from == kNoSeqNum or to == kNoSeqNum)
+		// 			std::cout << indent << " >> " << asymID << '\n';
+		// 		else
+		// 			std::cout << indent << " >> " << asymID << ' ' << from << ':' << to << '\n';
+		// 		asymID = b->asymID;
+		// 		from = to = b->seqID;
+		// 	}
+		// }
+
+		auto e = find_if(b, selected.end(), [b](auto s) -> bool
+			{ return s.chainID != b->chainID or not s.selected; });
+
+		std::string chainID = b->chainID;
+		int from = b->seqNr, to = from;
 
 		for (auto j = b + 1; j != e; ++j)
 		{
-			if (j->seqID == to + 1)
-				to = j->seqID;
-			else if (j->seqID != to) // probably an insertion code
+			if (j->seqNr == to + 1)
+				to = j->seqNr;
+			else if (j->seqNr != to) // probably an insertion code
 			{
 				if (from == kNoSeqNum or to == kNoSeqNum)
-					std::cout << indent << " >> " << asymID << '\n';
+					std::cout << indent << " >> " << chainID << '\n';
 				else
-					std::cout << indent << " >> " << asymID << ' ' << from << ':' << to << '\n';
-				asymID = b->asymID;
-				from = to = b->seqID;
+					std::cout << indent << " >> " << chainID << ' ' << from << ':' << to << '\n';
+				chainID = b->chainID;
+				from = to = b->seqNr;
 			}
 		}
 
+
 		if (from == kNoSeqNum or to == kNoSeqNum)
-			std::cout << indent << " >> " << asymID << '\n';
+			std::cout << indent << " >> " << chainID << '\n';
 		else
-			std::cout << indent << " >> " << asymID << ' ' << from << ':' << to << '\n';
+			std::cout << indent << " >> " << chainID << ' ' << from << ':' << to << '\n';
 
 		i = e;
 	}
@@ -139,85 +161,41 @@ void dump_selection(const std::vector<tls_residue> &selected, std::size_t indent
 	}
 }
 
-std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::datablock &db, bool pdbNamespace) const
+std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::datablock &db) const
 {
 	std::vector<tls_residue> selected;
 
 	// Collect the residues from poly seq scheme...
-	for (auto r : db["pdbx_poly_seq_scheme"])
+	for (auto &[chain, seqNr, iCode, name] :
+		db["pdbx_poly_seq_scheme"].rows<std::string,int,std::string,std::string>("pdb_strand_id", "pdb_seq_num", "pdb_ins_code", "pdb_mon_id"))
 	{
-		std::string chain, seqNr, iCode, name;
-
-		std::string asymID;
-		int seqID = 0;
-
-		if (pdbNamespace)
-			cif::tie(chain, seqNr, iCode, name, asymID, seqID) = r.get("pdb_strand_id", "pdb_seq_num", "pdb_ins_code", "pdb_mon_id", "asym_id", "seq_id");
-		else
-		{
-			cif::tie(chain, seqNr, name) = r.get("asym_id", "seq_id", "mon_id");
-			asymID = chain;
-			seqID = stoi(seqNr);
-		}
-
-		if (seqNr.empty())
-			continue;
-
 		if (iCode.length() > 1)
 			throw std::runtime_error("invalid iCode");
 
-		selected.push_back({ chain, stoi(seqNr), iCode[0], name, false, asymID, seqID });
+		selected.emplace_back(chain, seqNr, iCode[0], name);
 	}
 
 	// ... those from the nonpoly scheme
-	for (auto r : db["pdbx_nonpoly_scheme"])
+	for (auto &[chain, iCode, name] :
+		db["pdbx_nonpoly_scheme"].rows<std::string,std::string,std::string>("pdb_strand_id", "pdb_ins_code", "pdb_mon_id"))
 	{
-		std::string chain, seqNr, iCode, name, asymID;
-
-		if (pdbNamespace)
-		{
-			cif::tie(chain, seqNr, iCode, name, asymID) = r.get("pdb_strand_id", "pdb_seq_num", "pdb_ins_code", "pdb_mon_id", "asym_id");
-			if (seqNr.empty())
-				continue;
-		}
-		else
-		{
-			cif::tie(chain, name) = r.get("asym_id", "mon_id");
-			asymID = chain;
-			seqNr = "0";
-		}
-
 		if (cif::iequals(name, "HOH") or cif::iequals(name, "H2O"))
 			continue;
 
 		if (iCode.length() > 1)
 			throw std::runtime_error("invalid iCode");
 
-		selected.push_back({ chain, stoi(seqNr), iCode[0], name, false, asymID, kNoSeqNum });
+		selected.emplace_back(chain, 0, iCode[0], name);
 	}
 
 	// ... those from the nonpoly scheme
-	for (auto r : db["pdbx_branch_scheme"])
+	for (auto &[chain, iCode, name] :
+		db["pdbx_branch_scheme"].rows<std::string,std::string,std::string>("pdb_strand_id", "pdb_ins_code", "pdb_mon_id"))
 	{
-		std::string chain, seqNr, iCode, name, asymID;
-
-		if (pdbNamespace)
-		{
-			cif::tie(chain, seqNr, iCode, name, asymID) = r.get("auth_asym_id", "pdb_seq_num", "pdb_ins_code", "pdb_mon_id", "asym_id");
-			if (seqNr.empty())
-				continue;
-		}
-		else
-		{
-			cif::tie(chain, name) = r.get("asym_id", "mon_id");
-			asymID = chain;
-			seqNr = "0";
-		}
-
 		if (iCode.length() > 1)
 			throw std::runtime_error("invalid iCode");
 
-		selected.push_back({ chain, stoi(seqNr), iCode[0], name, false, asymID, kNoSeqNum });
+		selected.emplace_back(chain, 0, iCode[0], name);
 	}
 
 	// selected might consist of multiple ranges
@@ -234,63 +212,31 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 
 	std::vector<std::tuple<std::string, int, int>> result;
 
-	if (pdbNamespace)
+	auto i = selected.begin();
+
+	while (i != selected.end())
 	{
-		auto i = selected.begin();
+		auto b = find_if(i, selected.end(), [](auto s) -> bool
+			{ return s.selected; });
+		if (b == selected.end())
+			break;
 
-		while (i != selected.end())
+		auto e = find_if(b, selected.end(), [b](auto s) -> bool
+			{ return s.chainID != b->chainID or not s.selected; });
+
+		// return ranges with strict increasing sequence numbers.
+		// So when there's a gap in the sequence we split the range.
+		// Beware of iCodes though
+		result.push_back(std::make_tuple(b->chainID, b->seqNr, b->seqNr));
+		for (auto j = b + 1; j != e; ++j)
 		{
-			auto b = find_if(i, selected.end(), [](auto s) -> bool
-				{ return s.selected; });
-			if (b == selected.end())
-				break;
-
-			auto e = find_if(b, selected.end(), [b](auto s) -> bool
-				{ return s.chainID != b->chainID or not s.selected; });
-
-			// return ranges with strict increasing sequence numbers.
-			// So when there's a gap in the sequence we split the range.
-			// Beware of iCodes though
-			result.push_back(std::make_tuple(b->chainID, b->seqNr, b->seqNr));
-			for (auto j = b + 1; j != e; ++j)
-			{
-				if (j->seqNr == std::get<2>(result.back()) + 1)
-					std::get<2>(result.back()) = j->seqNr;
-				else if (j->seqNr != std::get<2>(result.back())) // probably an insertion code
-					result.push_back(std::make_tuple(b->chainID, j->seqNr, j->seqNr));
-			}
-
-			i = e;
+			if (j->seqNr == std::get<2>(result.back()) + 1)
+				std::get<2>(result.back()) = j->seqNr;
+			else if (j->seqNr != std::get<2>(result.back())) // probably an insertion code
+				result.push_back(std::make_tuple(b->chainID, j->seqNr, j->seqNr));
 		}
-	}
-	else
-	{
-		auto i = selected.begin();
 
-		while (i != selected.end())
-		{
-			auto b = find_if(i, selected.end(), [](auto s) -> bool
-				{ return s.selected; });
-			if (b == selected.end())
-				break;
-
-			auto e = find_if(b, selected.end(), [b](auto s) -> bool
-				{ return s.asymID != b->asymID or not s.selected; });
-
-			// return ranges with strict increasing sequence numbers.
-			// So when there's a gap in the sequence we split the range.
-			// Beware of iCodes though
-			result.push_back(std::make_tuple(b->asymID, b->seqID, b->seqID));
-			for (auto j = b + 1; j != e; ++j)
-			{
-				if (j->seqID == std::get<2>(result.back()) + 1)
-					std::get<2>(result.back()) = j->seqID;
-				else if (j->seqID != std::get<2>(result.back())) // probably an insertion code
-					result.push_back(std::make_tuple(b->asymID, j->seqID, j->seqID));
-			}
-
-			i = e;
-		}
+		i = e;
 	}
 
 	for (auto &&[name, i1, i2] : result)
