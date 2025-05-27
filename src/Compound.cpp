@@ -323,8 +323,8 @@ std::string Compound::type() const
 		result = "DNA linking";
 	else if (cif::iequals(mGroup, "RNA"))
 		result = "RNA linking";
-	//	else
-	//		result = mGroup;
+	else
+		result = mGroup;
 
 	return result;
 }
