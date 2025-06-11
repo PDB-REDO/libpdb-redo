@@ -50,9 +50,9 @@ namespace pdb_redo
 
 struct ResidueSpec
 {
-	std::string auth_asym_id;
-	std::string auth_comp_id;
-	std::string auth_seq_id;
+	std::string pdb_asym_id;
+	std::string pdb_comp_id;
+	std::string pdb_seq_id;
 	optional<char> pdbx_PDB_ins_code;
 	std::string label_asym_id;
 	std::string label_comp_id;
@@ -66,9 +66,9 @@ struct ResidueSpec
 		const std::string &label_asym_id,
 		const std::string &label_comp_id,
 		int label_seq_id)
-		: auth_asym_id(auth_asym_id)
-		, auth_comp_id(auth_comp_id)
-		, auth_seq_id(auth_seq_id)
+		: pdb_asym_id(auth_asym_id)
+		, pdb_comp_id(auth_comp_id)
+		, pdb_seq_id(auth_seq_id)
 #if __has_include(<experimental/optional>)
 		, pdbx_PDB_ins_code(pdbx_PDB_ins_code.empty() ? optional<char>{} : std::experimental::make_optional(pdbx_PDB_ins_code.c_str()[0]))
 #else
@@ -84,9 +84,9 @@ struct ResidueSpec
 	ResidueSpec &operator=(const ResidueSpec &rhs) = default;
 
 	ResidueSpec(const cif::mm::residue &res)
-		: auth_asym_id(res.get_auth_asym_id())
-		, auth_comp_id(res.get_compound_id())
-		, auth_seq_id(res.get_auth_seq_id())
+		: pdb_asym_id(res.get_pdb_strand_id())
+		, pdb_comp_id(res.get_compound_id())
+		, pdb_seq_id(res.get_pdb_seq_num())
 		, label_asym_id(res.get_asym_id())
 		, label_comp_id(res.get_compound_id())
 		, label_seq_id(res.get_seq_id())
@@ -97,9 +97,9 @@ struct ResidueSpec
 	}
 
 	ResidueSpec(const cif::mm::atom &atom)
-		: auth_asym_id(atom.get_auth_asym_id())
-		, auth_comp_id(atom.get_label_comp_id())
-		, auth_seq_id(atom.get_auth_seq_id())
+		: pdb_asym_id(atom.get_auth_asym_id())
+		, pdb_comp_id(atom.get_label_comp_id())
+		, pdb_seq_id(atom.get_auth_seq_id())
 		, label_asym_id(atom.get_label_asym_id())
 		, label_comp_id(atom.get_label_comp_id())
 		, label_seq_id(atom.get_label_seq_id())
@@ -111,9 +111,9 @@ struct ResidueSpec
 
 	bool operator==(const ResidueSpec &rhs) const
 	{
-		return auth_asym_id == rhs.auth_asym_id and
-		       auth_comp_id == rhs.auth_comp_id and
-		       auth_seq_id == rhs.auth_seq_id and
+		return pdb_asym_id == rhs.pdb_asym_id and
+		       pdb_comp_id == rhs.pdb_comp_id and
+		       pdb_seq_id == rhs.pdb_seq_id and
 		       pdbx_PDB_ins_code == rhs.pdbx_PDB_ins_code and
 		       label_asym_id == rhs.label_asym_id and
 		       label_comp_id == rhs.label_comp_id and

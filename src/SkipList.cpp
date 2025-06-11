@@ -45,7 +45,7 @@ void writeOLDSkipList(std::ostream &os, const SkipList &list)
 {
 	os << ':';
 	for (auto &res : list)
-		os << res.auth_asym_id << res.auth_seq_id << (res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : ' ') << ':';
+		os << res.pdb_asym_id << res.pdb_seq_id << (res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : ' ') << ':';
 }
 
 void writeCIFSkipList(std::ostream &os, const SkipList &list)
@@ -56,9 +56,9 @@ void writeCIFSkipList(std::ostream &os, const SkipList &list)
 	auto &&[cat, ignore] = db.emplace("skip_list");
 
 	for (auto &res : list)
-		cat->emplace({{"auth_asym_id", res.auth_asym_id},
-			{"auth_comp_id", res.auth_comp_id},
-			{"auth_seq_id", res.auth_seq_id},
+		cat->emplace({{"auth_asym_id", res.pdb_asym_id},
+			{"auth_comp_id", res.pdb_comp_id},
+			{"auth_seq_id", res.pdb_seq_id},
 			{"pdbx_PDB_ins_code", std::string{res.pdbx_PDB_ins_code and *res.pdbx_PDB_ins_code ? *res.pdbx_PDB_ins_code : '?'}},
 			{"label_asym_id", res.label_asym_id},
 			{"label_comp_id", res.label_comp_id},
@@ -127,8 +127,8 @@ SkipList readOLDSkipList(std::istream &is)
 		if (separator != ':' and separator != 0)
 			throw std::runtime_error("Invalid old format skiplist");
 
-		spec.auth_asym_id.push_back(chain);
-		spec.auth_seq_id = std::to_string(seq_nr);
+		spec.pdb_asym_id.push_back(chain);
+		spec.pdb_seq_id = std::to_string(seq_nr);
 		if (ins_code != ' ' and ins_code != 0)
 			spec.pdbx_PDB_ins_code = ins_code;
 

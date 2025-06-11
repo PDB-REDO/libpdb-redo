@@ -111,7 +111,7 @@ find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(GSL REQUIRED)
 
 if(NOT (cifpp_FOUND OR TARGET cifpp))
-	find_or_fetch_package(cifpp VERSION 7.0.9 GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git GIT_TAG v7.0.9 VARIABLES "CIFPP_SHARE_DIR")
+	find_or_fetch_package(cifpp VERSION 9.0.0 GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git GIT_TAG v9.0.0 VARIABLES "CIFPP_SHARE_DIR")
 endif()
 
 # Create a revision file, containing the current git version info
