@@ -63,7 +63,7 @@ option(BUILD_MINIMIZER "Build the minimizer code" ON)
 
 if(BUILD_FOR_CCP4)
 	if("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
-		message(FATAL_ERROR "A CCP4 built was requested but CCP4 was not sourced")
+		message(FATAL_ERROR "pdb-redo: A CCP4 built was requested but CCP4 was not sourced")
 	else()
 		list(APPEND CMAKE_MODULE_PATH "$ENV{CCP4}")
 		list(APPEND CMAKE_PREFIX_PATH "$ENV{CCP4}")
