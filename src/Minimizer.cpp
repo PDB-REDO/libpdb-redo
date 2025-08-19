@@ -1315,12 +1315,12 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 			r.get<std::string,int,std::string>("ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id");
 
 		auto ai = find_if(residues.begin(), residues.end(),
-			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, auth_seq_id = ptnr1_auth_seq_id](const cif::mm::residue *res)
-			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_auth_seq_id() == auth_seq_id; });
+			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, pdb_seq_num = ptnr1_auth_seq_id](const cif::mm::residue *res)
+			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_pdb_seq_num() == pdb_seq_num; });
 
 		auto bi = find_if(residues.begin(), residues.end(),
-			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id, auth_seq_id = ptnr2_auth_seq_id](const cif::mm::residue *res)
-			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_auth_seq_id() == auth_seq_id; });
+			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id, pdb_seq_num = ptnr2_auth_seq_id](const cif::mm::residue *res)
+			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_pdb_seq_num() == pdb_seq_num; });
 
 		if (ai == residues.end() and bi == residues.end())
 			continue;

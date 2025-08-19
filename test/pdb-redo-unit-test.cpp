@@ -121,8 +121,8 @@ TEST_CASE("skip_1")
 
 		for (std::size_t i = 0; i < skiplist.size(); ++i)
 		{
-			CHECK(skiplist[i].auth_asym_id == list2[i].auth_asym_id);
-			CHECK(skiplist[i].auth_seq_id == list2[i].auth_seq_id);
+			CHECK(skiplist[i].pdb_asym_id == list2[i].pdb_asym_id);
+			CHECK(skiplist[i].pdb_seq_id == list2[i].pdb_seq_id);
 			CHECK(skiplist[i].pdbx_PDB_ins_code == list2[i].pdbx_PDB_ins_code);
 		}
 	}
