@@ -537,8 +537,6 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	if (not fs::exists(dataFile))
 		throw std::runtime_error("Could not open mtz file " + hklin.string());
 
-	const std::string kBasePath("/%s/%s/[%s]");
-
 	using clipper::CCP4MTZfile;
 
 	CCP4MTZfile mtzin;
@@ -569,23 +567,23 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	}
 
 	mtzin.import_hkl_data(mFbData,
-		cif::format(kBasePath, "*", "*", cif::join(fbLabels, ",")).str());
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(fbLabels, ",")));
 	mtzin.import_hkl_data(mFdData,
-		cif::format(kBasePath, "*", "*", cif::join(fdLabels, ",")).str());
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(fdLabels, ",")));
 	if (hasFAN)
 		mtzin.import_hkl_data(mFaData,
-			cif::format(kBasePath, "*", "*", cif::join(faLabels, ",")).str());
+			std::format("/{}/{}/[{}]", "*", "*", cif::join(faLabels, ",")));
 	mtzin.import_hkl_data(mFoData,
-		cif::format(kBasePath, "*", "*", cif::join(foLabels, ",")).str());
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
 	mtzin.import_hkl_data(mFcData,
-		cif::format(kBasePath, "*", "*", cif::join(fcLabels, ",")).str());
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(fcLabels, ",")));
 
 	if (hasFREE)
 		mtzin.import_hkl_data(mFreeData,
-			cif::format(kBasePath, "*", "*", "FREE").str());
+			std::format("/{}/{}/[{}]", "*", "*", "FREE"));
 
 	mtzin.import_hkl_data(mPhiFomData,
-		cif::format(kBasePath, "*", "*", "PHWT,FOM").str());
+		std::format("/{}/{}/[{}]", "*", "*", "PHWT,FOM"));
 
 	mtzin.close_read();
 
@@ -827,8 +825,6 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 	if (cif::VERBOSE > 0)
 		std::cerr << "Recalculating maps from " << hklin << '\n';
 
-	const std::string kBasePath("/%s/%s/[%s]");
-
 	using clipper::CCP4MTZfile;
 
 	CCP4MTZfile mtzin;
@@ -836,9 +832,9 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 
 	mtzin.import_hkl_info(mHKLInfo);
 	mtzin.import_hkl_data(mFoData,
-		cif::format(kBasePath, "*", "*", cif::join(foLabels, ",")).str());
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
 	mtzin.import_hkl_data(mFreeData,
-		cif::format(kBasePath, "*", "*", cif::join(freeLabels, ",")).str());
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(freeLabels, ",")));
 
 	mtzin.close_read();
 }
