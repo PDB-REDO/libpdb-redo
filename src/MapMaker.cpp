@@ -567,23 +567,23 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	}
 
 	mtzin.import_hkl_data(mFbData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(fbLabels, ",")));
+		cif::format("/{}/{}/[{}]", "*", "*", cif::join(fbLabels, ",")));
 	mtzin.import_hkl_data(mFdData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(fdLabels, ",")));
+		cif::format("/{}/{}/[{}]", "*", "*", cif::join(fdLabels, ",")));
 	if (hasFAN)
 		mtzin.import_hkl_data(mFaData,
-			std::format("/{}/{}/[{}]", "*", "*", cif::join(faLabels, ",")));
+			cif::format("/{}/{}/[{}]", "*", "*", cif::join(faLabels, ",")));
 	mtzin.import_hkl_data(mFoData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
+		cif::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
 	mtzin.import_hkl_data(mFcData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(fcLabels, ",")));
+		cif::format("/{}/{}/[{}]", "*", "*", cif::join(fcLabels, ",")));
 
 	if (hasFREE)
 		mtzin.import_hkl_data(mFreeData,
-			std::format("/{}/{}/[{}]", "*", "*", "FREE"));
+			cif::format("/{}/{}/[{}]", "*", "*", "FREE"));
 
 	mtzin.import_hkl_data(mPhiFomData,
-		std::format("/{}/{}/[{}]", "*", "*", "PHWT,FOM"));
+		cif::format("/{}/{}/[{}]", "*", "*", "PHWT,FOM"));
 
 	mtzin.close_read();
 
@@ -832,9 +832,9 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 
 	mtzin.import_hkl_info(mHKLInfo);
 	mtzin.import_hkl_data(mFoData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
+		cif::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
 	mtzin.import_hkl_data(mFreeData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(freeLabels, ",")));
+		cif::format("/{}/{}/[{}]", "*", "*", cif::join(freeLabels, ",")));
 
 	mtzin.close_read();
 }
