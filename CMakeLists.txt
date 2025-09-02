@@ -35,7 +35,7 @@ include(CheckIncludeFiles)
 include(CheckLibraryExists)
 include(CMakePackageConfigHelpers)
 include(CheckCXXSourceCompiles)
-include(FindOrFetch)
+include(CPM)
 include(GenerateExportHeader)
 include(CTest)
 
@@ -110,9 +110,11 @@ find_package(Eigen3 REQUIRED)
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(GSL REQUIRED)
 
-# if(NOT (cifpp_FOUND OR TARGET cifpp))
-# 	find_or_fetch_package(cifpp VERSION 9.0.0 GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git GIT_TAG 9ea7cfc VARIABLES "CIFPP_SHARE_DIR")
-# endif()
+CPMFindPackage(
+	NAME cifpp
+	GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git
+	VERSION 9.0.0
+)
 
 # Create a revision file, containing the current git version info
 include(VersionString)
