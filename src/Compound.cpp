@@ -565,7 +565,7 @@ Link::Link(cif::datablock &db)
 		cif::tie(b.atom[0].compID, b.atom[0].atomID,
 			b.atom[1].compID, b.atom[1].atomID, type, b.distance, b.esd) =
 			row.get("atom_1_comp_id", "atom_id_1", "atom_2_comp_id", "atom_id_2",
-				"value_order", "value_dist", "value_dist_esd");
+				"type", "value_dist", "value_dist_esd");
 
 		using cif::iequals;
 
