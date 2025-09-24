@@ -29,12 +29,12 @@
    Date: dinsdag 22 mei, 2018
 */
 
+#include "pdb-redo/Minimizer.hpp"
+
 #include <filesystem>
 #include <future>
 #include <iomanip>
 #include <regex>
-
-#include "pdb-redo/Minimizer.hpp"
 
 namespace fs = std::filesystem;
 
@@ -535,7 +535,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 			if (symop != cif::sym_op() and d < kMaxNonBondedContactDistance)
 			{
 				cif::mm::atom a2s(a2, p, symop.string());
-				
+
 				add_nbc(a1, a2s);
 			}
 		}
@@ -592,7 +592,7 @@ void Minimizer::dropTorsionRestraints()
 {
 	for (auto &r : mTorsionRestraints)
 		mRestraints.erase(std::remove(mRestraints.begin(), mRestraints.end(), &r), mRestraints.end());
-	
+
 	mTorsionRestraints.clear();
 }
 
@@ -635,7 +635,7 @@ AtomRef Minimizer::ref(const cif::mm::atom &atom)
 }
 
 void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b,
-		const std::string &atom_id_a, const std::string &atom_id_b, const Link &link)
+	const std::string &atom_id_a, const std::string &atom_id_b, const Link &link)
 {
 	auto c1 = cif::compound_factory::instance().create(a.get_compound_id());
 	auto c2 = cif::compound_factory::instance().create(b.get_compound_id());
@@ -758,7 +758,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			auto volume = a_is_1 ?
 				link.chiralVolume(center.id, a.get_compound_id(), b.get_compound_id()) :
 				link.chiralVolume(center.id, b.get_compound_id(), a.get_compound_id());
-			
+
 			if (std::isnan(volume))
 			{
 				if (cif::VERBOSE > 0)
@@ -806,9 +806,6 @@ void Minimizer::printStats()
 {
 	AtomLocationProvider loc(mReferencedAtoms);
 
-	// for (auto &r : mBondRestraints)
-	// 	std::cout << mReferencedAtoms[r.mA] << " -> " << mReferencedAtoms[r.mB] << " = " << r.f(loc) << '\n';
-
 	double bondScore = rmsz(loc, mBondRestraints);
 	double angleScore = rmsz(loc, mAngleRestraints);
 	double torsionScore = rmsz(loc, mTorsionRestraints);
@@ -819,9 +816,12 @@ void Minimizer::printStats()
 	double densityScore = mDensityRestraint ? mDensityRestraint->f(loc) : 0;
 
 	std::cerr << "  Bonds:              " << bondScore << '\n'
-			  << "  Angles:             " << angleScore << '\n'
-			  << "  Torsion:            " << torsionScore << '\n'
-			  << "  Chirality:          " << chiralityVolumeScore << '\n'
+			  << "  Angles:             " << angleScore << '\n';
+
+	if (not mTorsionRestraints.empty())
+		std::cerr << "  Torsion:            " << torsionScore << '\n';
+
+	std::cerr << "  Chirality:          " << chiralityVolumeScore << '\n'
 			  << "  Planarity:          " << planarityScore << '\n'
 			  << "  Transpeptide:       " << transpeptideScore << '\n'
 			  << "  Non-Bonded-Contact: " << nbcScore << '\n'
@@ -841,7 +841,7 @@ double Minimizer::score(const AtomLocationProvider &loc)
 	{
 		if (cif::VERBOSE > 2)
 			r->print(loc);
-					
+
 		result += r->f(loc);
 	}
 
@@ -1309,10 +1309,10 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 	for (auto r : struct_conn)
 	{
 		const auto &[ptnr1_label_asym_id, ptnr1_label_seq_id, ptnr1_auth_seq_id] =
-			r.get<std::string,int,std::string>("ptnr1_label_asym_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id");
+			r.get<std::string, int, std::string>("ptnr1_label_asym_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id");
 
 		const auto &[ptnr2_label_asym_id, ptnr2_label_seq_id, ptnr2_auth_seq_id] =
-			r.get<std::string,int,std::string>("ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id");
+			r.get<std::string, int, std::string>("ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id");
 
 		auto ai = find_if(residues.begin(), residues.end(),
 			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, pdb_seq_num = ptnr1_auth_seq_id](const cif::mm::residue *res)
@@ -1329,7 +1329,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		const cif::mm::residue *rb = *bi;
 
 		const auto &[ptnr1_label_atom_id, ptnr2_label_atom_id, link_id] =
-			r.get<std::string,std::string,std::string>("ptnr1_label_atom_id", "ptnr2_label_atom_id", "ccp4_link_id");
+			r.get<std::string, std::string, std::string>("ptnr1_label_atom_id", "ptnr2_label_atom_id", "ccp4_link_id");
 
 		if (ai != residues.end() and bi != residues.end())
 		{
@@ -1345,7 +1345,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		else
 		{
 			residues.emplace_back(&structure.get_residue(ptnr1_label_asym_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
-			linked.emplace_back(residues.back(), rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);	
+			linked.emplace_back(residues.back(), rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 		}
 	}
 
@@ -1362,15 +1362,19 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		{
 			result->addLinkRestraints(*a, *b, atom_a, atom_b, a->get_compound_id() + "-" + b->get_compound_id());
 			continue;
-		} 
-		catch (...) {}
+		}
+		catch (...)
+		{
+		}
 
 		try
 		{
 			result->addLinkRestraints(*b, *a, atom_b, atom_a, b->get_compound_id() + "-" + a->get_compound_id());
 			continue;
 		}
-		catch (...) {}
+		catch (...)
+		{
+		}
 
 		// Last resort, if link is NAG-ASN, try pyr-ASN instead:
 
@@ -1395,7 +1399,7 @@ BondMap Minimizer::createBondMap()
 	std::vector<cif::point> pts;
 	for (auto a : mReferencedAtoms)
 		pts.emplace_back(a.get_location());
-	
+
 	cif::point center = cif::centroid(pts);
 	float radius = 0;
 
