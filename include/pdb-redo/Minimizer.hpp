@@ -171,6 +171,9 @@ class Minimizer
 	void addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b,
 		const std::string &atom_id_a, const std::string &atom_id_b, const Link &link);
 
+	void addSimpleBondRestraint(const cif::mm::residue &a, const cif::mm::residue &b,
+		const std::string &atom_id_a, const std::string &atom_id_b);
+
 	template <typename R>
 	double rmsz(const AtomLocationProvider &atoms, const std::vector<R> &a) const
 	{

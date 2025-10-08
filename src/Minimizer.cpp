@@ -641,9 +641,9 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 	auto c2 = cif::compound_factory::instance().create(b.get_compound_id());
 
 	assert(link.bonds().size() == 1);
-	bool a_is_1 = link.bonds().front().atom[0].compID == 1 ?
-		link.bonds().front().atom[0].atomID == atom_id_a :
-		link.bonds().front().atom[1].atomID == atom_id_a;
+	bool a_is_1 = link.bonds().front().atom[0].compID == 1
+	                  ? link.bonds().front().atom[0].atomID == atom_id_a
+	                  : link.bonds().front().atom[1].atomID == atom_id_a;
 
 	auto getCompoundAtom = [&](const LinkAtom &la)
 	{
@@ -755,9 +755,9 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			cif::mm::atom a2 = getAtom(center.atom[1]);
 			cif::mm::atom a3 = getAtom(center.atom[2]);
 
-			auto volume = a_is_1 ?
-				link.chiralVolume(center.id, a.get_compound_id(), b.get_compound_id()) :
-				link.chiralVolume(center.id, b.get_compound_id(), a.get_compound_id());
+			auto volume = a_is_1
+			                  ? link.chiralVolume(center.id, a.get_compound_id(), b.get_compound_id())
+			                  : link.chiralVolume(center.id, b.get_compound_id(), a.get_compound_id());
 
 			if (std::isnan(volume))
 			{
@@ -800,6 +800,19 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			continue;
 		}
 	}
+}
+
+void Minimizer::addSimpleBondRestraint(const cif::mm::residue &a, const cif::mm::residue &b,
+	const std::string &atom_id_a, const std::string &atom_id_b)
+{
+	auto c1 = cif::compound_factory::instance().create(a.get_compound_id());
+	auto c2 = cif::compound_factory::instance().create(b.get_compound_id());
+
+	cif::mm::atom a1 = a.get_atom_by_atom_id(atom_id_a);
+	cif::mm::atom a2 = b.get_atom_by_atom_id(atom_id_b);
+
+	// well, what is wisdom?
+	mBondRestraints.emplace_back(ref(a1), ref(a2), distance(a1, a2), 0.05);
 }
 
 void Minimizer::printStats()
@@ -1358,25 +1371,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 			continue;
 		}
 
-		try
-		{
-			result->addLinkRestraints(*a, *b, atom_a, atom_b, a->get_compound_id() + "-" + b->get_compound_id());
-			continue;
-		}
-		catch (...)
-		{
-		}
-
-		try
-		{
-			result->addLinkRestraints(*b, *a, atom_b, atom_a, b->get_compound_id() + "-" + a->get_compound_id());
-			continue;
-		}
-		catch (...)
-		{
-		}
-
-		// Last resort, if link is NAG-ASN, try pyr-ASN instead:
+		// if link is NAG-ASN, use pyr-ASN instead:
 
 		if (a->get_compound_id() == "NAG" and b->get_compound_id() == "ASN")
 			result->addLinkRestraints(*b, *a, atom_b, atom_a, "pyr-ASN");
@@ -1384,11 +1379,23 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 			result->addLinkRestraints(*a, *b, atom_a, atom_b, "pyr-ASN");
 		else
 		{
-			std::cerr << "Missing link information for " << a->get_compound_id() << " and " << b->get_compound_id() << '\n';
-			// result->addLinkRestraints(*a, *b, atom_a, atom_b, "symmetry");
-		}
 
-			// throw std::runtime_error("Missing link information for " + a->get_compound_id() + " and " + b->get_compound_id());
+			if (auto link = CompoundFactory::instance().createLink(a->get_compound_id() + "-" + b->get_compound_id()); link != nullptr)
+			{
+				result->addLinkRestraints(*a, *b, atom_a, atom_b, *link);
+				continue;
+			}
+
+			if (auto link = CompoundFactory::instance().createLink(b->get_compound_id() + "-" + a->get_compound_id()); link != nullptr)
+			{
+				result->addLinkRestraints(*b, *a, atom_b, atom_a, *link);
+				continue;
+			}
+
+			// No luck, just add a very basic bond restraint...
+			std::cerr << "Missing link information for " << a->get_compound_id() << " and " << b->get_compound_id() << '\n';
+			result->addSimpleBondRestraint(*a, *b, atom_a, atom_b);
+		}
 	}
 
 	if (xMap != nullptr)
