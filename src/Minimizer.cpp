@@ -1383,7 +1383,12 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		else if (b->get_compound_id() == "NAG" and a->get_compound_id() == "ASN")
 			result->addLinkRestraints(*a, *b, atom_a, atom_b, "pyr-ASN");
 		else
-			throw std::runtime_error("Missing link information for " + a->get_compound_id() + " and " + b->get_compound_id());
+		{
+			std::cerr << "Missing link information for " << a->get_compound_id() << " and " << b->get_compound_id() << '\n';
+			// result->addLinkRestraints(*a, *b, atom_a, atom_b, "symmetry");
+		}
+
+			// throw std::runtime_error("Missing link information for " + a->get_compound_id() + " and " + b->get_compound_id());
 	}
 
 	if (xMap != nullptr)
