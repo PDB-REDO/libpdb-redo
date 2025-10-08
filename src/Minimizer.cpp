@@ -805,9 +805,6 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 void Minimizer::addSimpleBondRestraint(const cif::mm::residue &a, const cif::mm::residue &b,
 	const std::string &atom_id_a, const std::string &atom_id_b)
 {
-	auto c1 = cif::compound_factory::instance().create(a.get_compound_id());
-	auto c2 = cif::compound_factory::instance().create(b.get_compound_id());
-
 	cif::mm::atom a1 = a.get_atom_by_atom_id(atom_id_a);
 	cif::mm::atom a2 = b.get_atom_by_atom_id(atom_id_b);
 
