@@ -1335,25 +1335,29 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		if (ai == residues.end() and bi == residues.end())
 			continue;
 
-		const cif::mm::residue *ra = *ai;
-		const cif::mm::residue *rb = *bi;
-
 		const auto &[ptnr1_label_atom_id, ptnr2_label_atom_id, link_id] =
 			r.get<std::string, std::string, std::string>("ptnr1_label_atom_id", "ptnr2_label_atom_id", "ccp4_link_id");
 
 		if (ai != residues.end() and bi != residues.end())
 		{
+			const cif::mm::residue *ra = *ai;
+			const cif::mm::residue *rb = *bi;
+
 			linked.emplace_back(ra, rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 			continue;
 		}
 
 		if (ai != residues.end())
 		{
+			const cif::mm::residue *ra = *ai;
+
 			residues.emplace_back(&structure.get_residue(ptnr2_label_asym_id, ptnr2_label_seq_id, ptnr2_auth_seq_id));
 			linked.emplace_back(ra, residues.back(), ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 		}
 		else
 		{
+			const cif::mm::residue *rb = *bi;
+
 			residues.emplace_back(&structure.get_residue(ptnr1_label_asym_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
 			linked.emplace_back(residues.back(), rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 		}
