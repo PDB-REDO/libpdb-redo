@@ -350,51 +350,6 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 
 double DensityIntegration::findMinGlobal(DensityIntegration::CallbackParams &params) const
 {
-	// int status;
-	// int iter = 0, max_iter = 100;
-	// double m = 2.0, m_expected = 0;
-	// double a = 0.0, b = 1e3;
-	// gsl_function F{ .function = &DensityIntegration::integrateDensityCallback, .params = &params };
-
-	// const gsl_min_fminimizer_type *T = gsl_min_fminimizer_brent;
-	// gsl_min_fminimizer *s = gsl_min_fminimizer_alloc(T);
-	// gsl_min_fminimizer_set(s, &F, m, a, b);
-
-	// printf("using %s method\n",
-	// 	gsl_min_fminimizer_name(s));
-
-	// printf("%5s [%9s, %9s] %9s %10s %9s\n",
-	// 	"iter", "lower", "upper", "min",
-	// 	"err", "err(est)");
-
-	// printf("%5d [%.7f, %.7f] %.7f %+.7f %.7f\n",
-	// 	iter, a, b,
-	// 	m, m - m_expected, b - a);
-
-	// do
-	// {
-	// 	iter++;
-	// 	status = gsl_min_fminimizer_iterate(s);
-
-	// 	m = gsl_min_fminimizer_x_minimum(s);
-	// 	a = gsl_min_fminimizer_x_lower(s);
-	// 	b = gsl_min_fminimizer_x_upper(s);
-
-	// 	status = gsl_min_test_interval(a, b, 0.001, 0.0);
-
-	// 	if (status == GSL_SUCCESS)
-	// 		printf("Converged:\n");
-
-	// 	printf("%5d [%.7f, %.7f] "
-	// 		   "%.7f %+.7f %.7f\n",
-	// 		iter, a, b,
-	// 		m, m - m_expected, b - a);
-	// } while (status == GSL_CONTINUE && iter < max_iter);
-
-	// gsl_min_fminimizer_free(s);
-
-	// return m;
-
 	const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
 	gsl_multimin_fminimizer *s = NULL;
 	gsl_vector *ss, *x;
@@ -431,16 +386,6 @@ double DensityIntegration::findMinGlobal(DensityIntegration::CallbackParams &par
 
 		size = gsl_multimin_fminimizer_size(s);
 		status = gsl_multimin_test_size(size, 1e-2);
-
-		// if (status == GSL_SUCCESS)
-		// {
-		// 	printf("converged to minimum at\n");
-		// }
-
-		// printf("%5d %10.3e f() = %7.3f size = %.3f\n",
-		// 	iter,
-		// 	gsl_vector_get(s->x, 0),
-		// 	s->fval, size);
 	} while (status == GSL_CONTINUE && iter < 100);
 
 	double result = gsl_vector_get(s->x, 0);
