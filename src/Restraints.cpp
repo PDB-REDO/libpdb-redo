@@ -271,10 +271,10 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 			std::tie(d[0], d[1], d[2], d[3]) = CalculateTorsionGradients(theta, p);
 
-			df.add(mA, 2.0 * diff * d[0] * scale * w);
-			df.add(mB, 2.0 * diff * d[1] * scale * w);
-			df.add(mC, 2.0 * diff * d[2] * scale * w);
-			df.add(mD, 2.0 * diff * d[3] * scale * w);
+			df.add(mA, /* 2.0 *  */diff * d[0] * scale * w);
+			df.add(mB, /* 2.0 *  */diff * d[1] * scale * w);
+			df.add(mC, /* 2.0 *  */diff * d[2] * scale * w);
+			df.add(mD, /* 2.0 *  */diff * d[3] * scale * w);
 		}
 	}
 }
