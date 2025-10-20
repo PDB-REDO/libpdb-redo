@@ -35,6 +35,7 @@
 #include <future>
 #include <iomanip>
 #include <regex>
+#include <stdexcept>
 
 namespace fs = std::filesystem;
 
@@ -425,7 +426,12 @@ void Minimizer::Finish(const cif::crystal &crystal)
 			try
 			{
 				auto c1 = CompoundFactory::instance().create(a1.get_label_comp_id());
+				if (not c1)
+					throw std::runtime_error("Missing restraint information for compound " + a1.get_label_comp_id());
+
 				auto c2 = CompoundFactory::instance().create(a2.get_label_comp_id());
+				if (not c2)
+					throw std::runtime_error("Missing restraint information for compound " + a2.get_label_comp_id());
 
 				std::string et1 = c1->get_atom_by_atom_id(a1.get_label_atom_id()).typeEnergy;
 				std::string et2 = c2->get_atom_by_atom_id(a2.get_label_atom_id()).typeEnergy;
