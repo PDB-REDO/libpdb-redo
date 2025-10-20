@@ -24,6 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <exception>
 #include <map>
 #include <mutex>
 #include <numeric>
@@ -33,6 +34,7 @@
 #include <fstream>
 
 #include "pdb-redo/Compound.hpp"
+#include "cif++/utilities.hpp"
 
 namespace fs = std::filesystem;
 
@@ -842,8 +844,10 @@ const Compound *CompoundFactoryImpl::create(std::string id)
 		{
 			result = createSelf(id);
 		}
-		catch (...)
+		catch (const std::exception &ex)
 		{
+			if (cif::VERBOSE > 0)
+				std::cout << ex.what() << "\n";
 		}
 	}
 
