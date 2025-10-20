@@ -357,7 +357,11 @@ void Minimizer::Finish(const cif::crystal &crystal)
 	if (mAtoms.empty())
 		throw std::runtime_error("No atoms to refine");
 
-	fs::path enerLibFilePath(getenv("CLIBD_MON"));
+	fs::path enerLibFilePath;
+	if (auto clibd_mon = getenv("CLIBD_MON"))
+		enerLibFilePath = clibd_mon;
+	else
+	 	throw std::runtime_error("Did you source the CCP4 environment?");
 	enerLibFilePath /= "ener_lib.cif";
 
 	cif::file enerLibFile(enerLibFilePath);

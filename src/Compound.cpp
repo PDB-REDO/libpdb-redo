@@ -971,9 +971,9 @@ class CLibdMonCompoundFactoryImpl : public CompoundFactoryImpl
 const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 {
 	const Compound *result = nullptr;
-	if (not mFile.empty() and not mMissing.contains(id))
+	if (auto clibd_mon_path = getenv("CLIBD_MON"); clibd_mon_path and not mFile.empty() and not mMissing.contains(id))
 	{
-		auto clibd_mon = fs::path(getenv("CLIBD_MON"));
+		auto clibd_mon = fs::path(clibd_mon_path);
 
 		fs::path resFile = clibd_mon / cif::to_lower_copy(id.substr(0, 1)) / (id + ".cif");
 		cif::file cifFile(resFile);
@@ -1001,6 +1001,8 @@ const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 			}
 		}
 	}
+	else
+		std::cerr << "Is the CCP4 environment sourced?\n";
 
 	return result;
 }
