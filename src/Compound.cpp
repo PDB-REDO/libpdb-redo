@@ -24,6 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <exception>
 #include <map>
 #include <mutex>
 #include <numeric>
@@ -33,6 +34,7 @@
 #include <fstream>
 
 #include "pdb-redo/Compound.hpp"
+#include "cif++/utilities.hpp"
 
 namespace fs = std::filesystem;
 
@@ -565,7 +567,7 @@ Link::Link(cif::datablock &db)
 		cif::tie(b.atom[0].compID, b.atom[0].atomID,
 			b.atom[1].compID, b.atom[1].atomID, type, b.distance, b.esd) =
 			row.get("atom_1_comp_id", "atom_id_1", "atom_2_comp_id", "atom_id_2",
-				"value_order", "value_dist", "value_dist_esd");
+				"type", "value_dist", "value_dist_esd");
 
 		using cif::iequals;
 
@@ -842,8 +844,10 @@ const Compound *CompoundFactoryImpl::create(std::string id)
 		{
 			result = createSelf(id);
 		}
-		catch (...)
+		catch (const std::exception &ex)
 		{
+			if (cif::VERBOSE > 0)
+				std::cout << ex.what() << "\n";
 		}
 	}
 
@@ -967,9 +971,9 @@ class CLibdMonCompoundFactoryImpl : public CompoundFactoryImpl
 const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 {
 	const Compound *result = nullptr;
-	if (not mFile.empty() and not mMissing.contains(id))
+	if (auto clibd_mon_path = getenv("CLIBD_MON"); clibd_mon_path and not mFile.empty() and not mMissing.contains(id))
 	{
-		auto clibd_mon = fs::path(getenv("CLIBD_MON"));
+		auto clibd_mon = fs::path(clibd_mon_path);
 
 		fs::path resFile = clibd_mon / cif::to_lower_copy(id.substr(0, 1)) / (id + ".cif");
 		cif::file cifFile(resFile);
@@ -997,6 +1001,8 @@ const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 			}
 		}
 	}
+	else
+		std::cerr << "Is the CCP4 environment sourced?\n";
 
 	return result;
 }

@@ -33,6 +33,7 @@
 
 #include <cif++.hpp>
 
+#include "cif++/gzio.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
@@ -283,7 +284,7 @@ bool IsMTZFile(const fs::path &p)
 {
 	bool result = false;
 
-	std::ifstream f(p);
+	cif::gzio::ifstream f(p);
 	if (f.is_open())
 	{
 		char sig[5] = {};
@@ -825,10 +826,39 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 	if (cif::VERBOSE > 0)
 		std::cerr << "Recalculating maps from " << hklin << '\n';
 
+	auto dataFile = hklin;
+
+	if (hklin.extension() == ".gz")
+	{
+		// file is compressed
+
+		fs::path p = hklin.parent_path();
+		std::string s = hklin.filename().string();
+
+		cif::gzio::ifstream in(hklin);
+
+		char tmpFileName[] = "/tmp/map-tmp-XXXXXX";
+		if (mkstemp(tmpFileName) < 0)
+			throw std::runtime_error(std::string("Could not create temp file for map: ") + strerror(errno));
+
+		dataFile = fs::path(tmpFileName);
+		std::ofstream out(dataFile);
+
+		if (not in.is_open() or not out.is_open())
+			throw std::runtime_error("Could not handle compressed map file");
+
+		out << in.rdbuf();
+	}
+
+	if (not fs::exists(dataFile))
+		throw std::runtime_error("Could not open map file " + hklin.string());
+
+	using namespace clipper;
+
 	using clipper::CCP4MTZfile;
 
 	CCP4MTZfile mtzin;
-	mtzin.open_read(hklin.string());
+	mtzin.open_read(dataFile.string());
 
 	mtzin.import_hkl_info(mHKLInfo);
 	mtzin.import_hkl_data(mFoData,
@@ -837,6 +867,9 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 		cif::format("/{}/{}/[{}]", "*", "*", cif::join(freeLabels, ",")));
 
 	mtzin.close_read();
+
+	if (dataFile != hklin)
+		fs::remove(dataFile);
 }
 
 // --------------------------------------------------------------------

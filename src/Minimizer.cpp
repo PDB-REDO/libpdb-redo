@@ -29,12 +29,13 @@
    Date: dinsdag 22 mei, 2018
 */
 
+#include "pdb-redo/Minimizer.hpp"
+
 #include <filesystem>
 #include <future>
 #include <iomanip>
 #include <regex>
-
-#include "pdb-redo/Minimizer.hpp"
+#include <stdexcept>
 
 namespace fs = std::filesystem;
 
@@ -356,7 +357,11 @@ void Minimizer::Finish(const cif::crystal &crystal)
 	if (mAtoms.empty())
 		throw std::runtime_error("No atoms to refine");
 
-	fs::path enerLibFilePath(getenv("CLIBD_MON"));
+	fs::path enerLibFilePath;
+	if (auto clibd_mon = getenv("CLIBD_MON"))
+		enerLibFilePath = clibd_mon;
+	else
+	 	throw std::runtime_error("Did you source the CCP4 environment?");
 	enerLibFilePath /= "ener_lib.cif";
 
 	cif::file enerLibFile(enerLibFilePath);
@@ -425,7 +430,12 @@ void Minimizer::Finish(const cif::crystal &crystal)
 			try
 			{
 				auto c1 = CompoundFactory::instance().create(a1.get_label_comp_id());
+				if (not c1)
+					throw std::runtime_error("Missing restraint information for compound " + a1.get_label_comp_id());
+
 				auto c2 = CompoundFactory::instance().create(a2.get_label_comp_id());
+				if (not c2)
+					throw std::runtime_error("Missing restraint information for compound " + a2.get_label_comp_id());
 
 				std::string et1 = c1->get_atom_by_atom_id(a1.get_label_atom_id()).typeEnergy;
 				std::string et2 = c2->get_atom_by_atom_id(a2.get_label_atom_id()).typeEnergy;
@@ -535,7 +545,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 			if (symop != cif::sym_op() and d < kMaxNonBondedContactDistance)
 			{
 				cif::mm::atom a2s(a2, p, symop.string());
-				
+
 				add_nbc(a1, a2s);
 			}
 		}
@@ -592,7 +602,7 @@ void Minimizer::dropTorsionRestraints()
 {
 	for (auto &r : mTorsionRestraints)
 		mRestraints.erase(std::remove(mRestraints.begin(), mRestraints.end(), &r), mRestraints.end());
-	
+
 	mTorsionRestraints.clear();
 }
 
@@ -635,15 +645,15 @@ AtomRef Minimizer::ref(const cif::mm::atom &atom)
 }
 
 void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::residue &b,
-		const std::string &atom_id_a, const std::string &atom_id_b, const Link &link)
+	const std::string &atom_id_a, const std::string &atom_id_b, const Link &link)
 {
 	auto c1 = cif::compound_factory::instance().create(a.get_compound_id());
 	auto c2 = cif::compound_factory::instance().create(b.get_compound_id());
 
 	assert(link.bonds().size() == 1);
-	bool a_is_1 = link.bonds().front().atom[0].compID == 1 ?
-		link.bonds().front().atom[0].atomID == atom_id_a :
-		link.bonds().front().atom[1].atomID == atom_id_a;
+	bool a_is_1 = link.bonds().front().atom[0].compID == 1
+	                  ? link.bonds().front().atom[0].atomID == atom_id_a
+	                  : link.bonds().front().atom[1].atomID == atom_id_a;
 
 	auto getCompoundAtom = [&](const LinkAtom &la)
 	{
@@ -755,10 +765,10 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			cif::mm::atom a2 = getAtom(center.atom[1]);
 			cif::mm::atom a3 = getAtom(center.atom[2]);
 
-			auto volume = a_is_1 ?
-				link.chiralVolume(center.id, a.get_compound_id(), b.get_compound_id()) :
-				link.chiralVolume(center.id, b.get_compound_id(), a.get_compound_id());
-			
+			auto volume = a_is_1
+			                  ? link.chiralVolume(center.id, a.get_compound_id(), b.get_compound_id())
+			                  : link.chiralVolume(center.id, b.get_compound_id(), a.get_compound_id());
+
 			if (std::isnan(volume))
 			{
 				if (cif::VERBOSE > 0)
@@ -802,12 +812,19 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 	}
 }
 
+void Minimizer::addSimpleBondRestraint(const cif::mm::residue &a, const cif::mm::residue &b,
+	const std::string &atom_id_a, const std::string &atom_id_b)
+{
+	cif::mm::atom a1 = a.get_atom_by_atom_id(atom_id_a);
+	cif::mm::atom a2 = b.get_atom_by_atom_id(atom_id_b);
+
+	// well, what is wisdom?
+	mBondRestraints.emplace_back(ref(a1), ref(a2), distance(a1, a2), 0.05);
+}
+
 void Minimizer::printStats()
 {
 	AtomLocationProvider loc(mReferencedAtoms);
-
-	// for (auto &r : mBondRestraints)
-	// 	std::cout << mReferencedAtoms[r.mA] << " -> " << mReferencedAtoms[r.mB] << " = " << r.f(loc) << '\n';
 
 	double bondScore = rmsz(loc, mBondRestraints);
 	double angleScore = rmsz(loc, mAngleRestraints);
@@ -819,9 +836,12 @@ void Minimizer::printStats()
 	double densityScore = mDensityRestraint ? mDensityRestraint->f(loc) : 0;
 
 	std::cerr << "  Bonds:              " << bondScore << '\n'
-			  << "  Angles:             " << angleScore << '\n'
-			  << "  Torsion:            " << torsionScore << '\n'
-			  << "  Chirality:          " << chiralityVolumeScore << '\n'
+			  << "  Angles:             " << angleScore << '\n';
+
+	if (not mTorsionRestraints.empty())
+		std::cerr << "  Torsion:            " << torsionScore << '\n';
+
+	std::cerr << "  Chirality:          " << chiralityVolumeScore << '\n'
 			  << "  Planarity:          " << planarityScore << '\n'
 			  << "  Transpeptide:       " << transpeptideScore << '\n'
 			  << "  Non-Bonded-Contact: " << nbcScore << '\n'
@@ -841,7 +861,7 @@ double Minimizer::score(const AtomLocationProvider &loc)
 	{
 		if (cif::VERBOSE > 2)
 			r->print(loc);
-					
+
 		result += r->f(loc);
 	}
 
@@ -1309,10 +1329,10 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 	for (auto r : struct_conn)
 	{
 		const auto &[ptnr1_label_asym_id, ptnr1_label_seq_id, ptnr1_auth_seq_id] =
-			r.get<std::string,int,std::string>("ptnr1_label_asym_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id");
+			r.get<std::string, int, std::string>("ptnr1_label_asym_id", "ptnr1_label_seq_id", "ptnr1_auth_seq_id");
 
 		const auto &[ptnr2_label_asym_id, ptnr2_label_seq_id, ptnr2_auth_seq_id] =
-			r.get<std::string,int,std::string>("ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id");
+			r.get<std::string, int, std::string>("ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id");
 
 		auto ai = find_if(residues.begin(), residues.end(),
 			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, pdb_seq_num = ptnr1_auth_seq_id](const cif::mm::residue *res)
@@ -1325,27 +1345,31 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		if (ai == residues.end() and bi == residues.end())
 			continue;
 
-		const cif::mm::residue *ra = *ai;
-		const cif::mm::residue *rb = *bi;
-
 		const auto &[ptnr1_label_atom_id, ptnr2_label_atom_id, link_id] =
-			r.get<std::string,std::string,std::string>("ptnr1_label_atom_id", "ptnr2_label_atom_id", "ccp4_link_id");
+			r.get<std::string, std::string, std::string>("ptnr1_label_atom_id", "ptnr2_label_atom_id", "ccp4_link_id");
 
 		if (ai != residues.end() and bi != residues.end())
 		{
+			const cif::mm::residue *ra = *ai;
+			const cif::mm::residue *rb = *bi;
+
 			linked.emplace_back(ra, rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 			continue;
 		}
 
 		if (ai != residues.end())
 		{
+			const cif::mm::residue *ra = *ai;
+
 			residues.emplace_back(&structure.get_residue(ptnr2_label_asym_id, ptnr2_label_seq_id, ptnr2_auth_seq_id));
 			linked.emplace_back(ra, residues.back(), ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 		}
 		else
 		{
+			const cif::mm::residue *rb = *bi;
+
 			residues.emplace_back(&structure.get_residue(ptnr1_label_asym_id, ptnr1_label_seq_id, ptnr1_auth_seq_id));
-			linked.emplace_back(residues.back(), rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);	
+			linked.emplace_back(residues.back(), rb, ptnr1_label_atom_id, ptnr2_label_atom_id, link_id);
 		}
 	}
 
@@ -1358,28 +1382,31 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 			continue;
 		}
 
-		try
-		{
-			result->addLinkRestraints(*a, *b, atom_a, atom_b, a->get_compound_id() + "-" + b->get_compound_id());
-			continue;
-		} 
-		catch (...) {}
-
-		try
-		{
-			result->addLinkRestraints(*b, *a, atom_b, atom_a, b->get_compound_id() + "-" + a->get_compound_id());
-			continue;
-		}
-		catch (...) {}
-
-		// Last resort, if link is NAG-ASN, try pyr-ASN instead:
+		// if link is NAG-ASN, use pyr-ASN instead:
 
 		if (a->get_compound_id() == "NAG" and b->get_compound_id() == "ASN")
 			result->addLinkRestraints(*b, *a, atom_b, atom_a, "pyr-ASN");
 		else if (b->get_compound_id() == "NAG" and a->get_compound_id() == "ASN")
 			result->addLinkRestraints(*a, *b, atom_a, atom_b, "pyr-ASN");
 		else
-			throw std::runtime_error("Missing link information for " + a->get_compound_id() + " and " + b->get_compound_id());
+		{
+
+			if (auto link = CompoundFactory::instance().createLink(a->get_compound_id() + "-" + b->get_compound_id()); link != nullptr)
+			{
+				result->addLinkRestraints(*a, *b, atom_a, atom_b, *link);
+				continue;
+			}
+
+			if (auto link = CompoundFactory::instance().createLink(b->get_compound_id() + "-" + a->get_compound_id()); link != nullptr)
+			{
+				result->addLinkRestraints(*b, *a, atom_b, atom_a, *link);
+				continue;
+			}
+
+			// No luck, just add a very basic bond restraint...
+			std::cerr << "Missing link information for " << a->get_compound_id() << " and " << b->get_compound_id() << '\n';
+			result->addSimpleBondRestraint(*a, *b, atom_a, atom_b);
+		}
 	}
 
 	if (xMap != nullptr)
@@ -1395,7 +1422,7 @@ BondMap Minimizer::createBondMap()
 	std::vector<cif::point> pts;
 	for (auto a : mReferencedAtoms)
 		pts.emplace_back(a.get_location());
-	
+
 	cif::point center = cif::centroid(pts);
 	float radius = 0;
 

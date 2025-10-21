@@ -29,13 +29,14 @@
    Date: dinsdag 22 mei, 2018
 */
 
-#include "pdb-redo/Minimizer.hpp"
 #include "pdb-redo/Restraints.hpp"
+
+#include "pdb-redo/Minimizer.hpp"
 
 #include <cif++.hpp>
 
-#include <Eigen/Eigenvalues>
-
+#include <gsl/gsl_eigen.h>
+#include <gsl/gsl_math.h>
 #include <numeric>
 
 namespace pdb_redo
@@ -81,7 +82,7 @@ void BondRestraint::print(const AtomLocationProvider &atoms) const
 
 double AngleRestraint::f(const AtomLocationProvider &atoms) const
 {
-	DPoint p[3] = {atoms[mA], atoms[mB], atoms[mC]};
+	DPoint p[3] = { atoms[mA], atoms[mB], atoms[mC] };
 
 	double c = cosinus_angle(p[1], p[0], p[1], p[2]);
 	double angle = std::atan2(std::sqrt(1 - c * c), c) * 180 / cif::kPI;
@@ -111,14 +112,14 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 	if (a < 0.01)
 	{
 		a = 0.01;
-		aVec = DPoint{0.01, 0.01, 0.01};
+		aVec = DPoint{ 0.01, 0.01, 0.01 };
 	};
 
 	auto b = distance(m, l);
 	if (b < 0.01)
 	{
 		b = 0.01;
-		bVec = DPoint{0.01, 0.01, 0.01};
+		bVec = DPoint{ 0.01, 0.01, 0.01 };
 	};
 
 	auto cosTheta = dot_product(aVec, bVec) / (a * b);
@@ -177,29 +178,31 @@ TorsionRestraint::CalculateTorsionGradients(float theta, DPoint p[4]) const
 	if (G == 0)
 		F = 999999999.9;
 
-	DPoint dH[4] = {c, -c, a, -a};
-	DPoint dK[4] = {{}, -c, c - b, b};
-	DPoint dJ[4] = {-b, b - a, a, {}};
-	DPoint dL[4] = {{}, 2.0 * (p[2] - p[1]) * L * L, -2.0 * (p[2] - p[1]) * L * L, {}};
+	DPoint dH[4] = { c, -c, a, -a };
+	DPoint dK[4] = { {}, -c, c - b, b };
+	DPoint dJ[4] = { -b, b - a, a, {} };
+	DPoint dL[4] = { {}, 2.0 * (p[2] - p[1]) * L * L, -2.0 * (p[2] - p[1]) * L * L, {} };
 	DPoint dM[4] = {
-		{-(b.m_y * c.m_z - b.m_z * c.m_y),
+		{ -(b.m_y * c.m_z - b.m_z * c.m_y),
 			-(b.m_z * c.m_x - b.m_x * c.m_z),
-			-(b.m_x * c.m_y - b.m_y * c.m_x)},
-		{(b.m_y * c.m_z - b.m_z * c.m_y) + (a.m_y * c.m_z - a.m_z * c.m_y),
+			-(b.m_x * c.m_y - b.m_y * c.m_x) },
+		{ (b.m_y * c.m_z - b.m_z * c.m_y) + (a.m_y * c.m_z - a.m_z * c.m_y),
 			(b.m_z * c.m_x - b.m_x * c.m_z) + (a.m_z * c.m_x - a.m_x * c.m_z),
-			(b.m_x * c.m_y - b.m_y * c.m_x) + (a.m_x * c.m_y - a.m_y * c.m_x)},
-		{(b.m_y * a.m_z - b.m_z * a.m_y) - (a.m_y * c.m_z - a.m_z * c.m_y),
+			(b.m_x * c.m_y - b.m_y * c.m_x) + (a.m_x * c.m_y - a.m_y * c.m_x) },
+		{ (b.m_y * a.m_z - b.m_z * a.m_y) - (a.m_y * c.m_z - a.m_z * c.m_y),
 			-(a.m_z * c.m_x - a.m_x * c.m_z) + (b.m_z * a.m_x - b.m_x * a.m_z),
-			-(a.m_x * c.m_y - a.m_y * c.m_x) + (a.m_y * b.m_x - a.m_x * b.m_y)},
-		{-(b.m_y * a.m_z - b.m_z * a.m_y),
+			-(a.m_x * c.m_y - a.m_y * c.m_x) + (a.m_y * b.m_x - a.m_x * b.m_y) },
+		{ -(b.m_y * a.m_z - b.m_z * a.m_y),
 			-(b.m_z * a.m_x - b.m_x * a.m_z),
-			-(a.m_y * b.m_x - a.m_x * b.m_y)}};
+			-(a.m_y * b.m_x - a.m_x * b.m_y) }
+	};
 
 	DPoint dE[4]{
 		dM[0] / blen,
 		dM[1] / blen + E * (p[2] - p[1]) * L,
 		dM[2] / blen - E * (p[2] - p[1]) * L,
-		dM[3] / blen};
+		dM[3] / blen
+	};
 
 	auto eff = E * F * F;
 	auto jl = J * L;
@@ -266,15 +269,15 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 			double scale = 180.0 / ((1 + tt * tt) * cif::kPI);
 			auto w = 1 / (mESD * mESD);
 
-			DPoint p[4] = {atoms[mA], atoms[mB], atoms[mC], atoms[mD]};
+			DPoint p[4] = { atoms[mA], atoms[mB], atoms[mC], atoms[mD] };
 			DPoint d[4];
 
 			std::tie(d[0], d[1], d[2], d[3]) = CalculateTorsionGradients(theta, p);
 
-			df.add(mA, 2.0 * diff * d[0] * scale * w);
-			df.add(mB, 2.0 * diff * d[1] * scale * w);
-			df.add(mC, 2.0 * diff * d[2] * scale * w);
-			df.add(mD, 2.0 * diff * d[3] * scale * w);
+			df.add(mA, /* 2.0 *  */ diff * d[0] * scale * w);
+			df.add(mB, /* 2.0 *  */ diff * d[1] * scale * w);
+			df.add(mC, /* 2.0 *  */ diff * d[2] * scale * w);
+			df.add(mD, /* 2.0 *  */ diff * d[3] * scale * w);
 		}
 	}
 }
@@ -318,11 +321,11 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &d
 	df.add(mCentre, s * DPoint{
 							-(b.m_y * c.m_z - b.m_z * c.m_y) - (a.m_z * c.m_y - a.m_y * c.m_z) - (a.m_y * b.m_z - a.m_z * b.m_y),
 							-(b.m_z * c.m_x - b.m_x * c.m_z) - (a.m_x * c.m_z - a.m_z * c.m_x) - (a.m_z * b.m_x - a.m_x * b.m_z),
-							-(b.m_x * c.m_y - b.m_y * c.m_x) - (a.m_y * c.m_x - a.m_x * c.m_y) - (a.m_x * b.m_y - a.m_y * b.m_x)});
+							-(b.m_x * c.m_y - b.m_y * c.m_x) - (a.m_y * c.m_x - a.m_x * c.m_y) - (a.m_x * b.m_y - a.m_y * b.m_x) });
 
-	df.add(mA1, s * DPoint{b.m_y * c.m_z - b.m_z * c.m_y, b.m_z * c.m_x - b.m_x * c.m_z, b.m_x * c.m_y - b.m_y * c.m_x});
-	df.add(mA2, s * DPoint{a.m_z * c.m_y - a.m_y * c.m_z, a.m_x * c.m_z - a.m_z * c.m_x, a.m_y * c.m_x - a.m_x * c.m_y});
-	df.add(mA3, s * DPoint{a.m_y * b.m_z - a.m_z * b.m_y, a.m_z * b.m_x - a.m_x * b.m_z, a.m_x * b.m_y - a.m_y * b.m_x});
+	df.add(mA1, s * DPoint{ b.m_y * c.m_z - b.m_z * c.m_y, b.m_z * c.m_x - b.m_x * c.m_z, b.m_x * c.m_y - b.m_y * c.m_x });
+	df.add(mA2, s * DPoint{ a.m_z * c.m_y - a.m_y * c.m_z, a.m_x * c.m_z - a.m_z * c.m_x, a.m_y * c.m_x - a.m_x * c.m_y });
+	df.add(mA3, s * DPoint{ a.m_y * b.m_z - a.m_z * b.m_y, a.m_z * b.m_x - a.m_x * b.m_z, a.m_x * b.m_y - a.m_y * b.m_x });
 }
 
 void ChiralVolumeRestraint::print(const AtomLocationProvider &atoms) const
@@ -351,30 +354,32 @@ void PlanarityRestraint::calculatePlaneFunction(const AtomLocationProvider &atom
 		Cxz += (atoms[a].m_x - center.m_x) * (atoms[a].m_z - center.m_z);
 		Cyz += (atoms[a].m_y - center.m_y) * (atoms[a].m_z - center.m_z);
 	}
-	
-	Eigen::Matrix3d mat;
-	mat << Cxx, Cxy, Cxz,
-		   Cxy, Cyy, Cyz,
-		   Cxz, Cyz, Czz;
 
-	Eigen::EigenSolver<Eigen::Matrix3d> es(mat);
+	double data[9] = {
+		Cxx, Cxy, Cxz,
+		Cxy, Cyy, Cyz,
+		Cxz, Cyz, Czz
+	};
 
-	auto ev = es.eigenvalues();
+	gsl_matrix_view m = gsl_matrix_view_array(data, 3, 3);
 
-	float b_ev = std::numeric_limits<float>::max();
-	for (std::size_t i = 0; i < 3; ++i)
-	{
-		if (ev[i].real() > b_ev)
-			continue;
+	gsl_vector *eval = gsl_vector_alloc(3);
+	gsl_matrix *evec = gsl_matrix_alloc(3, 3);
 
-		b_ev = ev[i].real();
+	gsl_eigen_symmv_workspace *w = gsl_eigen_symmv_alloc(3);
+	gsl_eigen_symmv(&m.matrix, eval, evec, w);
+	gsl_eigen_symmv_free(w);
 
-		auto col = es.eigenvectors().col(i);
+	gsl_eigen_symmv_sort(eval, evec, GSL_EIGEN_SORT_ABS_ASC);
 
-		abcd[0] = col(0).real();
-		abcd[1] = col(1).real();
-		abcd[2] = col(2).real();
-	}
+	gsl_vector_view evec_i = gsl_matrix_column(evec, 0);
+
+	abcd[0] = gsl_vector_get(&evec_i.vector, 0);
+	abcd[1] = gsl_vector_get(&evec_i.vector, 1);
+	abcd[2] = gsl_vector_get(&evec_i.vector, 2);
+
+	gsl_vector_free(eval);
+	gsl_matrix_free(evec);
 
 	double sumSq = 1e-20 + abcd[0] * abcd[0] + abcd[1] * abcd[1] + abcd[2] * abcd[2];
 
@@ -446,7 +451,7 @@ void PlanarityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) 
 		auto l = atoms[a];
 		auto deviLen = l.m_x * abcd[0] + l.m_y * abcd[1] + l.m_z * abcd[2] - abcd[3];
 
-		df.add(a, 2 * deviLen * DPoint{abcd[0], abcd[1], abcd[2]} / (mESD * mESD));
+		df.add(a, 2 * deviLen * DPoint{ abcd[0], abcd[1], abcd[2] } / (mESD * mESD));
 	}
 }
 
@@ -474,10 +479,9 @@ double NonBondedContactRestraint::f(const AtomLocationProvider &atoms) const
 
 		if (cif::VERBOSE > 2)
 			std::cerr << "non-bonded-contact::f() = " << result << " min-dist is " << mMinDist << " and dist is " << std::sqrt(distance)
-					<< " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << '\n'
-					<< " a1: " << atoms[mA] << " a2: " << atoms[mB] << '\n';
+					  << " a1: " << atoms.atom(mA) << " a2: " << atoms.atom(mB) << '\n'
+					  << " a1: " << atoms[mA] << " a2: " << atoms[mB] << '\n';
 	}
-
 
 	return result;
 }
@@ -527,7 +531,7 @@ double DensityRestraint::f(const AtomLocationProvider &atoms) const
 
 	for (auto &a : mAtoms)
 	{
-		clipper::Coord_orth p{atoms[a.first].m_x, atoms[a.first].m_y, atoms[a.first].m_z };
+		clipper::Coord_orth p{ atoms[a.first].m_x, atoms[a.first].m_y, atoms[a.first].m_z };
 		clipper::Coord_frac pf = p.coord_frac(mXMap.cell());
 
 		result += a.second * mXMap.interp<clipper::Interp_cubic>(pf);
@@ -546,7 +550,7 @@ void DensityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 	for (auto &a : mAtoms)
 	{
-		clipper::Coord_orth p{atoms[a.first].m_x, atoms[a.first].m_y, atoms[a.first].m_z };
+		clipper::Coord_orth p{ atoms[a.first].m_x, atoms[a.first].m_y, atoms[a.first].m_z };
 		clipper::Coord_frac pf = p.coord_frac(mXMap.cell());
 		auto pm = pf.coord_map(mXMap.grid_sampling());
 
@@ -558,7 +562,7 @@ void DensityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 		auto gradOrth = gradFrac.grad_orth(mXMap.cell());
 
-		df.add(a.first, DPoint{gradOrth.dx(), gradOrth.dy(), gradOrth.dz()} * mMapWeight * -a.second);
+		df.add(a.first, DPoint{ gradOrth.dx(), gradOrth.dy(), gradOrth.dz() } * mMapWeight * -a.second);
 	}
 }
 
