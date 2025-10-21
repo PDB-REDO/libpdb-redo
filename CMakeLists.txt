@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(libpdb-redo VERSION 3.3.0 LANGUAGES CXX C)
+project(libpdb-redo VERSION 3.3.1 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -113,7 +113,7 @@ find_package(GSL REQUIRED)
 CPMFindPackage(
 	NAME cifpp
 	GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git
-	VERSION 9.0.0
+	VERSION 9.0.5
 )
 
 # Create a revision file, containing the current git version info

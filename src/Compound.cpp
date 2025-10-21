@@ -898,7 +898,7 @@ class RestraintCompoundFactoryImpl : public CompoundFactoryImpl
 			auto c = createSelf(id);
 
 			// Only forward compounds that are not known yet
-			if (cif::compound_factory::instance().create(id) != nullptr)
+			if (cif::compound_factory::instance().exists(id))
 				continue;
 
 			cf.emplace_back(c->generateCCDCompound());
