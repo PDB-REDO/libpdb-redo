@@ -31,12 +31,92 @@
 #include "clipper/core/coords.h"
 
 #include <algorithm>
+#include <clipper/core/clipper_types.h>
 #include <cmath>
 #include <limits>
 #include <stdexcept>
 
 namespace pdb_redo
 {
+
+// Locate the single blob in the xmap
+std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap)
+{
+	auto &sg = xmap.spacegroup();
+
+	struct Vec3Less
+	{
+		bool operator()(const clipper::Vec3<int> &a, const clipper::Vec3<int> &b) const
+		{
+			int d = a[0] - b[0];
+			if (d == 0)
+				d = a[1] - b[1];
+			if (d == 0)
+				d = a[2] - b[2];
+			return d < 0;
+		}
+	};
+
+	// Minimal blob finding algo
+	std::set<clipper::Coord_grid, Vec3Less> result;
+	std::stack<clipper::Coord_grid> stack;
+
+	for (clipper::Xmap<float>::Map_reference_coord i(xmap); not i.last(); i.next())
+	{
+		if (xmap[i] <= 0)
+			continue;
+
+		
+		if (int symNr = i.sym(); symNr == 0)
+			stack.push(i.coord());
+		else
+		{
+			clipper::Coord_map cm(i.coord());
+			cm = clipper::Coord_map(sg.symop(symNr).inverse() * cm);
+			stack.push(cm.coord_grid());
+		}
+
+		break;
+	}
+
+
+	while (not stack.empty())
+	{
+		auto p = stack.top();
+		stack.pop();
+
+		clipper::Xmap<float>::Map_reference_coord iw(xmap, p);
+
+		result.insert(p);
+
+		for (int du : { -1, 0, 1 })
+			for (int dv : { -1, 0, 1 })
+				for (int dw : { -1, 0, 1 })
+				{
+					if (du == 0 and dv == 0 and dw == 0)
+						continue;
+
+					clipper::Coord_grid g(p.u() + du, p.v() + dv, p.w() + dw);
+					clipper::Xmap<float>::Map_reference_coord iw(xmap, g);
+
+					if (xmap[iw] == 0)
+						continue;
+
+					if (iw.sym() != 0)
+					{
+						// Move point into the correct symmetry
+						clipper::Coord_map cm(g);
+						cm = clipper::Coord_map(sg.symop(iw.sym()).inverse() * cm);
+						g = cm.coord_grid();
+					}
+
+					if (not result.contains(g))
+						stack.push(g);
+				}
+	}
+
+	return { result.begin(), result.end() };
+}
 
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap)
 {
@@ -48,58 +128,10 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 	// Minimal blob finding algo
 	std::vector<std::pair<clipper::Coord_grid, bool>> blobPoints;
 
-	for (clipper::Xmap<float>::Map_reference_index i(xmap); not i.last(); i.next())
-	{
-		if (xmap[i] <= 0)
-			continue;
-
-		blobPoints.emplace_back(i.coord(), true);
-		break;
-	}
-
-	if (blobPoints.empty())
-		throw std::runtime_error("No density found in map");
-
 	std::vector<cif::point> blob;
-
-	for (;;)
-	{
-		auto i = std::find_if(blobPoints.begin(), blobPoints.end(), [](auto &bp)
-			{ return bp.second; });
-
-		if (i == blobPoints.end())
-			break;
-
-		i->second = false;
-
-		clipper::Xmap<float>::Map_reference_coord iw(xmap, i->first);
-		int symNr = iw.sym();
-
-		blob.emplace_back(iw.coord_orth());
-
-		for (int du : { -1, 0, 1 })
-			for (int dv : { -1, 0, 1 })
-				for (int dw : { -1, 0, 1 })
-				{
-					if (du == 0 and dv == 0 and dw == 0)
-						continue;
-
-					clipper::Coord_grid g(i->first.u() + du, i->first.v() + dv, i->first.w() + dw);
-					clipper::Xmap<float>::Map_reference_coord iw(xmap, g);
-					if (iw.sym() != symNr)
-						continue;
-
-					if (xmap[iw] == 0)
-						continue;
-
-					auto j = std::find_if(blobPoints.begin(), blobPoints.end(), [g](auto &bp)
-						{ return bp.first == g; });
-
-					if (j == blobPoints.end())
-						blobPoints.emplace_back(g, true);
-				}
-	}
-
+	for (auto p : findSingleBlob(xmap))
+		blob.emplace_back(xmap.coord_orth(p.coord_map()));
+	
 	cif::point center = cif::center_points(blob);
 
 	using list_of_spheres = std::vector<std::tuple<cif::point, float>>;
@@ -109,7 +141,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 	for (auto p : blob)
 	{
 		mapSpheres.emplace_back(p, gridPointRadius * 1.5);
-		// std::cout << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f} }},\n", p.get_x(), p.get_y(), p.get_z());
+		std::cout << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f}, r: {:.3f} }},\n", p.get_x(), p.get_y(), p.get_z(), gridPointRadius);
 	}
 
 	std::cout << "\n\n";
@@ -153,15 +185,15 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		}
 	}
 
-	// for (auto &[line, l1, l2] : blobSurface)
-	// {
-	// 	auto p1 = /* center + */ l1 * line;
-	// 	auto p2 = /* center + */ l2 * line;
+	for (auto &[line, l1, l2] : blobSurface)
+	{
+		auto p1 = /* center + */ l1 * line;
+		auto p2 = /* center + */ l2 * line;
 
-	// 	// std::cout << "p1: " << p1 << ", p2: " << p2 << "\n";
-	// 	std::cout << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f} }},\n", p1.get_x(), p1.get_y(), p1.get_z())
-	// 			  << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f} }},\n", p2.get_x(), p2.get_y(), p2.get_z());
-	// }
+		// std::cout << "p1: " << p1 << ", p2: " << p2 << "\n";
+		std::cout << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f} }},\n", p1.get_x(), p1.get_y(), p1.get_z())
+				  << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f} }},\n", p2.get_x(), p2.get_y(), p2.get_z());
+	}
 
 	// Same for the ligand
 
@@ -186,7 +218,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 
 	std::vector<std::tuple<cif::point, float, float>> ligandSurface;
 	ligandSurface.reserve(dots.size());
-	for (auto p: dots)
+	for (auto p : dots)
 		ligandSurface.emplace_back(p, std::numeric_limits<float>::max(), std::numeric_limits<float>::min());
 
 	for (const auto &[sp_c, radius] : atomSpheres)
@@ -249,10 +281,10 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 
 	std::vector<Score> best;
 
-	for (int i = 0; i < dots.size(); ++i)
+	for (size_t i = 0; i < dots.size(); ++i)
 	{
 		std::vector<cif::point> blobDots(N), ligandDots(N);
-	
+
 		for (auto li = ligandDots.begin(); auto &[line, l1, l2] : ligandSurface)
 		{
 			*li++ = line * l1;
@@ -285,7 +317,6 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 	{
 		std::cout << "q: " << q << ", v: " << v << "\n";
 	}
-
 
 	return 0;
 }
