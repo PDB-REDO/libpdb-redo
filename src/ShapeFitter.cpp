@@ -602,4 +602,120 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 	return best.front().v;
 }
 
+// --------------------------------------------------------------------
+
+double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
+    const std::vector<cif::point> &blob)
+{
+	const auto dots = cif::spherical_dots<7>::instance();
+
+	// auto cellVolume = xmap.cell().volume();
+	// auto gridSize = xmap.grid_sampling().size();
+	// auto gridPointVolume = cellVolume / gridSize;
+	// auto gridPointRadius = std::pow((3 * gridPointVolume) / (4 * cif::kPI), 1 / 3.0);
+
+	// Locate the center of the blob
+	auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(blob);
+
+	for (auto p : blob)
+	{
+		auto d = cif::distance(p, blobCenter);
+		assert(d < 1.01f * blobRadius);
+	}
+
+	// Same for the ligand
+	auto &ligand = structure.get_residue(asym_id);
+
+	std::vector<cif::point> atomLocations;
+	for (auto a : ligand.atoms())
+		atomLocations.emplace_back(a.get_location());
+	auto [ligandCenter, ligandRadius] = cif::smallest_sphere_around_points(atomLocations);
+
+	for (auto p : atomLocations)
+	{
+		auto d = cif::distance(p, ligandCenter);
+		assert(d < 1.01f * ligandRadius);
+	}
+
+	// Move ligand to the correct center
+	if (cif::distance(ligandCenter, blobCenter) > 0.1f)
+	{
+		auto d = blobCenter - ligandCenter;
+		atomLocations.clear();
+
+		for (auto a : ligand.atoms())
+		{
+			auto loc = a.get_location() + d;
+			a.set_location(loc);
+			atomLocations.emplace_back(loc);
+		}
+	}
+
+	// for (size_t ix = 0; auto p : atomLocations)
+	// 	std::cout << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f}, r: {:.3f} }},\n", p.m_x, p.m_y, p.m_z, cif::atom_type_traits(ligand.atoms()[ix++].get_type()).radius());
+	// std::cout << "\n\n";
+
+	struct Score
+	{
+		cif::quaternion q;
+		double v;
+		std::vector<cif::point> loc;
+
+		bool operator<(const Score &rhs) const
+		{
+			return v < rhs.v;
+		}
+	};
+
+	std::vector<Score> best;
+	cif::crystal crystal(structure.get_datablock());
+
+	for (size_t i = 0; i < dots.size(); ++i)
+	{
+		auto axis = cif::cross_product(dots[0], dots[i]);
+		auto angle = cif::angle(dots[0], {}, dots[i]);
+
+		auto q = cif::construct_from_angle_axis(angle, axis);
+
+		for (auto li = atomLocations.begin(); auto a : ligand.atoms())
+		{
+			auto loc = *li++;
+			loc.rotate(q, blobCenter);
+			a.set_location(loc);
+		}
+
+		jiggleFit(crystal, structure, ligand, xmap);
+
+		std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
+
+		auto score = minimizer->refine(false);
+
+		std::cout << "score: " << score << " for iteration " << i << "\n";
+
+		// minimizer->printStats();
+
+		std::vector<cif::point> bestLoc;
+		for (auto a : ligand.atoms())
+			bestLoc.emplace_back(a.get_location());
+
+		best.emplace_back(q, score, std::move(bestLoc));
+		
+		std::push_heap(best.begin(), best.end());
+	}
+
+	std::sort_heap(best.begin(), best.end());
+
+	for (bool first = true; auto [q, v, loc] : best)
+	{
+		std::cout << "q: " << q << ", v: " << v << "\n";
+		if (std::exchange(first, false))
+		{
+			for (size_t ix = 0; ix < loc.size(); ++ix)
+				ligand.atoms()[ix].set_location(loc[ix]);
+		}
+	}
+
+	return best.front().v;
+}
+
 } // namespace pdb_redo

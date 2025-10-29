@@ -28,6 +28,7 @@
 #include "cif++/datablock.hpp"
 #include "cif++/model.hpp"
 #include "cif++/validate.hpp"
+#include "pdb-redo/BlobFinder.hpp"
 
 #include <catch2/catch_test_macros.hpp>
 #include <clipper/core/xmap.h>
@@ -114,7 +115,7 @@ TEST_CASE("sf-1")
 			blob.emplace_back(i.coord_orth());
 	}
 
-	CHECK(blob.size() == 781);
+	CHECK(blob.size() == 831);
 
 	auto cf = R"(
 data_1CBS
@@ -178,4 +179,64 @@ _symmetry.Int_Tables_number                19
 
 	std::ofstream file(std::filesystem::temp_directory_path() / "test.cif");
 	cf.save(file);
+}
+
+// --------------------------------------------------------------------
+
+TEST_CASE("sf-2")
+{
+	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
+	cif::file file(example.string());
+	cif::mm::structure s(file);
+	s.remove_residue(s.get_residue("B"));
+
+	pdb_redo::MapMaker<float> mm;
+	float samplingRate = 0.75;
+	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
+
+    auto &mm_fb = mm.fb();
+    auto maskedmap = mm_fb.masked(s, s.atoms());
+
+	pdb_redo::BlobFinder blobFinder(maskedmap, s);
+
+	std::vector<cif::row_initializer> atoms;
+	auto compound = cif::compound_factory::instance().create("REA");
+
+	for (auto a : compound->atoms())
+	{
+		// We skip H-atoms, as fitting without H-atoms works better and we avoid conflicts in protonation states between CCD and MONLIB
+		if (cif::atom_type_traits(a.type_symbol).symbol() == "H")
+			continue;
+
+		auto ax = a.get_location().get_x();
+		auto ay = a.get_location().get_y();
+		auto az = a.get_location().get_z();
+
+		atoms.emplace_back(cif::row_initializer{
+			{ "type_symbol", cif::atom_type_traits(a.type_symbol).symbol() },
+			{ "label_atom_id", a.id },
+			{ "auth_atom_id", a.id },
+			{ "Cartn_x", ax },
+			{ "Cartn_y", ay },
+			{ "Cartn_z", az },
+			{ "B_iso_or_equiv", 30.00 } });
+	}
+
+	auto ligand_entity_id = s.create_non_poly_entity("REA");
+	auto ligand_asym_id = s.create_non_poly(ligand_entity_id, atoms);
+
+	for (;;)
+	{
+		auto blob = blobFinder.next();
+
+		auto score = pdb_redo::fitShape(s, ligand_asym_id, mm_fb, blob);
+	
+		CHECK(score < 0);
+	
+		std::ofstream of(std::filesystem::temp_directory_path() / "test-2.cif");
+		file.save(of);
+
+		break;
+	}
+
 }

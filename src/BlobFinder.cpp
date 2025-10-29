@@ -114,6 +114,8 @@ BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
 
 	size_t ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
 	mGrowingThreshold = mXmap[mPotentialGridPoints.at(ix)];
+	if (mGrowingThreshold == 0)
+		mGrowingThreshold = 1e-6;
 
 	mPotentialGridPoints.erase(mPotentialGridPoints.begin(), mPotentialGridPoints.begin() + ix);
 }
