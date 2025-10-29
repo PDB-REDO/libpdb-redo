@@ -123,6 +123,7 @@ write_version_header("${PROJECT_SOURCE_DIR}/src" LIB_NAME "LibPDBREDO")
 # Sources
 list(APPEND project_sources
 	${PROJECT_SOURCE_DIR}/src/AtomShape.cpp
+	${PROJECT_SOURCE_DIR}/src/BlobFinder.cpp
 	${PROJECT_SOURCE_DIR}/src/BondMap.cpp
 	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
 	${PROJECT_SOURCE_DIR}/src/Compound.cpp
@@ -139,6 +140,7 @@ list(APPEND project_sources
 
 list(APPEND project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/AtomShape.hpp
+	${PROJECT_SOURCE_DIR}/include/pdb-redo/BlobFinder.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/BondMap.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/ClipperWrapper.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Compound.hpp

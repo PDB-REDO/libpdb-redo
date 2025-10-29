@@ -109,13 +109,13 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 					if (xmap[iw] == 0)
 						continue;
 
-					if (iw.sym() != 0)
-					{
-						// Move point into the correct symmetry
-						clipper::Coord_map cm(g);
-						cm = clipper::Coord_map(sg.symop(iw.sym()).inverse() * cm);
-						g = cm.coord_grid();
-					}
+					// if (iw.sym() != 0)
+					// {
+					// 	// Move point into the correct symmetry
+					// 	clipper::Coord_map cm(g);
+					// 	cm = clipper::Coord_map(sg.symop(iw.sym()).inverse() * cm);
+					// 	g = cm.coord_grid();
+					// }
 
 					if (not gridPoints.contains(g))
 						stack.push(g);
@@ -481,185 +481,31 @@ jiggleFit(cif::crystal &crystal, cif::mm::structure &structure, cif::mm::residue
 
 // --------------------------------------------------------------------
 
-std::tuple<cif::point, float> circleForFourPoints(std::array<cif::point, 4> p)
-{
-	// auto u = (a.m_z - b.m_z) * (c.m_x * d.m_y - d.m_x * c.m_y) - (b.m_z - c.m_z) * (d.m_x * a.m_y - a.m_x * d.m_y);
-	// auto v = (c.m_z - d.m_z) * (a.m_x * b.m_y - b.m_x * a.m_y) - (d.m_z - a.m_z) * (b.m_x * c.m_y - c.m_x * b.m_y);
-	// auto w = (a.m_z - c.m_z) * (d.m_x * b.m_y - b.m_x * d.m_y) - (b.m_z - d.m_z) * (a.m_x * c.m_y - c.m_x * a.m_y);
-	// auto uvw = 2 * (u + v + w);
-
-	// if (uvw == 0.f)
-	// 	throw std::runtime_error("colinear points");
-
-	// auto sq = [](cif::point p)
-	// {
-	// 	return p.m_x * p.m_x + p.m_y * p.m_y + p.m_z * p.m_z;
-	// };
-	// auto ra = sq(a);
-	// auto rb = sq(b);
-	// auto rc = sq(c);
-	// auto rd = sq(d);
-	// auto x0 = ((ra * (b.m_y * (c.m_z - d.m_z) + c.m_y * (d.m_z - b.m_z) + d.m_y * (b.m_z - c.m_z)) - rb * (c.m_y * (d.m_z - a.m_z) + d.m_y * (a.m_z - c.m_z) + a.m_y * (c.m_z - d.m_z)) + rc * (d.m_y * (a.m_z - b.m_z) + a.m_y * (b.m_z - d.m_z) + b.m_y * (d.m_z - a.m_z)) - rd * (a.m_y * (b.m_z - c.m_z) + b.m_y * (c.m_z - a.m_z) + c.m_y * (a.m_z - b.m_z))) / uvw);
-	// auto y0 = ((ra * (b.m_z * (c.m_x - d.m_x) + c.m_z * (d.m_x - b.m_x) + d.m_z * (b.m_x - c.m_x)) - rb * (c.m_z * (d.m_x - a.m_x) + d.m_z * (a.m_x - c.m_x) + a.m_z * (c.m_x - d.m_x)) + rc * (d.m_z * (a.m_x - b.m_x) + a.m_z * (b.m_x - d.m_x) + b.m_z * (d.m_x - a.m_x)) - rd * (a.m_z * (b.m_x - c.m_x) + b.m_z * (c.m_x - a.m_x) + c.m_z * (a.m_x - b.m_x))) / uvw);
-	// auto z0 = ((ra * (b.m_x * (c.m_y - d.m_y) + c.m_x * (d.m_y - b.m_y) + d.m_x * (b.m_y - c.m_y)) - rb * (c.m_x * (d.m_y - a.m_y) + d.m_x * (a.m_y - c.m_y) + a.m_x * (c.m_y - d.m_y)) + rc * (d.m_x * (a.m_y - b.m_y) + a.m_x * (b.m_y - d.m_y) + b.m_x * (d.m_y - a.m_y)) - rd * (a.m_x * (b.m_y - c.m_y) + b.m_x * (c.m_y - a.m_y) + c.m_x * (a.m_y - b.m_y))) / uvw);
-
-	// cif::point center{ x0, y0, z0 };
-	// auto radius = cif::distance(a, center);
-
-	auto t0 = -(p[0].m_x * p[0].m_x + p[0].m_y * p[0].m_y + p[0].m_z * p[0].m_z);
-	auto t1 = -(p[1].m_x * p[1].m_x + p[1].m_y * p[1].m_y + p[1].m_z * p[1].m_z);
-	auto t2 = -(p[2].m_x * p[2].m_x + p[2].m_y * p[2].m_y + p[2].m_z * p[2].m_z);
-	auto t3 = -(p[3].m_x * p[3].m_x + p[3].m_y * p[3].m_y + p[3].m_z * p[3].m_z);
-
-	// clang-format off
-	cif::matrix4x4<float> Tm({
-		p[0].m_x, p[0].m_y, p[0].m_z, 1,
-		p[1].m_x, p[1].m_y, p[1].m_z, 1,
-		p[2].m_x, p[2].m_y, p[2].m_z, 1,
-		p[3].m_x, p[3].m_y, p[3].m_z, 1
-	});
-	auto T = cif::determinant(Tm);
-
-	cif::matrix4x4<float> Dm({
-		t0, p[0].m_y, p[0].m_z, 1,
-		t1, p[1].m_y, p[1].m_z, 1,
-		t2, p[2].m_y, p[2].m_z, 1,
-		t3, p[3].m_y, p[3].m_z, 1
-	});
-	auto D = cif::determinant(Dm);
-
-	cif::matrix4x4<float> Em({
-		p[0].m_x, t0, p[0].m_z, 1,
-		p[1].m_x, t1, p[1].m_z, 1,
-		p[2].m_x, t2, p[2].m_z, 1,
-		p[3].m_x, t3, p[3].m_z, 1
-	});
-	auto E = cif::determinant(Em);
-
-	cif::matrix4x4<float> Fm({
-		p[0].m_x, p[0].m_y, t0, 1,
-		p[1].m_x, p[1].m_y, t1, 1,
-		p[2].m_x, p[2].m_y, t2, 1,
-		p[3].m_x, p[3].m_y, t3, 1
-	});
-
-	auto F = cif::determinant(Fm);
-
-	cif::matrix4x4<float> Gm({
-		p[0].m_x, p[0].m_y, p[0].m_z, t0,
-		p[1].m_x, p[1].m_y, p[1].m_z, t1,
-		p[2].m_x, p[2].m_y, p[2].m_z, t2,
-		p[3].m_x, p[3].m_y, p[3].m_z, t3
-	});
-	auto G = cif::determinant(Gm);
-
-	cif::point center{ -D / 2, -E / 2, -F / 2 };
-	float radius = std::sqrt(D * D + E * E + F * F - 4 * G) / 2;
-
-	// clang-format on
-
-	auto d0 = cif::distance(p[0], center);
-	auto d1 = cif::distance(p[1], center);
-	auto d2 = cif::distance(p[2], center);
-	auto d3 = cif::distance(p[3], center);
-
-	assert(cif::distance(p[0], center) == radius);
-	assert(cif::distance(p[1], center) == radius);
-	assert(cif::distance(p[2], center) == radius);
-	assert(cif::distance(p[3], center) == radius);
-
-	return { center, radius };
-}
-
-std::tuple<cif::point, float> smallestSphereAroundPoints(std::vector<cif::point> pts)
-{
-	// Find the smallest sphere aroud the blob
-	std::random_device rd;
-	std::mt19937 g(rd());
-
-	std::shuffle(pts.begin(), pts.end(), g);
-
-	cif::point center;
-	float radius;
-
-	std::array<cif::point, 4> p4;
-
-	for (int offset = 0; offset + 4 < pts.size(); ++offset)
-	{
-		try
-		{
-			std::tie(center, radius) = circleForFourPoints({ pts[offset + 0], pts[offset + 1], pts[offset + 2], pts[offset + 3] });
-		}
-		catch (...)
-		{
-			continue;
-		}
-
-		p4[0] = pts[offset + 0];
-		p4[1] = pts[offset + 1];
-		p4[2] = pts[offset + 2];
-		p4[3] = pts[offset + 3];
-
-		pts.erase(pts.begin(), pts.begin() + 4);
-
-		break;
-	}
-
-	while (not pts.empty())
-	{
-		auto e = pts.back();
-		pts.pop_back();
-
-		if (cif::distance(e, center) <= radius)
-			continue;
-
-		int bestI = -1;
-		for (int i = 0; i < 4; ++i)
-		{
-			try
-			{
-				auto [nc, nr] = circleForFourPoints({
-					i == 0 ? e : p4[0],
-					i == 1 ? e : p4[1],
-					i == 2 ? e : p4[2],
-					i == 3 ? e : p4[3]});
-
-				if (cif::distance(p4[i], nc) <= nr)
-				{
-					center = nc;
-					radius = nr;
-					bestI = i;
-				}
-			}
-			catch (...)
-			{
-			}
-		}
-
-		assert(bestI >= 0 and bestI < 4);
-		assert(cif::distance(p4[bestI], center) <= radius);
-
-		std::swap(p4[bestI], e);
-	}
-
-	return { center, radius };
-}
-
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap)
 {
 	const auto dots = cif::spherical_dots<7>::instance();
 
-	// auto cellVolume = xmap.cell().volume();
-	// auto gridSize = xmap.grid_sampling().size();
-	// auto gridPointVolume = cellVolume / gridSize;
-	// auto gridPointRadius = std::pow((3 * gridPointVolume) / (4 * cif::kPI), 1 / 3.0);
+	auto cellVolume = xmap.cell().volume();
+	auto gridSize = xmap.grid_sampling().size();
+	auto gridPointVolume = cellVolume / gridSize;
+	auto gridPointRadius = std::pow((3 * gridPointVolume) / (4 * cif::kPI), 1 / 3.0);
 
 	// Locate the center of the blob
 	std::vector<cif::point> blob;
-	for (auto p : findSingleBlob(xmap, true))
+	for (auto p : findSingleBlob(xmap, false))
 		blob.emplace_back(xmap.coord_orth(p.coord_map()));
 
-	auto [blobCenter, blobRadius] = smallestSphereAroundPoints(blob);
+	for (auto p : blob)
+		std::cout << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f}, r: {:.3f} }},\n", p.m_x, p.m_y, p.m_z, gridPointRadius);
+	std::cout << "\n\n";
+
+	auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(blob);
+
+	for (auto p : blob)
+	{
+		auto d = cif::distance(p, blobCenter);
+		assert(d < 1.01f * blobRadius);
+	}
 
 	// Same for the ligand
 	auto &ligand = structure.get_residue(asym_id);
@@ -667,7 +513,13 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 	std::vector<cif::point> atomLocations;
 	for (auto a : ligand.atoms())
 		atomLocations.emplace_back(a.get_location());
-	auto [ligandCenter, ligandRadius] = smallestSphereAroundPoints(atomLocations);
+	auto [ligandCenter, ligandRadius] = cif::smallest_sphere_around_points(atomLocations);
+
+	for (auto p : atomLocations)
+	{
+		auto d = cif::distance(p, ligandCenter);
+		assert(d < 1.01f * ligandRadius);
+	}
 
 	// Move ligand to the correct center
 	if (cif::distance(ligandCenter, blobCenter) > 0.1f)
@@ -683,10 +535,15 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		}
 	}
 
+	for (size_t ix = 0; auto p : atomLocations)
+		std::cout << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f}, r: {:.3f} }},\n", p.m_x, p.m_y, p.m_z, cif::atom_type_traits(ligand.atoms()[ix++].get_type()).radius());
+	std::cout << "\n\n";
+
 	struct Score
 	{
 		cif::quaternion q;
 		double v;
+		std::vector<cif::point> loc;
 
 		bool operator<(const Score &rhs) const
 		{
@@ -717,29 +574,32 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 
 		auto score = minimizer->refine(false);
 
+		std::cout << "score: " << score << " for iteration " << i << "\n";
+
 		// minimizer->printStats();
 
-		best.emplace_back(q, score);
+		std::vector<cif::point> bestLoc;
+		for (auto a : ligand.atoms())
+			bestLoc.emplace_back(a.get_location());
+
+		best.emplace_back(q, score, std::move(bestLoc));
+		
 		std::push_heap(best.begin(), best.end());
 	}
 
 	std::sort_heap(best.begin(), best.end());
 
-	for (auto [q, v] : best)
+	for (bool first = true; auto [q, v, loc] : best)
 	{
 		std::cout << "q: " << q << ", v: " << v << "\n";
+		if (std::exchange(first, false))
+		{
+			for (size_t ix = 0; ix < loc.size(); ++ix)
+				ligand.atoms()[ix].set_location(loc[ix]);
+		}
 	}
 
-	for (auto li = atomLocations.begin(); auto a : ligand.atoms())
-	{
-		auto loc = *li++;
-		loc.rotate(best.front().q, blobCenter);
-		a.set_location(loc);
-	}
-
-	std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
-
-	return minimizer->refine(true);
+	return best.front().v;
 }
 
 } // namespace pdb_redo
