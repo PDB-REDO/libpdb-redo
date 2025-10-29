@@ -50,6 +50,22 @@ namespace fs = std::filesystem;
 
 // --------------------------------------------------------------------
 
+cif::file operator""_cf(const char *text, std::size_t length)
+{
+	struct membuf : public std::streambuf
+	{
+		membuf(char *text, std::size_t length)
+		{
+			this->setg(text, text, text + length);
+		}
+	} buffer(const_cast<char *>(text), length);
+
+	std::istream is(&buffer);
+	return cif::file(is);
+}
+
+// --------------------------------------------------------------------
+
 std::filesystem::path gTestDir = std::filesystem::current_path();
 
 int main(int argc, char *argv[])
@@ -100,13 +116,36 @@ TEST_CASE("sf-1")
 
 	CHECK(blob.size() == 781);
 
+	auto cf = R"(
+data_1CBS
+# 
+_entry.id   1CBS
+# 
+_cell.entry_id           1CBS
+_cell.length_a           45.650
+_cell.length_b           47.560
+_cell.length_c           77.610
+_cell.angle_alpha        90.00
+_cell.angle_beta         90.00
+_cell.angle_gamma        90.00
+_cell.Z_PDB              4
+_cell.pdbx_unique_axis   ?
+# 
+_symmetry.entry_id                         1CBS
+_symmetry.space_group_name_H-M             'P 21 21 21'
+_symmetry.pdbx_full_space_group_name_H-M   ?
+_symmetry.cell_setting                     ?
+_symmetry.Int_Tables_number                19
+# 
+	)"_cf;
+
 	// Create a ligand
-	cif::datablock db; // empty
-    db.set_validator(&cif::validator_factory::instance().get("mmcif_pdbx.dic"));
+	cif::datablock &db = cf.front(); // almost empty
+	db.set_validator(&cif::validator_factory::instance().get("mmcif_pdbx.dic"));
 	cif::mm::structure s(db);
 
 	std::vector<cif::row_initializer> atoms;
-    auto compound = cif::compound_factory::instance().create("REA");
+	auto compound = cif::compound_factory::instance().create("REA");
 
 	for (auto a : compound->atoms())
 	{
@@ -127,11 +166,16 @@ TEST_CASE("sf-1")
 			{ "Cartn_z", az },
 			{ "B_iso_or_equiv", 30.00 } });
 	}
-	
-    auto ligand_entity_id = s.create_non_poly_entity("REA");
-    auto ligand_asym_id = s.create_non_poly(ligand_entity_id, atoms);
 
-    std::cout << "ligand: " << ligand_asym_id << " created\n";
+	auto ligand_entity_id = s.create_non_poly_entity("REA");
+	auto ligand_asym_id = s.create_non_poly(ligand_entity_id, atoms);
 
-    pdb_redo::fitShape(s, ligand_asym_id, xmap);
+	std::cout << "ligand: " << ligand_asym_id << " created\n";
+
+	auto score = pdb_redo::fitShape(s, ligand_asym_id, xmap);
+
+	CHECK(score < 0);
+
+	std::ofstream file(std::filesystem::temp_directory_path() / "test.cif");
+	cf.save(file);
 }

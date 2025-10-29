@@ -26,18 +26,16 @@
 
 #include <filesystem>
 #include <fstream>
-#include <iomanip>
 
 #include <clipper/clipper-ccp4.h>
 #include <clipper/clipper-contrib.h>
 
 #include <cif++.hpp>
-
 #include "cif++/gzio.hpp"
+
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
-#include "pdb-redo/Statistics.hpp"
 
 #ifdef _MSC_VER
 #include <io.h>
@@ -591,8 +589,8 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	if (dataFile != hklin)
 		fs::remove(dataFile);
 
-	Cell cell = mHKLInfo.cell();
-	Spacegroup spacegroup = mHKLInfo.spacegroup();
+	clipper::Cell cell = mHKLInfo.cell();
+	clipper::Spacegroup spacegroup = mHKLInfo.spacegroup();
 
 	ResolutionCalculator rc(cell);
 	mResHigh = 99;
@@ -714,7 +712,7 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 		"length_a", "length_b", "length_c", "angle_alpha", "angle_beta", "angle_gamma");
 
 	using clipper::Cell_descr;
-	Cell cell = Cell(Cell_descr{a, b, c, alpha, beta, gamma});
+	clipper::Cell cell(clipper::Cell_descr{ a, b, c, alpha, beta, gamma });
 
 	//	if (not cell2.equals(m_cell))
 	//		throw std::runtime_error("Reflections file and coordinates file do not agree upon the cell parameters");
@@ -738,8 +736,8 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 	}
 
 	std::string spacegroupDescr = reflns["symmetry"].front()["space_group_name_H-M"].as<std::string>();
-	auto spacegroup = Spacegroup(clipper::Spgr_descr{spacegroupDescr});
-	mHKLInfo = HKL_info(spacegroup, cell, clipper::Resolution{hires}, true);
+	auto spacegroup = clipper::Spacegroup(clipper::Spgr_descr{spacegroupDescr});
+	mHKLInfo = clipper::HKL_info(spacegroup, cell, clipper::Resolution{hires}, true);
 
 	//	m_crystal = MTZcrystal(m_xname, m_pname, m_cell);
 
@@ -790,23 +788,23 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 			first = false;
 		}
 
-		mFoData[ix] = F_sigF(F, sigF);
+		mFoData[ix] = clipper::data32::F_sigF(F, sigF);
 
 		switch (flag)
 		{
 			case 'o':
 			case 'h':
 			case 'l':
-				mFreeData[ix] = Flag(1);
+				mFreeData[ix] = clipper::data32::Flag(1);
 				break;
 
 			case 'f':
-				mFreeData[ix] = Flag(0);
+				mFreeData[ix] = clipper::data32::Flag(0);
 				break;
 
 			case '0':
 			case '1':
-				mFreeData[ix] = Flag(workRefl == flag ? 1 : 0);
+				mFreeData[ix] = clipper::data32::Flag(workRefl == flag ? 1 : 0);
 				break;
 
 			default:
@@ -879,8 +877,8 @@ void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 	bool noBulk, AnisoScalingFlag anisoScaling,
 	float samplingRate, bool electronScattering)
 {
-	Cell cell = mHKLInfo.cell();
-	Spacegroup spacegroup = mHKLInfo.spacegroup();
+	auto cell = mHKLInfo.cell();
+	auto spacegroup = mHKLInfo.spacegroup();
 
 	// The calculation work
 	std::vector<clipper::Atom> atoms;
@@ -933,7 +931,7 @@ void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 	mFdData.init(mHKLInfo, cell);
 	mPhiFomData.init(mHKLInfo, cell);
 
-	HKL_data<Flag> flag(mHKLInfo, cell);
+	clipper::HKL_data<clipper::data32::Flag> flag(mHKLInfo, cell);
 
 	const int freeflag = 0;
 	for (auto ih = mFreeData.first(); not ih.last(); ih.next())
@@ -1002,7 +1000,7 @@ void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 template <typename FTYPE>
 void MapMaker<FTYPE>::fixMTZ()
 {
-	Spacegroup spacegroup = mHKLInfo.spacegroup();
+	auto spacegroup = mHKLInfo.spacegroup();
 
 	enum
 	{
@@ -1163,7 +1161,7 @@ void MapMaker<FTYPE>::fixMTZ()
 
 		auto mFo = mFbData[ih] - mFdData[ih];
 
-		HKL_class cls(spacegroup, ih.hkl());
+		clipper::HKL_class cls(spacegroup, ih.hkl());
 
 		if (not mFoData[ih].missing() and mPhiFomData[ih].fom() > 0)
 		{

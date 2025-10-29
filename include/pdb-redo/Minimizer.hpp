@@ -31,13 +31,10 @@
 
 #pragma once
 
-#include <optional>
-
 #include <cif++.hpp>
 
 #include "pdb-redo/BondMap.hpp"
 #include "pdb-redo/Compound.hpp"
-#include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/Restraints.hpp"
 
 // --------------------------------------------------------------------

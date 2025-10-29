@@ -28,8 +28,7 @@
 
 #include <cif++/model.hpp>
 
-#include <clipper/core/xmap.h>
-#include <clipper/minimal-clipper-map.h>
+#include <clipper/clipper.h>
 
 namespace pdb_redo
 {
