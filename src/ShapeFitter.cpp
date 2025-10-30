@@ -382,7 +382,7 @@ double JiggleFitterFragments::refine_gsl(bool debug)
 			break;
 
 		double size = gsl_multimin_fminimizer_size(s);
-		status = gsl_multimin_test_size(size, 1e-3);
+		status = gsl_multimin_test_size(size, 1e-2);
 
 		if (status == GSL_SUCCESS)
 		{
@@ -415,68 +415,82 @@ jiggleFit(cif::crystal &crystal, cif::mm::structure &structure, cif::mm::residue
 {
 	auto &atoms = ligand.atoms();
 
-	// calculate_ar(atoms, true);
+	std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, atoms, xmm));
 
-	// try eight times, take best. Second time is flipped along major axis
+	// minimizer->printStats();
 
-	std::vector<cif::point> savedPositions, bestPositions(atoms.size());
-	savedPositions.reserve(atoms.size());
-	double bestScore = std::numeric_limits<double>::max();
+	JiggleFitterFragments f(minimizer.get(), ligand);
+	f.refine_gsl(false);
 
-	for (auto &atom : atoms)
-		savedPositions.emplace_back(atom.get_location());
+	// minimizer->printStats();
 
-	for (bool first = true; auto axis : std::initializer_list<cif::point>{
-								{ 0, 0, 0 },
-								{ 0, 0, 1 },
-								{ 0, 1, 0 },
-								{ 0, 1, 1 },
-								{ 1, 0, 0 },
-								{ 1, 0, 1 },
-								{ 1, 1, 0 },
-								{ 1, 1, 1 } })
-	{
-		if (not std::exchange(first, false))
-		{
-			auto q = cif::construct_from_angle_axis(180, axis);
-			auto c = cif::centroid(savedPositions);
+	// std::cout << "Jiggle score: " << minimizer->score() << "\n";
+	return minimizer->score();
 
-			for (size_t ix = 0; auto loc : savedPositions)
-			{
-				loc.rotate(q, c);
-				atoms[ix++].set_location(loc);
-			}
-		}
 
-		std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, atoms, xmm));
 
-		// minimizer->printStats();
+	// // calculate_ar(atoms, true);
 
-		JiggleFitterFragments f(minimizer.get(), ligand);
-		f.refine_gsl(false);
+	// // try eight times, take best. Second time is flipped along major axis
 
-		// minimizer->printStats();
+	// std::vector<cif::point> savedPositions, bestPositions(atoms.size());
+	// savedPositions.reserve(atoms.size());
+	// double bestScore = std::numeric_limits<double>::max();
 
-		// std::cout << "Jiggle score: " << minimizer->score() << "\n";
+	// for (auto &atom : atoms)
+	// 	savedPositions.emplace_back(atom.get_location());
 
-		auto score = minimizer->refine(true);
-		if (bestScore > score)
-		{
-			bestScore = score;
+	// for (bool first = true; auto axis : std::initializer_list<cif::point>{
+	// 							{ 0, 0, 0 },
+	// 							{ 0, 0, 1 },
+	// 							{ 0, 1, 0 },
+	// 							{ 0, 1, 1 },
+	// 							{ 1, 0, 0 },
+	// 							{ 1, 0, 1 },
+	// 							{ 1, 1, 0 },
+	// 							{ 1, 1, 1 } })
+	// {
+	// 	if (not std::exchange(first, false))
+	// 	{
+	// 		auto q = cif::construct_from_angle_axis(180, axis);
+	// 		auto c = cif::centroid(savedPositions);
 
-			for (size_t ix = 0; auto &atom : atoms)
-				bestPositions[ix++] = atom.get_location();
-		}
+	// 		for (size_t ix = 0; auto loc : savedPositions)
+	// 		{
+	// 			loc.rotate(q, c);
+	// 			atoms[ix++].set_location(loc);
+	// 		}
+	// 	}
 
-		// minimizer->printStats();
-		// std::cout << "Minimizer score:\t" << minimizer->score() << "\n";
-	}
+	// 	std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, atoms, xmm));
 
-	for (size_t ix = 0; auto loc : bestPositions)
-		atoms[ix++].set_location(loc);
+	// 	// minimizer->printStats();
 
-	// note to self: result is the minimizer score
-	return bestScore;
+	// 	JiggleFitterFragments f(minimizer.get(), ligand);
+	// 	f.refine_gsl(false);
+
+	// 	// minimizer->printStats();
+
+	// 	// std::cout << "Jiggle score: " << minimizer->score() << "\n";
+
+	// 	auto score = minimizer->refine(true);
+	// 	if (bestScore > score)
+	// 	{
+	// 		bestScore = score;
+
+	// 		for (size_t ix = 0; auto &atom : atoms)
+	// 			bestPositions[ix++] = atom.get_location();
+	// 	}
+
+	// 	// minimizer->printStats();
+	// 	// std::cout << "Minimizer score:\t" << minimizer->score() << "\n";
+	// }
+
+	// for (size_t ix = 0; auto loc : bestPositions)
+	// 	atoms[ix++].set_location(loc);
+
+	// // note to self: result is the minimizer score
+	// return bestScore;
 }
 
 // --------------------------------------------------------------------
@@ -583,7 +597,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 			bestLoc.emplace_back(a.get_location());
 
 		best.emplace_back(q, score, std::move(bestLoc));
-		
+
 		std::push_heap(best.begin(), best.end());
 	}
 
@@ -605,7 +619,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 // --------------------------------------------------------------------
 
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
-    const std::vector<cif::point> &blob)
+	const std::vector<cif::point> &blob)
 {
 	const auto dots = cif::spherical_dots<7>::instance();
 
@@ -684,7 +698,9 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 			a.set_location(loc);
 		}
 
-		jiggleFit(crystal, structure, ligand, xmap);
+		auto jScore = jiggleFit(crystal, structure, ligand, xmap);
+
+		std::cout << "jiggle score: " << jScore << " for iteration " << i << "\n";
 
 		std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
 
@@ -699,7 +715,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 			bestLoc.emplace_back(a.get_location());
 
 		best.emplace_back(q, score, std::move(bestLoc));
-		
+
 		std::push_heap(best.begin(), best.end());
 	}
 

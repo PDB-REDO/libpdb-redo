@@ -31,6 +31,7 @@
 #include "pdb-redo/BlobFinder.hpp"
 
 #include <catch2/catch_test_macros.hpp>
+#include <cif++/pdb.hpp>
 #include <clipper/core/xmap.h>
 #define CATCH_CONFIG_RUNNER
 
@@ -239,4 +240,71 @@ TEST_CASE("sf-2")
 		break;
 	}
 
+}
+
+// --------------------------------------------------------------------
+
+TEST_CASE("sf-3")
+{
+	const fs::path example(gTestDir / "3aba_final.cif");
+	cif::file file = cif::pdb::read(example.string());
+
+	cif::pdb::reconstruct_pdbx(file);
+
+	cif::mm::structure s(file);
+	// auto &db = s.get_datablock();
+
+	for (std::string asymID : { "H"})
+	{
+		s.remove_residue(s.get_residue(asymID));
+	
+		pdb_redo::MapMaker<float> mm;
+		float samplingRate = 0.75;
+		mm.loadMTZ(gTestDir / "3aba_final.mtz", samplingRate);
+	
+		auto &mm_fb = mm.fb();
+		auto maskedmap = mm_fb.masked(s, s.atoms());
+	
+		pdb_redo::BlobFinder blobFinder(maskedmap, s);
+	
+		std::vector<cif::row_initializer> atoms;
+		auto compound = cif::compound_factory::instance().create("GOL");
+	
+		for (auto a : compound->atoms())
+		{
+			// We skip H-atoms, as fitting without H-atoms works better and we avoid conflicts in protonation states between CCD and MONLIB
+			if (cif::atom_type_traits(a.type_symbol).symbol() == "H")
+				continue;
+	
+			auto ax = a.get_location().get_x();
+			auto ay = a.get_location().get_y();
+			auto az = a.get_location().get_z();
+	
+			atoms.emplace_back(cif::row_initializer{
+				{ "type_symbol", cif::atom_type_traits(a.type_symbol).symbol() },
+				{ "label_atom_id", a.id },
+				{ "auth_atom_id", a.id },
+				{ "Cartn_x", ax },
+				{ "Cartn_y", ay },
+				{ "Cartn_z", az },
+				{ "B_iso_or_equiv", 30.00 } });
+		}
+	
+		auto ligand_entity_id = s.create_non_poly_entity("GOL");
+		auto ligand_asym_id = s.create_non_poly(ligand_entity_id, atoms);
+	
+		for (;;)
+		{
+			auto blob = blobFinder.next();
+	
+			auto score = pdb_redo::fitShape(s, ligand_asym_id, mm_fb, blob);
+		
+			CHECK(score < 0);
+		
+			std::ofstream of(std::filesystem::temp_directory_path() / std::format("{}-{}.cif", "3aba", asymID));
+			file.save(of);
+	
+			break;
+		}
+	}
 }
