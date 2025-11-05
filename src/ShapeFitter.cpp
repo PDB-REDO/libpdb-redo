@@ -26,11 +26,14 @@
 
 #include "pdb-redo/ShapeFitter.hpp"
 
+#include "pdb-redo/Compound.hpp"
 #include "pdb-redo/Minimizer.hpp"
 
 #include <algorithm>
 #include <cif++/atom_type.hpp>
+#include <cif++/compound.hpp>
 #include <cif++/matrix.hpp>
+#include <cif++/model.hpp>
 #include <cif++/point.hpp>
 #include <cif++/symmetry.hpp>
 #include <clipper/core/clipper_types.h>
@@ -427,8 +430,6 @@ jiggleFit(cif::crystal &crystal, cif::mm::structure &structure, cif::mm::residue
 	// std::cout << "Jiggle score: " << minimizer->score() << "\n";
 	return minimizer->score();
 
-
-
 	// // calculate_ar(atoms, true);
 
 	// // try eight times, take best. Second time is flipped along major axis
@@ -618,24 +619,82 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 
 // --------------------------------------------------------------------
 
+class ConformationIterator
+{
+  public:
+	ConformationIterator(cif::mm::structure &structure, const std::string &asym_id);
+
+	void next();
+	bool last() const;
+
+  private:
+	struct TorsionData
+	{
+		cif::mm::atom dihedral_atoms[4];
+		std::vector<cif::mm::atom> rotating_atoms;
+	};
+
+	struct Iteration
+	{
+		size_t index;
+		float angle;
+	};
+
+	cif::mm::residue &m_residue;
+	std::vector<TorsionData> m_torsions;
+};
+
+ConformationIterator::ConformationIterator(cif::mm::structure &structure, const std::string &asym_id)
+	: m_residue(structure.get_residue(asym_id))
+{
+	auto compound = pdb_redo::CompoundFactory::instance().create(m_residue.get_compound_id());
+
+	for (auto &torsion : compound->torsions())
+	{
+		if (torsion.period <= 1)
+			continue;
+		
+		TorsionData td{
+			{
+				m_residue.get_atom_by_atom_id(torsion.atomID[0]),
+				m_residue.get_atom_by_atom_id(torsion.atomID[1]),
+				m_residue.get_atom_by_atom_id(torsion.atomID[2]),
+				m_residue.get_atom_by_atom_id(torsion.atomID[3])
+			}
+		};
+
+		bool ok = true;
+		for (auto &a : td.dihedral_atoms)
+			ok = ok and a and a.get_type() != cif::H;
+		if (not ok)
+			continue;
+
+		
+	}
+
+}
+
+void ConformationIterator::next()
+{
+
+}
+
+bool ConformationIterator::last() const
+{
+
+}
+
+
+
+// --------------------------------------------------------------------
+
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
 	const std::vector<cif::point> &blob)
 {
 	const auto dots = cif::spherical_dots<7>::instance();
 
-	// auto cellVolume = xmap.cell().volume();
-	// auto gridSize = xmap.grid_sampling().size();
-	// auto gridPointVolume = cellVolume / gridSize;
-	// auto gridPointRadius = std::pow((3 * gridPointVolume) / (4 * cif::kPI), 1 / 3.0);
-
 	// Locate the center of the blob
 	auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(blob);
-
-	for (auto p : blob)
-	{
-		auto d = cif::distance(p, blobCenter);
-		assert(d < 1.01f * blobRadius);
-	}
 
 	// Same for the ligand
 	auto &ligand = structure.get_residue(asym_id);
@@ -645,29 +704,16 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		atomLocations.emplace_back(a.get_location());
 	auto [ligandCenter, ligandRadius] = cif::smallest_sphere_around_points(atomLocations);
 
-	for (auto p : atomLocations)
+	// Move ligand to the correct center and store new positions
+	auto d = blobCenter - ligandCenter;
+	atomLocations.clear();
+
+	for (auto a : ligand.atoms())
 	{
-		auto d = cif::distance(p, ligandCenter);
-		assert(d < 1.01f * ligandRadius);
+		auto loc = a.get_location() + d;
+		a.set_location(loc);
+		atomLocations.emplace_back(loc);
 	}
-
-	// Move ligand to the correct center
-	if (cif::distance(ligandCenter, blobCenter) > 0.1f)
-	{
-		auto d = blobCenter - ligandCenter;
-		atomLocations.clear();
-
-		for (auto a : ligand.atoms())
-		{
-			auto loc = a.get_location() + d;
-			a.set_location(loc);
-			atomLocations.emplace_back(loc);
-		}
-	}
-
-	// for (size_t ix = 0; auto p : atomLocations)
-	// 	std::cout << std::format("{{ x: {:.4f}, y: {:.4f}, z: {:.4f}, r: {:.3f} }},\n", p.m_x, p.m_y, p.m_z, cif::atom_type_traits(ligand.atoms()[ix++].get_type()).radius());
-	// std::cout << "\n\n";
 
 	struct Score
 	{

@@ -146,31 +146,7 @@ _symmetry.Int_Tables_number                19
 	db.set_validator(&cif::validator_factory::instance().get("mmcif_pdbx.dic"));
 	cif::mm::structure s(db);
 
-	std::vector<cif::row_initializer> atoms;
-	auto compound = cif::compound_factory::instance().create("REA");
-
-	for (auto a : compound->atoms())
-	{
-		// We skip H-atoms, as fitting without H-atoms works better and we avoid conflicts in protonation states between CCD and MONLIB
-		if (cif::atom_type_traits(a.type_symbol).symbol() == "H")
-			continue;
-
-		auto ax = a.get_location().get_x();
-		auto ay = a.get_location().get_y();
-		auto az = a.get_location().get_z();
-
-		atoms.emplace_back(cif::row_initializer{
-			{ "type_symbol", cif::atom_type_traits(a.type_symbol).symbol() },
-			{ "label_atom_id", a.id },
-			{ "auth_atom_id", a.id },
-			{ "Cartn_x", ax },
-			{ "Cartn_y", ay },
-			{ "Cartn_z", az },
-			{ "B_iso_or_equiv", 30.00 } });
-	}
-
-	auto ligand_entity_id = s.create_non_poly_entity("REA");
-	auto ligand_asym_id = s.create_non_poly(ligand_entity_id, atoms);
+	auto ligand_asym_id = s.create_non_poly("REA", true);
 
 	std::cout << "ligand: " << ligand_asym_id << " created\n";
 
@@ -200,31 +176,7 @@ TEST_CASE("sf-2")
 
 	pdb_redo::BlobFinder blobFinder(maskedmap, s);
 
-	std::vector<cif::row_initializer> atoms;
-	auto compound = cif::compound_factory::instance().create("REA");
-
-	for (auto a : compound->atoms())
-	{
-		// We skip H-atoms, as fitting without H-atoms works better and we avoid conflicts in protonation states between CCD and MONLIB
-		if (cif::atom_type_traits(a.type_symbol).symbol() == "H")
-			continue;
-
-		auto ax = a.get_location().get_x();
-		auto ay = a.get_location().get_y();
-		auto az = a.get_location().get_z();
-
-		atoms.emplace_back(cif::row_initializer{
-			{ "type_symbol", cif::atom_type_traits(a.type_symbol).symbol() },
-			{ "label_atom_id", a.id },
-			{ "auth_atom_id", a.id },
-			{ "Cartn_x", ax },
-			{ "Cartn_y", ay },
-			{ "Cartn_z", az },
-			{ "B_iso_or_equiv", 30.00 } });
-	}
-
-	auto ligand_entity_id = s.create_non_poly_entity("REA");
-	auto ligand_asym_id = s.create_non_poly(ligand_entity_id, atoms);
+	auto ligand_asym_id = s.create_non_poly("REA", true);
 
 	for (;;)
 	{
@@ -267,31 +219,7 @@ TEST_CASE("sf-3")
 	
 		pdb_redo::BlobFinder blobFinder(maskedmap, s);
 	
-		std::vector<cif::row_initializer> atoms;
-		auto compound = cif::compound_factory::instance().create("GOL");
-	
-		for (auto a : compound->atoms())
-		{
-			// We skip H-atoms, as fitting without H-atoms works better and we avoid conflicts in protonation states between CCD and MONLIB
-			if (cif::atom_type_traits(a.type_symbol).symbol() == "H")
-				continue;
-	
-			auto ax = a.get_location().get_x();
-			auto ay = a.get_location().get_y();
-			auto az = a.get_location().get_z();
-	
-			atoms.emplace_back(cif::row_initializer{
-				{ "type_symbol", cif::atom_type_traits(a.type_symbol).symbol() },
-				{ "label_atom_id", a.id },
-				{ "auth_atom_id", a.id },
-				{ "Cartn_x", ax },
-				{ "Cartn_y", ay },
-				{ "Cartn_z", az },
-				{ "B_iso_or_equiv", 30.00 } });
-		}
-	
-		auto ligand_entity_id = s.create_non_poly_entity("GOL");
-		auto ligand_asym_id = s.create_non_poly(ligand_entity_id, atoms);
+		auto ligand_asym_id = s.create_non_poly("GOL", true);
 	
 		for (;;)
 		{
