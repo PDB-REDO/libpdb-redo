@@ -109,15 +109,6 @@ TEST_CASE("sf-1")
 	map.read(gTestDir / "1cbs-REA-blob.map");
 	clipper::Xmap<float> &xmap = map.get();
 
-	std::vector<cif::point> blob;
-	for (auto i = xmap.first(); not i.last(); i.next())
-	{
-		if (xmap[i] > 0)
-			blob.emplace_back(i.coord_orth());
-	}
-
-	CHECK(blob.size() == 831);
-
 	auto cf = R"(
 data_1CBS
 # 
@@ -146,16 +137,22 @@ _symmetry.Int_Tables_number                19
 	db.set_validator(&cif::validator_factory::instance().get("mmcif_pdbx.dic"));
 	cif::mm::structure s(db);
 
+	pdb_redo::BlobFinder bf(xmap, 0);
+
+	auto blob = bf.next();
+
+	CHECK(blob.size() == 831);
+
 	auto ligand_asym_id = s.create_non_poly("REA", true);
 
 	std::cout << "ligand: " << ligand_asym_id << " created\n";
 
-	auto score = pdb_redo::fitShape(s, ligand_asym_id, xmap);
+	auto score = pdb_redo::fitShape(s, ligand_asym_id, xmap, blob);
 
 	CHECK(score < 0);
 
-	std::ofstream file(std::filesystem::temp_directory_path() / "test.cif");
-	cf.save(file);
+	// std::ofstream file(std::filesystem::temp_directory_path() / "test.cif");
+	// cf.save(file);
 }
 
 // --------------------------------------------------------------------
@@ -186,8 +183,8 @@ TEST_CASE("sf-2")
 	
 		CHECK(score < 0);
 	
-		std::ofstream of(std::filesystem::temp_directory_path() / "test-2.cif");
-		file.save(of);
+		// std::ofstream of(std::filesystem::temp_directory_path() / "test-2.cif");
+		// file.save(of);
 
 		break;
 	}
@@ -206,7 +203,7 @@ TEST_CASE("sf-3")
 	cif::mm::structure s(file);
 	// auto &db = s.get_datablock();
 
-	for (std::string asymID : { "H"})
+	for (std::string asymID : { "H", "I", "J", "K", "L"})
 	{
 		s.remove_residue(s.get_residue(asymID));
 	
@@ -221,18 +218,19 @@ TEST_CASE("sf-3")
 	
 		auto ligand_asym_id = s.create_non_poly("GOL", true);
 	
-		for (;;)
+		for (int i = 0;; ++i)
 		{
 			auto blob = blobFinder.next();
+			if (blob.empty())
+				break;
 	
 			auto score = pdb_redo::fitShape(s, ligand_asym_id, mm_fb, blob);
 		
-			CHECK(score < 0);
-		
-			std::ofstream of(std::filesystem::temp_directory_path() / std::format("{}-{}.cif", "3aba", asymID));
-			file.save(of);
-	
-			break;
+			if (score < 0)
+			{
+				std::ofstream of(std::filesystem::temp_directory_path() / std::format("{}-{}-{}.cif", "3aba", asymID, i));
+				file.save(of);
+			}
 		}
 	}
 }

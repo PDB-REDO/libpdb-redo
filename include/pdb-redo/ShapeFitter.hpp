@@ -33,7 +33,7 @@
 namespace pdb_redo
 {
 
-double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap);
+// double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap);
 
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
     const std::vector<cif::point> &blob);

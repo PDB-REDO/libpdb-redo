@@ -27,12 +27,39 @@
 #include "pdb-redo/BlobFinder.hpp"
 
 #include <pdb-redo/Restraints.hpp>
+#include <stdexcept>
 
 namespace pdb_redo
 {
 
-BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
-	float growingPercentile)
+BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, float growingPercentile)
+	: mXmap(xmm)
+{
+	// Create vector with density heights for all values >0
+	for (auto i = clipper::Xmap_base::Map_reference_coord(xmm); not i.last(); i.next())
+	{
+		double dens_height = xmm[i];
+		if (dens_height > 0)
+			mPotentialGridPoints.emplace_back(i);
+	}
+
+	// Check if vector not empty
+	if (mPotentialGridPoints.empty())
+		throw std::runtime_error("No gridpoints with density height above 0");
+
+	// Sort vector on density height (from high to low numbers)
+	std::sort(mPotentialGridPoints.begin(), mPotentialGridPoints.end(), [this](GridPoint a, GridPoint b)
+		{ return mXmap[a] < mXmap[b]; });
+
+	size_t ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
+	mGrowingThreshold = mXmap[mPotentialGridPoints.at(ix)];
+	if (mGrowingThreshold == 0)
+		mGrowingThreshold = 1e-6;
+
+	mPotentialGridPoints.erase(mPotentialGridPoints.begin(), mPotentialGridPoints.begin() + ix);
+}
+
+BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure, float growingPercentile)
 	: mXmap(xmm)
 	, mProteinAtoms(structure.atoms())
 {
@@ -103,10 +130,7 @@ BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
 
 	// Check if vector not empty
 	if (mPotentialGridPoints.empty())
-	{
-		std::cerr << "No gridpoints with density height above 0\n";
-		exit(1);
-	}
+		throw std::runtime_error("No gridpoints with density height above 0");
 
 	// Sort vector on density height (from high to low numbers)
 	std::sort(mPotentialGridPoints.begin(), mPotentialGridPoints.end(), [this](GridPoint a, GridPoint b)
@@ -144,12 +168,18 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 			continue;
 
 		// Check if centroid of found blob in proximity of protein atoms and blob is of substantial size
-		if (blobIsInProximityOfAtoms(newblob))
+		if (mProteinAtoms.empty() or blobIsInProximityOfAtoms(newblob))
 		{
 			std::vector<cif::point> result;
 
 			for (auto &gp : newblob)
 				result.emplace_back(gp.coord_orth());
+
+			std::sort(result.begin(), result.end());
+			result.erase(std::unique(result.begin(), result.end()), result.end());
+
+			if (result.empty())
+				continue;
 
 			return result;
 		}

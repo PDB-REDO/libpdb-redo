@@ -24,14 +24,11 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <fstream>
-#include <numeric>
 
 #include <cif++.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/BondMap.hpp"
-#include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/Statistics.hpp"
 

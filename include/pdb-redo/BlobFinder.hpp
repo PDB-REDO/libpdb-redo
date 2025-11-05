@@ -38,6 +38,10 @@ struct GridPoint;
 class BlobFinder
 {
   public:
+	/// \brief Find all blobs in the map
+	BlobFinder(clipper::Xmap<float> &xmm, float growingPercentile = 0.95f);
+
+	/// \brief Find only blobs near the molecule(s) in @a structure
 	BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
 		float growingPercentile = 0.95f);
 
