@@ -227,21 +227,14 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 }
 
 // --------------------------------------------------------------------
-
 // This code is highly inspired by the jiggle fit implemented in carbivore
 
-class JiggleFitterFragments
+class JiggleFitter
 {
   public:
-	JiggleFitterFragments(pdb_redo::Minimizer *minimizer,
-		cif::mm::residue &ligand /* , cif::file &file */);
+	JiggleFitter(pdb_redo::Minimizer *minimizer, cif::mm::residue &res);
 
-	virtual ~JiggleFitterFragments()
-	{
-	}
-
-	double refine_gsl(bool debug);
-	double refine_newuoa(bool debug);
+	double refine();
 
 	double score()
 	{
@@ -260,14 +253,11 @@ class JiggleFitterFragments
 
 	std::vector<double> m_variables;
 	std::vector<float> m_stepsizes;
-
-	// cif::file &m_file;
 	const cif::mm::structure &m_structure;
-	int m_step = 1;
 
 	static double F(const gsl_vector *v, void *params)
 	{
-		JiggleFitterFragments *self = reinterpret_cast<JiggleFitterFragments *>(params);
+		JiggleFitter *self = reinterpret_cast<JiggleFitter *>(params);
 		return self->F(v);
 	}
 
@@ -283,7 +273,7 @@ class JiggleFitterFragments
 
 	static double call(void *data, long n, const double *values)
 	{
-		return reinterpret_cast<JiggleFitterFragments *>(data)->call(n, values);
+		return reinterpret_cast<JiggleFitter *>(data)->call(n, values);
 	}
 
 	double call(long n, const double *values)
@@ -294,31 +284,24 @@ class JiggleFitterFragments
 
 		return score();
 	}
-
-	bool m_debug = false;
 };
 
-JiggleFitterFragments::JiggleFitterFragments(pdb_redo::Minimizer *minimizer,
-	cif::mm::residue &ligand /* ,
-     cif::file &file */
-	)
+JiggleFitter::JiggleFitter(pdb_redo::Minimizer *minimizer, cif::mm::residue &res)
 	: m_minimizer(std::move(minimizer))
-	, m_atoms(ligand.atoms()) /* , m_file(file) */
-	, m_structure(*ligand.get_structure())
+	, m_atoms(res.atoms())
+	, m_structure(*res.get_structure())
 {
 	for (auto &atom : m_atoms)
-	{
 		m_locations.emplace_back(atom.get_location());
-	}
 
-	m_center = cif::centroid(m_locations);
+	std::tie(m_center, std::ignore) = cif::smallest_sphere_around_points(m_locations);
 
 	// This is where to set step sizes that are used during the rigid body fit
 	m_variables = { 0, 0, 0, 0, 0 };
 	m_stepsizes = { 1.f, 1.f, 0.2f, 0.2f, 0.2f };
 }
 
-void JiggleFitterFragments::transform()
+void JiggleFitter::transform()
 {
 	// get the variables assigned
 	const double alpha = m_variables[0], beta = m_variables[1], x = m_variables[2], y = m_variables[3], z = m_variables[4];
@@ -339,24 +322,14 @@ void JiggleFitterFragments::transform()
 		a.rotate(q, m_center); // rotate a using quaternion q01, move it to the alpha_loc - rotate - move back
 		m_atoms[i].set_location(a + translation);
 	}
-
-	// The lines below I used to understand what happens during jigglefit
-	// std::cout << "step: " << m_step << "\talpha: " << alpha << "\tbeta: " << beta << "\tx: " << x << "\ty: " << y << "\tz: " << z << "\tscore: " << score() << "\n";
-	// std::filesystem::create_directories("/local_data/zata/projects/fragmentfit/outputwhiletesting/steps/");
-	// m_file.save("/local_data/zata/projects/fragmentfit/phase1/jigglefit/steps/step" + std::to_string(m_step++) + ".cif");
-	// auto &db = m_structure.get_datablock();
-	// std::ofstream out("/local_data/zata/projects/fragmentfit/outputwhiletesting/steps/step" + std::to_string(m_step++) + ".cif");
-	// db.write(out);
 }
 
-double JiggleFitterFragments::refine_gsl(bool debug)
+double JiggleFitter::refine()
 {
-	m_debug = debug;
-
 	const int kMaxIterations = 4000;
 
 	gsl_multimin_function f = {
-		.f = &JiggleFitterFragments::F,
+		.f = &JiggleFitter::F,
 		.n = m_variables.size(),
 		.params = this
 	};
@@ -409,89 +382,6 @@ double JiggleFitterFragments::refine_gsl(bool debug)
 	// m_minimizer->printStats();
 
 	return result;
-}
-
-// --------------------------------------------------------------------
-
-double
-jiggleFit(cif::crystal &crystal, cif::mm::structure &structure, cif::mm::residue &ligand, clipper::Xmap<float> &xmm)
-{
-	auto &atoms = ligand.atoms();
-
-	std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, atoms, xmm));
-
-	// minimizer->printStats();
-
-	JiggleFitterFragments f(minimizer.get(), ligand);
-	f.refine_gsl(false);
-
-	// minimizer->printStats();
-
-	// std::cout << "Jiggle score: " << minimizer->score() << "\n";
-	return minimizer->score();
-
-	// // calculate_ar(atoms, true);
-
-	// // try eight times, take best. Second time is flipped along major axis
-
-	// std::vector<cif::point> savedPositions, bestPositions(atoms.size());
-	// savedPositions.reserve(atoms.size());
-	// double bestScore = std::numeric_limits<double>::max();
-
-	// for (auto &atom : atoms)
-	// 	savedPositions.emplace_back(atom.get_location());
-
-	// for (bool first = true; auto axis : std::initializer_list<cif::point>{
-	// 							{ 0, 0, 0 },
-	// 							{ 0, 0, 1 },
-	// 							{ 0, 1, 0 },
-	// 							{ 0, 1, 1 },
-	// 							{ 1, 0, 0 },
-	// 							{ 1, 0, 1 },
-	// 							{ 1, 1, 0 },
-	// 							{ 1, 1, 1 } })
-	// {
-	// 	if (not std::exchange(first, false))
-	// 	{
-	// 		auto q = cif::construct_from_angle_axis(180, axis);
-	// 		auto c = cif::centroid(savedPositions);
-
-	// 		for (size_t ix = 0; auto loc : savedPositions)
-	// 		{
-	// 			loc.rotate(q, c);
-	// 			atoms[ix++].set_location(loc);
-	// 		}
-	// 	}
-
-	// 	std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, atoms, xmm));
-
-	// 	// minimizer->printStats();
-
-	// 	JiggleFitterFragments f(minimizer.get(), ligand);
-	// 	f.refine_gsl(false);
-
-	// 	// minimizer->printStats();
-
-	// 	// std::cout << "Jiggle score: " << minimizer->score() << "\n";
-
-	// 	auto score = minimizer->refine(true);
-	// 	if (bestScore > score)
-	// 	{
-	// 		bestScore = score;
-
-	// 		for (size_t ix = 0; auto &atom : atoms)
-	// 			bestPositions[ix++] = atom.get_location();
-	// 	}
-
-	// 	// minimizer->printStats();
-	// 	// std::cout << "Minimizer score:\t" << minimizer->score() << "\n";
-	// }
-
-	// for (size_t ix = 0; auto loc : bestPositions)
-	// 	atoms[ix++].set_location(loc);
-
-	// // note to self: result is the minimizer score
-	// return bestScore;
 }
 
 // --------------------------------------------------------------------
@@ -569,6 +459,8 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 	std::vector<Score> best;
 	cif::crystal crystal(structure.get_datablock());
 
+	std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, ligand.atoms(), xmap));
+
 	for (size_t i = 0; i < dots.size(); ++i)
 	{
 		auto axis = cif::cross_product(dots[0], dots[i]);
@@ -583,12 +475,15 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 			a.set_location(loc);
 		}
 
-		jiggleFit(crystal, structure, ligand, xmap);
+		JiggleFitter f(minimizer.get(), ligand);
+		auto jScore = f.refine();
 
-		std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
+		std::cout << "jigglefit score: " << jScore << " for iteration " << i << "\n";
+
+		if (jScore > 0)
+			continue;
 
 		auto score = minimizer->refine(false);
-
 		std::cout << "score: " << score << " for iteration " << i << "\n";
 
 		// minimizer->printStats();
@@ -729,6 +624,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 
 	std::vector<Score> best;
 	cif::crystal crystal(structure.get_datablock());
+	std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
 
 	for (size_t i = 0; i < dots.size(); ++i)
 	{
@@ -744,14 +640,15 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 			a.set_location(loc);
 		}
 
-		auto jScore = jiggleFit(crystal, structure, ligand, xmap);
+		JiggleFitter f(minimizer.get(), ligand);
+		auto jScore = f.refine();
 
-		std::cout << "jiggle score: " << jScore << " for iteration " << i << "\n";
+		std::cout << "jigglefit score: " << jScore << " for iteration " << i << "\n";
 
-		std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
+		if (jScore > 0)
+			continue;
 
 		auto score = minimizer->refine(false);
-
 		std::cout << "score: " << score << " for iteration " << i << "\n";
 
 		// minimizer->printStats();
