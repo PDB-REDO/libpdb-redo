@@ -1166,9 +1166,11 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 			// EDIA calculations
 			auto fb = Fb[iw];
 
-			float z = 0;
-			if (fb >= mMeanDensityFb + mRMSDensityFb)
-				z = static_cast<float>((fb - mMeanDensityFb) / mRMSDensityFb);
+			// fix z calculation, thanks to Dmytro Guzenko for spotting the error
+			float z = static_cast<float>((fb - mMeanDensityFb) / mRMSDensityFb);
+
+			if (z < 0)
+				z = 0;
 			
 			if (z > 1.2)
 				z = 1.2f;
