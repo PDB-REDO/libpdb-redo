@@ -198,7 +198,7 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 		{
 			for (float z : vz)
 			{
-				float min_x, max_x;
+				float min_x = 0, max_x = 0;
 				for (bool first = true; auto &p : result)
 				{
 					if (p[1] != y or p[2] != z)
@@ -512,65 +512,65 @@ double JiggleFitter::refine()
 // 	return best.front().v;
 // }
 
-// --------------------------------------------------------------------
+// // --------------------------------------------------------------------
 
-class ConformationIterator
-{
-  public:
-	ConformationIterator(cif::mm::structure &structure, const std::string &asym_id);
+// class ConformationIterator
+// {
+//   public:
+// 	ConformationIterator(cif::mm::structure &structure, const std::string &asym_id);
 
-	void next();
-	bool last() const;
+// 	void next();
+// 	bool last() const;
 
-  private:
-	struct TorsionData
-	{
-		cif::mm::atom dihedral_atoms[4];
-		std::vector<cif::mm::atom> rotating_atoms;
-	};
+//   private:
+// 	struct TorsionData
+// 	{
+// 		cif::mm::atom dihedral_atoms[4];
+// 		std::vector<cif::mm::atom> rotating_atoms;
+// 	};
 
-	struct Iteration
-	{
-		size_t index;
-		float angle;
-	};
+// 	struct Iteration
+// 	{
+// 		size_t index;
+// 		float angle;
+// 	};
 
-	cif::mm::residue &m_residue;
-	std::vector<TorsionData> m_torsions;
-};
+// 	cif::mm::residue &m_residue;
+// 	std::vector<TorsionData> m_torsions;
+// };
 
-ConformationIterator::ConformationIterator(cif::mm::structure &structure, const std::string &asym_id)
-	: m_residue(structure.get_residue(asym_id))
-{
-	auto compound = pdb_redo::CompoundFactory::instance().create(m_residue.get_compound_id());
+// ConformationIterator::ConformationIterator(cif::mm::structure &structure, const std::string &asym_id)
+// 	: m_residue(structure.get_residue(asym_id))
+// {
+// 	auto compound = pdb_redo::CompoundFactory::instance().create(m_residue.get_compound_id());
 
-	for (auto &torsion : compound->torsions())
-	{
-		if (torsion.period <= 1)
-			continue;
+// 	for (auto &torsion : compound->torsions())
+// 	{
+// 		if (torsion.period <= 1)
+// 			continue;
 
-		TorsionData td{
-			{ m_residue.get_atom_by_atom_id(torsion.atomID[0]),
-				m_residue.get_atom_by_atom_id(torsion.atomID[1]),
-				m_residue.get_atom_by_atom_id(torsion.atomID[2]),
-				m_residue.get_atom_by_atom_id(torsion.atomID[3]) }
-		};
+// 		TorsionData td{
+// 			{ m_residue.get_atom_by_atom_id(torsion.atomID[0]),
+// 				m_residue.get_atom_by_atom_id(torsion.atomID[1]),
+// 				m_residue.get_atom_by_atom_id(torsion.atomID[2]),
+// 				m_residue.get_atom_by_atom_id(torsion.atomID[3]) }
+// 		};
 
-		bool ok = true;
-		for (auto &a : td.dihedral_atoms)
-			ok = ok and a and a.get_type() != cif::H;
-		if (not ok)
-			continue;
-	}
-}
+// 		bool ok = true;
+// 		for (auto &a : td.dihedral_atoms)
+// 			ok = ok and a and a.get_type() != cif::H;
+// 		if (not ok)
+// 			continue;
+// 	}
+// }
 
-void ConformationIterator::next()
-{
-}
+// void ConformationIterator::next()
+// {
+// }
 
-bool ConformationIterator::last() const
-{
-}
+// bool ConformationIterator::last() const
+// {
+// }
 
 // --------------------------------------------------------------------
 

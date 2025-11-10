@@ -34,6 +34,10 @@ foreach(PDB_REDO_TEST IN LISTS PDB_REDO_tests)
 		OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/Run${PDB_REDO_TEST}.touch
 		COMMAND $<TARGET_FILE:${PDB_REDO_TEST}> -- ${PROJECT_SOURCE_DIR}/test)
 
-	add_test(NAME ${PDB_REDO_TEST}
-		COMMAND $<TARGET_FILE:${PDB_REDO_TEST}> --data-dir ${PROJECT_SOURCE_DIR}/test)
+	if((${PDB_REDO_TEST} STREQUAL "rsr-test" OR ${PDB_REDO_TEST} STREQUAL "shape-fitter-test") AND ("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4}))
+		message(NOTICE "Skipping test ${PDB_REDO_TEST} since CCP4 is not sourced")
+	else()
+		add_test(NAME ${PDB_REDO_TEST}
+			COMMAND $<TARGET_FILE:${PDB_REDO_TEST}> --data-dir ${PROJECT_SOURCE_DIR}/test)
+	endif()
 endforeach()
