@@ -26,6 +26,7 @@
 
 #include "pdb-redo/BlobFinder.hpp"
 
+#include <cif++/point.hpp>
 #include <pdb-redo/Restraints.hpp>
 #include <stdexcept>
 
@@ -164,25 +165,29 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 				}),
 			mPotentialGridPoints.end());
 
-		if (newblob.size() < 30 or gridPointVolume * newblob.size() < minimalVolume)
+		std::vector<cif::point> result;
+
+		for (auto &gp : newblob)
+			result.emplace_back(gp.coord_orth());
+
+		std::sort(result.begin(), result.end());
+		result.erase(std::unique(result.begin(), result.end()), result.end());
+
+		if (result.size() < 30 or gridPointVolume * result.size() < minimalVolume)
 			continue;
 
-		// Check if centroid of found blob in proximity of protein atoms and blob is of substantial size
-		if (mProteinAtoms.empty() or blobIsInProximityOfAtoms(newblob))
+		// Check if found blob is in proximity of protein atoms
+		if (not mProteinAtoms.empty())
 		{
-			std::vector<cif::point> result;
+			auto [c, r] = cif::smallest_sphere_around_points(result);
+			auto max_d = (10 + r) * (10 + r);
 
-			for (auto &gp : newblob)
-				result.emplace_back(gp.coord_orth());
-
-			std::sort(result.begin(), result.end());
-			result.erase(std::unique(result.begin(), result.end()), result.end());
-
-			if (result.empty())
+			if (std::find_if(mProteinAtoms.begin(), mProteinAtoms.end(), [max_d, c](const cif::mm::atom &a)
+					{ return cif::distance_squared(a.get_location(), c) < max_d; }) == mProteinAtoms.end())
 				continue;
-
-			return result;
 		}
+
+		return result;
 	}
 
 	return {};
@@ -229,22 +234,6 @@ std::vector<BlobFinder::GridPoint> BlobFinder::pop()
 	}
 
 	return blob;
-}
-
-bool BlobFinder::blobIsInProximityOfAtoms(const std::vector<GridPoint> &blob) const
-{
-	cif::point blobCentroid;
-	for (auto &gp : blob)
-		blobCentroid += cif::point{ gp.coord_orth() };
-	blobCentroid /= blob.size();
-
-	for (auto &proteinatom : mProteinAtoms)
-	{
-		if (cif::distance(proteinatom.get_location(), blobCentroid) <= 10)
-			return true;
-	}
-
-	return false;
 }
 
 } // namespace pdb_redo
