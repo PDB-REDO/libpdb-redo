@@ -132,7 +132,6 @@ list(APPEND project_sources
 	${PROJECT_SOURCE_DIR}/src/Ramachandran.cpp
 	${PROJECT_SOURCE_DIR}/src/ResolutionCalculator.cpp
 	${PROJECT_SOURCE_DIR}/src/SkipList.cpp
-	${PROJECT_SOURCE_DIR}/src/ShapeFitter.cpp
 	${PROJECT_SOURCE_DIR}/src/Statistics.cpp
 	${PROJECT_SOURCE_DIR}/src/TLS.cpp
 	${PROJECT_SOURCE_DIR}/src/Version.cpp
@@ -149,7 +148,6 @@ list(APPEND project_headers
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Ramachandran.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/ResolutionCalculator.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/SkipList.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/ShapeFitter.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Statistics.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/TLS.hpp
 	${PROJECT_SOURCE_DIR}/include/pdb-redo/Version.hpp
@@ -159,11 +157,13 @@ if(BUILD_MINIMIZER)
 	list(APPEND project_sources
 		${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
 		${PROJECT_SOURCE_DIR}/src/Restraints.cpp
+		${PROJECT_SOURCE_DIR}/src/ShapeFitter.cpp
 	)
 
 	list(APPEND project_headers
 		${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
 		${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp
+		${PROJECT_SOURCE_DIR}/include/pdb-redo/ShapeFitter.hpp
 	)
 endif()
 
