@@ -101,7 +101,7 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 	const double kRadToDegree = 180.0 / cif::kPI, kDegreeToRad = 1 / kRadToDegree;
 
 	if (cif::VERBOSE > 2)
-		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ": \n";
+		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ":\n";
 
 	DPoint k = atoms[mA], l = atoms[mB], m = atoms[mC];
 
@@ -249,7 +249,7 @@ double TorsionRestraint::f(const AtomLocationProvider &atoms) const
 void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
 	if (cif::VERBOSE > 2)
-		std::cerr << "torsion::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << "/" << atoms.atom(mD) << ' ' << ": \n";
+		std::cerr << "torsion::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << "/" << atoms.atom(mD) << ' ' << ":\n";
 
 	double cos_a1 = cosinus_angle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
 	double cos_a2 = cosinus_angle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
@@ -306,7 +306,7 @@ double ChiralVolumeRestraint::f(const AtomLocationProvider &atoms) const
 void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
 	if (cif::VERBOSE > 2)
-		std::cerr << "chiral::df(): \n";
+		std::cerr << "chiral::df():\n";
 
 	DPoint centre = atoms[mCentre];
 	DPoint a = atoms[mA1] - centre;
@@ -546,7 +546,7 @@ double DensityRestraint::f(const AtomLocationProvider &atoms) const
 void DensityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
 	if (cif::VERBOSE > 2)
-		std::cerr << "density::df(): \n";
+		std::cerr << "density::df():\n";
 
 	for (auto &a : mAtoms)
 	{
@@ -568,7 +568,7 @@ void DensityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 void DensityRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "density \n";
+	std::cout << "density\n";
 }
 
 } // namespace pdb_redo

@@ -640,7 +640,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		if (jScore > 0)
 			continue;
 
-		auto score = minimizer->refine(false);
+		auto score = minimizer->refine(true);
 		if (cif::VERBOSE > 1)
 			std::cout << "score: " << score << " for iteration " << i << "\n";
 

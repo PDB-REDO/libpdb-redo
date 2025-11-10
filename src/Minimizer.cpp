@@ -994,7 +994,7 @@ GSLDFCollector::~GSLDFCollector()
 	if (cif::VERBOSE > 2)
 	{
 		std::cerr << std::string(19, '-') << '\n'
-				  << "Collected gradient: \n";
+				  << "Collected gradient:\n";
 
 		for (std::size_t i = 0; i < mAtoms.size(); ++i)
 		{
