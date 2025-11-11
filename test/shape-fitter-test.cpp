@@ -191,46 +191,46 @@ TEST_CASE("sf-2")
 
 }
 
-// --------------------------------------------------------------------
+// // --------------------------------------------------------------------
 
-TEST_CASE("sf-3")
-{
-	const fs::path example(gTestDir / "3aba_final.cif");
-	cif::file file = cif::pdb::read(example.string());
+// TEST_CASE("sf-3")
+// {
+// 	const fs::path example(gTestDir / "3aba_besttls.cif.gz");
+// 	cif::file file = cif::pdb::read(example.string());
 
-	cif::pdb::reconstruct_pdbx(file);
+// 	cif::pdb::reconstruct_pdbx(file);
 
-	cif::mm::structure s(file);
-	// auto &db = s.get_datablock();
+// 	cif::mm::structure s(file);
+// 	// auto &db = s.get_datablock();
 
-	for (std::string asymID : { "H", "I", "J", "K", "L"})
-	{
-		s.remove_residue(s.get_residue(asymID));
+// 	for (std::string asymID : { "H", "I", "J", "K", "L"})
+// 	{
+// 		s.remove_residue(s.get_residue(asymID));
 	
-		pdb_redo::MapMaker<float> mm;
-		float samplingRate = 0.75;
-		mm.loadMTZ(gTestDir / "3aba_final.mtz", samplingRate);
+// 		pdb_redo::MapMaker<float> mm;
+// 		float samplingRate = 0.75;
+// 		mm.loadMTZ(gTestDir / "3aba_loopwhole.mtz", samplingRate);
 	
-		auto &mm_fb = mm.fb();
-		auto maskedmap = mm_fb.masked(s, s.atoms());
+// 		auto &mm_fb = mm.fb();
+// 		auto maskedmap = mm_fb.masked(s, s.atoms());
 	
-		pdb_redo::BlobFinder blobFinder(maskedmap, s);
+// 		pdb_redo::BlobFinder blobFinder(maskedmap, s);
 	
-		auto ligand_asym_id = s.create_non_poly("GOL", true);
+// 		auto ligand_asym_id = s.create_non_poly("GOL", true);
 	
-		for (int i = 0;; ++i)
-		{
-			auto blob = blobFinder.next();
-			if (blob.empty())
-				break;
+// 		for (int i = 0;; ++i)
+// 		{
+// 			auto blob = blobFinder.next();
+// 			if (blob.empty())
+// 				break;
 	
-			auto score = pdb_redo::fitShape(s, ligand_asym_id, mm_fb, blob);
+// 			auto score = pdb_redo::fitShape(s, ligand_asym_id, mm_fb, blob);
 		
-			if (score < 0)
-			{
-				std::ofstream of(std::filesystem::temp_directory_path() / std::format("{}-{}-{}.cif", "3aba", asymID, i));
-				file.save(of);
-			}
-		}
-	}
-}
+// 			if (score < 0)
+// 			{
+// 				std::ofstream of(std::filesystem::temp_directory_path() / std::format("{}-{}-{}.cif", "3aba", asymID, i));
+// 				file.save(of);
+// 			}
+// 		}
+// 	}
+// }

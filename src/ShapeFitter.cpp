@@ -142,7 +142,7 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 		{
 			for (float y : vy)
 			{
-				float min_z, max_z;
+				float min_z = 0, max_z = 0;
 				for (bool first = true; auto &p : result)
 				{
 					if (p[0] != x or p[1] != y)
@@ -170,7 +170,7 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 		{
 			for (float z : vz)
 			{
-				float min_y, max_y;
+				float min_y = 0, max_y = 0;
 				for (bool first = true; auto &p : result)
 				{
 					if (p[0] != x or p[2] != z)
