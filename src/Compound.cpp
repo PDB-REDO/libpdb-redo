@@ -538,7 +538,14 @@ float Compound::chiralVolume(const std::string &centreID) const
 		float cosb = static_cast<float>(std::cos(beta * kPI / 180));
 		float cosc = static_cast<float>(std::cos(gamma * kPI / 180));
 
-		result = (a * b * c * std::sqrt(1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc))) / 6;
+		// When the atoms are in a plane and the result should be nearly zero
+		// the result of 1 + 2 * cosa * cosb * cosc - cosa^2 - cosb^2 - cosc^2 can become negative
+		// and thus give a nan.
+		
+		if (auto v = 1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc); v > 0)
+			result = (a * b * c * std::sqrt(v)) / 6;
+		else
+			result = 0;
 
 		if (cv.volumeSign == negativ)
 			result = -result;
@@ -768,8 +775,15 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 		float cosb = static_cast<float>(std::cos(beta * kPI / 180));
 		float cosc = static_cast<float>(std::cos(gamma * kPI / 180));
 
-		result = (a * b * c * std::sqrt(1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc))) / 6;
+		// When the atoms are in a plane and the result should be nearly zero
+		// the result of 1 + 2 * cosa * cosb * cosc - cosa^2 - cosb^2 - cosc^2 can become negative
+		// and thus give a nan.
 
+		if (auto v = 1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc); v > 0)
+			result = (a * b * c * std::sqrt(v)) / 6;
+		else
+			result = 0;
+			
 		if (cv.volumeSign == negativ)
 			result = -result;
 

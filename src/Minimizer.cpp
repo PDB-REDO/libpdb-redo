@@ -31,8 +31,8 @@
 
 #include "pdb-redo/Minimizer.hpp"
 
+#include <cmath>
 #include <filesystem>
-#include <future>
 #include <iomanip>
 #include <regex>
 #include <stdexcept>
@@ -53,8 +53,7 @@ const double
 
 const double
 	kDefaultMapWeight = 60,
-	kDefaultPlane5ESD = 0.11,
-	kDefaultChiralVolumeESD = 0.2;
+	kDefaultPlane5ESD = 0.11;
 
 // --------------------------------------------------------------------
 
