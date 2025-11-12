@@ -39,6 +39,7 @@
 #include <clipper/core/clipper_types.h>
 #include <clipper/core/coords.h>
 #include <cmath>
+#include <filesystem>
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_multimin.h>
@@ -232,19 +233,13 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 class JiggleFitter
 {
   public:
-	JiggleFitter(pdb_redo::Minimizer *minimizer, cif::mm::residue &res);
+	JiggleFitter(pdb_redo::Minimizer &minimizer, cif::mm::residue &res);
 
 	double refine();
-
-	double score()
-	{
-		return m_minimizer->score();
-	}
-
 	virtual void transform();
 
   protected:
-	pdb_redo::Minimizer *m_minimizer;
+	pdb_redo::Minimizer &m_minimizer;
 
 	std::vector<cif::mm::atom> m_atoms;
 	std::vector<cif::point> m_locations;
@@ -253,7 +248,6 @@ class JiggleFitter
 
 	std::vector<double> m_variables;
 	std::vector<float> m_stepsizes;
-	const cif::mm::structure &m_structure;
 
 	static double F(const gsl_vector *v, void *params)
 	{
@@ -268,28 +262,15 @@ class JiggleFitter
 
 		transform();
 
-		return score();
-	}
-
-	static double call(void *data, long n, const double *values)
-	{
-		return reinterpret_cast<JiggleFitter *>(data)->call(n, values);
-	}
-
-	double call(long n, const double *values)
-	{
-		// assert(n == m_variables.size());
-		std::copy(values, values + n, m_variables.begin());
-		transform();
-
-		return score();
+		// return m_minimizer.score();
+		auto result = m_minimizer.score();
+		return result;
 	}
 };
 
-JiggleFitter::JiggleFitter(pdb_redo::Minimizer *minimizer, cif::mm::residue &res)
-	: m_minimizer(std::move(minimizer))
+JiggleFitter::JiggleFitter(pdb_redo::Minimizer &minimizer, cif::mm::residue &res)
+	: m_minimizer(minimizer)
 	, m_atoms(res.atoms())
-	, m_structure(*res.get_structure())
 {
 	for (auto &atom : m_atoms)
 		m_locations.emplace_back(atom.get_location());
@@ -298,7 +279,7 @@ JiggleFitter::JiggleFitter(pdb_redo::Minimizer *minimizer, cif::mm::residue &res
 
 	// This is where to set step sizes that are used during the rigid body fit
 	m_variables = { 0, 0, 0, 0, 0 };
-	m_stepsizes = { 1.f, 1.f, 0.2f, 0.2f, 0.2f };
+	m_stepsizes = { 10.f, 10.f, 0.1f, 0.1f, 0.1f };
 }
 
 void JiggleFitter::transform()
@@ -335,12 +316,12 @@ double JiggleFitter::refine()
 	};
 
 	auto T = gsl_multimin_fminimizer_nmsimplex2;
-	auto x = gsl_vector_alloc(m_variables.size());
 
+	auto x = gsl_vector_alloc(m_variables.size());
 	for (size_t i = 0; i < m_variables.size(); ++i)
 		gsl_vector_set(x, i, m_variables[i]);
 
-	auto ss = gsl_vector_alloc(m_variables.size());
+	auto ss = gsl_vector_alloc(m_stepsizes.size());
 	for (size_t i = 0; i < m_stepsizes.size(); ++i)
 		gsl_vector_set(ss, i, m_stepsizes[i]);
 
@@ -358,7 +339,7 @@ double JiggleFitter::refine()
 			break;
 
 		double size = gsl_multimin_fminimizer_size(s);
-		status = gsl_multimin_test_size(size, 1e-2);
+		status = gsl_multimin_test_size(size, 1e-5);
 
 		if (status == GSL_SUCCESS)
 		{
@@ -378,8 +359,6 @@ double JiggleFitter::refine()
 	auto result = s->fval;
 
 	gsl_multimin_fminimizer_free(s);
-
-	// m_minimizer->printStats();
 
 	return result;
 }
@@ -577,7 +556,7 @@ double JiggleFitter::refine()
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
 	const std::vector<cif::point> &blob)
 {
-	const auto dots = cif::spherical_dots<7>::instance();
+	const auto dots = cif::spherical_dots<15>::instance();
 
 	// Locate the center of the blob
 	auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(blob);
@@ -615,7 +594,6 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 
 	std::vector<Score> best;
 	cif::crystal crystal(structure.get_datablock());
-	std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
 
 	for (size_t i = 0; i < dots.size(); ++i)
 	{
@@ -631,20 +609,39 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 			a.set_location(loc);
 		}
 
-		JiggleFitter f(minimizer.get(), ligand);
+		{
+			std::ofstream of(std::filesystem::temp_directory_path() / std::format("voor-{}.cif", i));
+			of << structure.get_datablock() << "\n";
+			of.close();
+		}
+
+		std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
+
+		JiggleFitter f(*minimizer.get(), ligand);
 		auto jScore = f.refine();
 
+		{
+			std::ofstream of(std::filesystem::temp_directory_path() / std::format("na-{}.cif", i));
+			of << structure.get_datablock() << "\n";
+			of.close();
+		}
+
 		if (cif::VERBOSE > 1)
+		{
 			std::cout << "jigglefit score: " << jScore << " for iteration " << i << "\n";
+			minimizer->printStats();
+		}
 
 		if (jScore > 0)
 			continue;
 
 		auto score = minimizer->refine(true);
-		if (cif::VERBOSE > 1)
-			std::cout << "score: " << score << " for iteration " << i << "\n";
 
-		// minimizer->printStats();
+		if (cif::VERBOSE > 1)
+		{
+			std::cout << "score: " << score << " for iteration " << i << "\n";
+			minimizer->printStats();
+		}
 
 		std::vector<cif::point> bestLoc;
 		for (auto a : ligand.atoms())
@@ -655,21 +652,24 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		std::push_heap(best.begin(), best.end());
 	}
 
+	if (best.empty())
+		return 0;
+
 	std::sort_heap(best.begin(), best.end());
 
-	for (bool first = true; auto [q, v, loc] : best)
-	{
-		if (cif::VERBOSE > 1)
-			std::cout << "q: " << q << ", v: " << v << "\n";
+	// for (bool first = true; auto [q, v, loc] : best)
+	// {
+	// 	if (std::exchange(first, false))
+	// 	{
+	// 		for (size_t ix = 0; ix < loc.size(); ++ix)
+	// 			ligand.atoms()[ix].set_location(loc[ix]);
+	// 	}
+	// }
 
-		if (std::exchange(first, false))
-		{
-			for (size_t ix = 0; ix < loc.size(); ++ix)
-				ligand.atoms()[ix].set_location(loc[ix]);
-		}
-	}
+	for (size_t ix = 0; auto l : best.front().loc)
+		ligand.atoms()[ix++].set_location(l);
 
-	return best.empty() ? 0 : best.front().v;
+	return best.front().v;
 }
 
 } // namespace pdb_redo

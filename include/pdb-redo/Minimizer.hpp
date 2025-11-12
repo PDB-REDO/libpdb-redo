@@ -172,20 +172,20 @@ class Minimizer
 		const std::string &atom_id_a, const std::string &atom_id_b);
 
 	template <typename R>
-	double rmsz(const AtomLocationProvider &atoms, const std::vector<R> &a) const
+	std::tuple<double, double> rmsz(const AtomLocationProvider &atoms, const std::vector<R> &a) const
 	{
-		double result = 0;
+		double z = 0, sum = 0;
 
 		if (not a.empty())
 		{
-			double sumZ = accumulate(a.begin(), a.end(),
-				0.0, [&atoms](double sum, const R &r)
-				{ double z = r.f(atoms); return sum + z; });
+			sum = accumulate(a.begin(), a.end(),
+				0.0, [&atoms](double s, const R &r)
+				{ double z = r.f(atoms); return s + z; });
 
-			result = std::sqrt(sumZ / a.size());
+			z = std::sqrt(sum / a.size());
 		}
 
-		return result;
+		return { z, sum };
 	}
 
 	AtomRef ref(const cif::mm::atom &atom);
