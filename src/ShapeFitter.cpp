@@ -598,19 +598,10 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		atomLocations.emplace_back(loc);
 	}
 
-	struct Score
-	{
-		double v;
-		std::vector<cif::point> loc;
-
-		bool operator<(const Score &rhs) const
-		{
-			return v < rhs.v;
-		}
-	};
-
-	std::vector<Score> best;
 	cif::crystal crystal(structure.get_datablock());
+
+	double bestScore = 0;
+	std::vector<cif::point> bestLoc;
 
 	for (size_t i = 0; i < dots.size(); ++i)
 	{
@@ -632,31 +623,19 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		if (cif::VERBOSE > 1)
 			std::cout << "jigglefit score: " << jScore << " for iteration " << i << "\n";
 
-		if (jScore > 0)
+		if (jScore >= bestScore)
 			continue;
 
-		std::vector<cif::point> loc;
+		bestLoc.clear();
 		for (auto a : ligand.atoms())
-			loc.emplace_back(a.get_location());
-
-		best.emplace_back(jScore, std::move(loc));
-		std::push_heap(best.begin(), best.end());
-		if (best.size() > 10)
-		{
-			std::pop_heap(best.begin(), best.end());
-			best.pop_back();
-		}
+			bestLoc.emplace_back(a.get_location());
+		bestScore = jScore;
 	}
 
-	if (best.empty())
-		return 0;
-
-	std::sort_heap(best.begin(), best.end());
-
-	for (size_t ix = 0; auto l : best.front().loc)
+	for (size_t ix = 0; auto l : bestLoc)
 		ligand.atoms()[ix++].set_location(l);
 
-	return best.front().v;
+	return bestScore;
 }
 
 } // namespace pdb_redo
