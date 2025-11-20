@@ -26,8 +26,9 @@
 
 #include "pdb-redo/ShapeFitter.hpp"
 
-#include "pdb-redo/Compound.hpp"
+#include "cif++/validate.hpp"
 #include "pdb-redo/Minimizer.hpp"
+#include "pdb-redo/Restraints.hpp"
 
 #include <algorithm>
 #include <cif++/atom_type.hpp>
@@ -39,14 +40,13 @@
 #include <clipper/core/clipper_types.h>
 #include <clipper/core/coords.h>
 #include <cmath>
+#include <filesystem>
+#include <fstream>
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_multimin.h>
 #include <gsl/gsl_vector_double.h>
-#include <limits>
 #include <memory>
-#include <random>
-#include <stdexcept>
 
 namespace pdb_redo
 {
@@ -227,33 +227,25 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 }
 
 // --------------------------------------------------------------------
-// This code is highly inspired by the jiggle fit implemented in carbivore
 
 class JiggleFitter
 {
   public:
-	JiggleFitter(pdb_redo::Minimizer *minimizer, cif::mm::residue &res);
+	JiggleFitter(cif::mm::residue &res, clipper::Xmap<float> &xmap, float mapWeight = 45.f);
 
 	double refine();
-
-	double score()
-	{
-		return m_minimizer->score();
-	}
-
 	virtual void transform();
 
   protected:
-	pdb_redo::Minimizer *m_minimizer;
+	std::vector<cif::mm::atom> mAtoms;
+	std::vector<cif::point> mLocations;
 
-	std::vector<cif::mm::atom> m_atoms;
-	std::vector<cif::point> m_locations;
+	cif::point mCenter;
 
-	cif::point m_center;
+	std::vector<double> mVariables;
+	std::vector<float> mStepSizes;
 
-	std::vector<double> m_variables;
-	std::vector<float> m_stepsizes;
-	const cif::mm::structure &m_structure;
+	std::unique_ptr<pdb_redo::DensityRestraint> mDensityDestraint;
 
 	static double F(const gsl_vector *v, void *params)
 	{
@@ -263,48 +255,55 @@ class JiggleFitter
 
 	double F(const gsl_vector *v)
 	{
-		for (size_t i = 0; i < m_variables.size(); ++i)
-			m_variables[i] = gsl_vector_get(v, i);
+		for (size_t i = 0; i < mVariables.size(); ++i)
+			mVariables[i] = gsl_vector_get(v, i);
 
 		transform();
 
-		return score();
-	}
+		pdb_redo::AtomLocationProvider loc(mAtoms);
 
-	static double call(void *data, long n, const double *values)
-	{
-		return reinterpret_cast<JiggleFitter *>(data)->call(n, values);
-	}
+		auto result = mDensityDestraint->f(loc);
 
-	double call(long n, const double *values)
-	{
-		// assert(n == m_variables.size());
-		std::copy(values, values + n, m_variables.begin());
-		transform();
-
-		return score();
+		return result;
 	}
 };
 
-JiggleFitter::JiggleFitter(pdb_redo::Minimizer *minimizer, cif::mm::residue &res)
-	: m_minimizer(std::move(minimizer))
-	, m_atoms(res.atoms())
-	, m_structure(*res.get_structure())
+JiggleFitter::JiggleFitter(cif::mm::residue &res, clipper::Xmap<float> &xmap, float mapWeight)
+	: mAtoms(res.atoms())
 {
-	for (auto &atom : m_atoms)
-		m_locations.emplace_back(atom.get_location());
+	for (auto &atom : mAtoms)
+		mLocations.emplace_back(atom.get_location());
 
-	std::tie(m_center, std::ignore) = cif::smallest_sphere_around_points(m_locations);
+	std::tie(mCenter, std::ignore) = cif::smallest_sphere_around_points(mLocations);
+
+	std::vector<std::pair<pdb_redo::AtomRef, double>> densityAtoms;
+	densityAtoms.reserve(mAtoms.size());
+
+	std::transform(mAtoms.begin(), mAtoms.end(), std::back_inserter(densityAtoms),
+		[&densityAtoms](const cif::mm::atom &a)
+		{
+			double z = static_cast<int>(a.get_type());
+			double weight = 1;
+			double occupancy = a.get_occupancy();
+
+			if (occupancy > 1)
+				occupancy = 1;
+
+			// TODO: cryo_em support
+			return std::make_pair(densityAtoms.size(), z * weight * occupancy);
+		});
+
+	mDensityDestraint.reset(new DensityRestraint(std::move(densityAtoms), xmap, mapWeight));
 
 	// This is where to set step sizes that are used during the rigid body fit
-	m_variables = { 0, 0, 0, 0, 0 };
-	m_stepsizes = { 1.f, 1.f, 0.2f, 0.2f, 0.2f };
+	mVariables = { 0, 0, 0, 0, 0 };
+	mStepSizes = { 10.f, 10.f, 0.1f, 0.1f, 0.1f };
 }
 
 void JiggleFitter::transform()
 {
 	// get the variables assigned
-	const double alpha = m_variables[0], beta = m_variables[1], x = m_variables[2], y = m_variables[3], z = m_variables[4];
+	const double alpha = mVariables[0], beta = mVariables[1], x = mVariables[2], y = mVariables[3], z = mVariables[4];
 
 	// rotations
 	auto q0 = cif::construct_from_angle_axis(alpha, { 1, 0, 0 }); // construct quaternion from float angle, point axis
@@ -316,11 +315,11 @@ void JiggleFitter::transform()
 	cif::point translation(x, y, z);
 
 	// Move the molecule
-	for (size_t i = 0; i < m_locations.size(); ++i)
+	for (size_t i = 0; i < mLocations.size(); ++i)
 	{
-		auto a = m_locations[i];
-		a.rotate(q, m_center); // rotate a using quaternion q01, move it to the alpha_loc - rotate - move back
-		m_atoms[i].set_location(a + translation);
+		auto a = mLocations[i];
+		a.rotate(q, mCenter); // rotate a using quaternion q01, move it to the alpha_loc - rotate - move back
+		mAtoms[i].set_location(a + translation);
 	}
 }
 
@@ -330,21 +329,21 @@ double JiggleFitter::refine()
 
 	gsl_multimin_function f = {
 		.f = &JiggleFitter::F,
-		.n = m_variables.size(),
+		.n = mVariables.size(),
 		.params = this
 	};
 
 	auto T = gsl_multimin_fminimizer_nmsimplex2;
-	auto x = gsl_vector_alloc(m_variables.size());
 
-	for (size_t i = 0; i < m_variables.size(); ++i)
-		gsl_vector_set(x, i, m_variables[i]);
+	auto x = gsl_vector_alloc(mVariables.size());
+	for (size_t i = 0; i < mVariables.size(); ++i)
+		gsl_vector_set(x, i, mVariables[i]);
 
-	auto ss = gsl_vector_alloc(m_variables.size());
-	for (size_t i = 0; i < m_stepsizes.size(); ++i)
-		gsl_vector_set(ss, i, m_stepsizes[i]);
+	auto ss = gsl_vector_alloc(mStepSizes.size());
+	for (size_t i = 0; i < mStepSizes.size(); ++i)
+		gsl_vector_set(ss, i, mStepSizes[i]);
 
-	auto s = gsl_multimin_fminimizer_alloc(T, m_variables.size());
+	auto s = gsl_multimin_fminimizer_alloc(T, mVariables.size());
 
 	gsl_multimin_fminimizer_set(s, &f, x, ss);
 
@@ -358,7 +357,7 @@ double JiggleFitter::refine()
 			break;
 
 		double size = gsl_multimin_fminimizer_size(s);
-		status = gsl_multimin_test_size(size, 1e-2);
+		status = gsl_multimin_test_size(size, 1e-5);
 
 		if (status == GSL_SUCCESS)
 		{
@@ -367,8 +366,8 @@ double JiggleFitter::refine()
 		}
 	} while (status == GSL_CONTINUE and iter < kMaxIterations);
 
-	for (size_t i = 0; i < m_variables.size(); ++i)
-		m_variables[i] = gsl_vector_get(s->x, i);
+	for (size_t i = 0; i < mVariables.size(); ++i)
+		mVariables[i] = gsl_vector_get(s->x, i);
 
 	transform();
 
@@ -378,8 +377,6 @@ double JiggleFitter::refine()
 	auto result = s->fval;
 
 	gsl_multimin_fminimizer_free(s);
-
-	// m_minimizer->printStats();
 
 	return result;
 }
@@ -577,7 +574,7 @@ double JiggleFitter::refine()
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
 	const std::vector<cif::point> &blob)
 {
-	const auto dots = cif::spherical_dots<7>::instance();
+	const auto dots = cif::spherical_dots<15>::instance();
 
 	// Locate the center of the blob
 	auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(blob);
@@ -601,21 +598,10 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		atomLocations.emplace_back(loc);
 	}
 
-	struct Score
-	{
-		cif::quaternion q;
-		double v;
-		std::vector<cif::point> loc;
-
-		bool operator<(const Score &rhs) const
-		{
-			return v < rhs.v;
-		}
-	};
-
-	std::vector<Score> best;
 	cif::crystal crystal(structure.get_datablock());
-	std::unique_ptr<Minimizer> minimizer(Minimizer::create(crystal, structure, ligand.atoms(), xmap));
+
+	double bestScore = 0;
+	std::vector<cif::point> bestLoc;
 
 	for (size_t i = 0; i < dots.size(); ++i)
 	{
@@ -631,45 +617,25 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 			a.set_location(loc);
 		}
 
-		JiggleFitter f(minimizer.get(), ligand);
+		JiggleFitter f(ligand, xmap);
 		auto jScore = f.refine();
 
 		if (cif::VERBOSE > 1)
 			std::cout << "jigglefit score: " << jScore << " for iteration " << i << "\n";
 
-		if (jScore > 0)
+		if (jScore >= bestScore)
 			continue;
 
-		auto score = minimizer->refine(true);
-		if (cif::VERBOSE > 1)
-			std::cout << "score: " << score << " for iteration " << i << "\n";
-
-		// minimizer->printStats();
-
-		std::vector<cif::point> bestLoc;
+		bestLoc.clear();
 		for (auto a : ligand.atoms())
 			bestLoc.emplace_back(a.get_location());
-
-		best.emplace_back(q, score, std::move(bestLoc));
-
-		std::push_heap(best.begin(), best.end());
+		bestScore = jScore;
 	}
 
-	std::sort_heap(best.begin(), best.end());
+	for (size_t ix = 0; auto l : bestLoc)
+		ligand.atoms()[ix++].set_location(l);
 
-	for (bool first = true; auto [q, v, loc] : best)
-	{
-		if (cif::VERBOSE > 1)
-			std::cout << "q: " << q << ", v: " << v << "\n";
-
-		if (std::exchange(first, false))
-		{
-			for (size_t ix = 0; ix < loc.size(); ++ix)
-				ligand.atoms()[ix].set_location(loc[ix]);
-		}
-	}
-
-	return best.empty() ? 0 : best.front().v;
+	return bestScore;
 }
 
 } // namespace pdb_redo

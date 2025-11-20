@@ -30,9 +30,12 @@
 */
 
 #include "pdb-redo/Minimizer.hpp"
+#include "pdb-redo/Restraints.hpp"
 
+#include <cmath>
 #include <filesystem>
-#include <future>
+#include <format>
+#include <initializer_list>
 #include <iomanip>
 #include <regex>
 #include <stdexcept>
@@ -53,8 +56,7 @@ const double
 
 const double
 	kDefaultMapWeight = 60,
-	kDefaultPlane5ESD = 0.11,
-	kDefaultChiralVolumeESD = 0.2;
+	kDefaultPlane5ESD = 0.11;
 
 // --------------------------------------------------------------------
 
@@ -826,27 +828,25 @@ void Minimizer::printStats()
 {
 	AtomLocationProvider loc(mReferencedAtoms);
 
-	double bondScore = rmsz(loc, mBondRestraints);
-	double angleScore = rmsz(loc, mAngleRestraints);
-	double torsionScore = rmsz(loc, mTorsionRestraints);
-	double chiralityVolumeScore = rmsz(loc, mChiralVolumeRestraints);
-	double planarityScore = rmsz(loc, mPlanarityRestraints);
-	double transpeptideScore = rmsz(loc, mTransPeptideRestraints);
-	double nbcScore = rmsz(loc, mNonBondedContactRestraints);
+	std::cerr << "  Restraint            Score   rmsz\n";
+
+	auto print = [](std::string_view name, std::tuple<double, double> v)
+	{
+		auto [z, sum] = v;
+		std::cerr << std::format("  {:15} {:10.1f} {:6.2f}\n", name, sum, z );
+	};
+
+	print("bond", rmsz(loc, mBondRestraints));
+	print("angle", rmsz(loc, mAngleRestraints));
+	print("torsion", rmsz(loc, mTorsionRestraints));
+	print("chiralityVolume", rmsz(loc, mChiralVolumeRestraints));
+	print("planarity", rmsz(loc, mPlanarityRestraints));
+	print("transpeptide", rmsz(loc, mTransPeptideRestraints));
+	print("nbc", rmsz(loc, mNonBondedContactRestraints));
+
 	double densityScore = mDensityRestraint ? mDensityRestraint->f(loc) : 0;
-
-	std::cerr << "  Bonds:              " << bondScore << '\n'
-			  << "  Angles:             " << angleScore << '\n';
-
-	if (not mTorsionRestraints.empty())
-		std::cerr << "  Torsion:            " << torsionScore << '\n';
-
-	std::cerr << "  Chirality:          " << chiralityVolumeScore << '\n'
-			  << "  Planarity:          " << planarityScore << '\n'
-			  << "  Transpeptide:       " << transpeptideScore << '\n'
-			  << "  Non-Bonded-Contact: " << nbcScore << '\n'
-			  << "  Density:            " << densityScore << '\n';
-}
+	std::cerr << std::format("  {:15} {:10.1f}\n", "density", densityScore );
+}	
 
 double Minimizer::score()
 {
@@ -858,12 +858,7 @@ double Minimizer::score(const AtomLocationProvider &loc)
 {
 	double result = 0;
 	for (auto r : mRestraints)
-	{
-		if (cif::VERBOSE > 2)
-			r->print(loc);
-
 		result += r->f(loc);
-	}
 
 	if (cif::VERBOSE > 3)
 		std::cout << "score: " << result << '\n';

@@ -31,8 +31,6 @@
 
 #pragma once
 
-#include <set>
-
 #include <cif++/point.hpp>
 
 #include <pdb-redo/MapMaker.hpp>
