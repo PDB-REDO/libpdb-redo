@@ -113,8 +113,7 @@ find_package(GSL REQUIRED)
 CPMFindPackage(
 	NAME cifpp
 	GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git
-	VERSION 9.0.5
-)
+	VERSION 9.0.6)
 
 # Create a revision file, containing the current git version info
 include(VersionString)
@@ -198,27 +197,23 @@ install(TARGETS pdb-redo
 install(EXPORT pdb-redoTargets
 	FILE "pdb-redoTargets.cmake"
 	NAMESPACE pdb-redo::
-	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pdb-redo
-)
+	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pdb-redo)
 
 install(
 	DIRECTORY include/pdb-redo
 	DESTINATION ${CMAKE_INSTALL_INCLUDEDIR}
-	COMPONENT Devel
-)
+	COMPONENT Devel)
 
 configure_package_config_file(${PROJECT_SOURCE_DIR}/cmake/pdb-redoConfig.cmake.in
 	${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfig.cmake
 	INSTALL_DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pdb-redo
-	PATH_VARS INCLUDE_INSTALL_DIR LIBRARY_INSTALL_DIR
-)
+	PATH_VARS INCLUDE_INSTALL_DIR LIBRARY_INSTALL_DIR)
 
 install(FILES
 	"${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfig.cmake"
 	"${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfigVersion.cmake"
 	DESTINATION ${CMAKE_INSTALL_LIBDIR}/cmake/pdb-redo
-	COMPONENT Devel
-)
+	COMPONENT Devel)
 
 set_target_properties(pdb-redo PROPERTIES
 	VERSION ${PROJECT_VERSION}
@@ -226,14 +221,12 @@ set_target_properties(pdb-redo PROPERTIES
 	INTERFACE_pdb-redo_MAJOR_VERSION ${PROJECT_VERSION_MAJOR})
 
 set_property(TARGET pdb-redo APPEND PROPERTY
-	COMPATIBLE_INTERFACE_STRING pdb-redo_MAJOR_VERSION
-)
+	COMPATIBLE_INTERFACE_STRING pdb-redo_MAJOR_VERSION)
 
 write_basic_package_version_file(
 	"${CMAKE_CURRENT_BINARY_DIR}/pdb-redo/pdb-redoConfigVersion.cmake"
 	VERSION ${PROJECT_VERSION}
-	COMPATIBILITY AnyNewerVersion
-)
+	COMPATIBILITY AnyNewerVersion)
 
 # pkgconfig support
 set(prefix ${CMAKE_INSTALL_PREFIX})

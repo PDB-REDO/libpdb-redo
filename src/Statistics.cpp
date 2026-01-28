@@ -392,7 +392,7 @@ StatsCollector::StatsCollector(const MapMaker<float> &mm, cif::mm::structure &st
 void StatsCollector::initialize()
 {
 	// easiest way to prime this map:
-	for (auto &asym_id : mStructure.get_datablock()["struct_asym"].rows<std::string>("id"))
+	for (auto asym_id : mStructure.get_datablock()["struct_asym"].rows<std::string>("id"))
 		mRmsScaled[asym_id] = { 1, 1 };
 
 	mMeanDensityFb = mMapMaker.fb().meanDensity();

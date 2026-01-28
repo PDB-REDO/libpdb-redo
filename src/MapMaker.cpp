@@ -26,6 +26,11 @@
 
 #include "pdb-redo/MapMaker.hpp"
 
+#include <clipper/clipper-ccp4.h>
+#include <clipper/clipper-contrib.h>
+
+#include <cif++.hpp>
+#include <system_error>
 #include "cif++/gzio.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"

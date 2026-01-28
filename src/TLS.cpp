@@ -166,7 +166,7 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 	std::vector<tls_residue> selected;
 
 	// Collect the residues from poly seq scheme...
-	for (auto &[chain, seqNr, iCode, name] :
+	for (const auto &[chain, seqNr, iCode, name] :
 		db["pdbx_poly_seq_scheme"].rows<std::string,int,std::string,std::string>("pdb_strand_id", "pdb_seq_num", "pdb_ins_code", "pdb_mon_id"))
 	{
 		if (iCode.length() > 1)
@@ -176,7 +176,7 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 	}
 
 	// ... those from the nonpoly scheme
-	for (auto &[chain, iCode, name] :
+	for (const auto &[chain, iCode, name] :
 		db["pdbx_nonpoly_scheme"].rows<std::string,std::string,std::string>("pdb_strand_id", "pdb_ins_code", "pdb_mon_id"))
 	{
 		if (cif::iequals(name, "HOH") or cif::iequals(name, "H2O"))
@@ -189,7 +189,7 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 	}
 
 	// ... those from the nonpoly scheme
-	for (auto &[chain, iCode, name] :
+	for (const auto &[chain, iCode, name] :
 		db["pdbx_branch_scheme"].rows<std::string,std::string,std::string>("pdb_strand_id", "pdb_ins_code", "pdb_mon_id"))
 	{
 		if (iCode.length() > 1)
