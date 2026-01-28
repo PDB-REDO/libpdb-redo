@@ -24,22 +24,23 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <filesystem>
-#include <fstream>
-
-#include <clipper/clipper-ccp4.h>
-#include <clipper/clipper-contrib.h>
-
-#include <cif++.hpp>
-#include "cif++/gzio.hpp"
-
-#include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/MapMaker.hpp"
+
+#include "cif++/gzio.hpp"
+#include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
 
+#include <cerrno>
+#include <cif++.hpp>
+#include <clipper/clipper-ccp4.h>
+#include <clipper/clipper-contrib.h>
+#include <filesystem>
+#include <fstream>
+#include <system_error>
+
 #ifdef _MSC_VER
-#include <io.h>
-#define mkstemp _mktemp
+# include <io.h>
+# define mkstemp _mktemp
 #endif
 
 namespace fs = std::filesystem;
@@ -130,7 +131,7 @@ struct CCP4MapFileHeader
 	float SKWMAT[9];
 	float SKWTRN[3];
 	uint32_t UNUSED[15];
-	char MAP[4] = {'M', 'A', 'P', ' '};
+	char MAP[4] = { 'M', 'A', 'P', ' ' };
 	uint32_t MACHST = 0x00004144;
 	float ARMS;
 	uint32_t NLABL = 1;
@@ -151,7 +152,7 @@ std::tuple<FTYPE, FTYPE, FTYPE, FTYPE> CalculateMapStatistics(const clipper::Xma
 		for (int g1 = r.min()[1]; g1 <= r.max()[1]; ++g1)
 			for (int g2 = r.min()[2]; g2 <= r.max()[2]; ++g2)
 			{
-				c.set_coord({g0, g1, g2});
+				c.set_coord({ g0, g1, g2 });
 				FTYPE v = xmap[c];
 
 				asum += v;
@@ -178,7 +179,7 @@ void writeCCP4MapFile(std::ostream &os, clipper::Xmap<FTYPE> &xmap, clipper::Gri
 
 	auto &spacegroup = xmap.spacegroup();
 	int spaceGroupNumber = spacegroup.descr().spacegroup_number();
-	int orderFMS[3] = {3, 1, 2};
+	int orderFMS[3] = { 3, 1, 2 };
 
 	switch (spaceGroupNumber)
 	{
@@ -267,7 +268,7 @@ void writeCCP4MapFile(std::ostream &os, clipper::Xmap<FTYPE> &xmap, clipper::Gri
 		for (g[1] = gridFMSMin[1]; g[1] <= gridFMSMax[1]; ++g[1])
 			for (g[0] = gridFMSMin[0]; g[0] <= gridFMSMax[0]; ++g[0])
 			{
-				c.set_coord({g[orderXYZ[0]], g[orderXYZ[1]], g[orderXYZ[2]]});
+				c.set_coord({ g[orderXYZ[0]], g[orderXYZ[1]], g[orderXYZ[2]] });
 				*si++ = static_cast<float>(xmap[c]);
 			}
 
@@ -355,7 +356,7 @@ void Map<FTYPE>::read(const std::filesystem::path &f)
 
 		char tmpFileName[] = "/tmp/map-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
-			throw std::runtime_error(std::string("Could not create temp file for map: ") + strerror(errno));
+			throw std::system_error(std::error_code(errno, std::system_category()), "Could not create temp file for map");
 
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
@@ -410,10 +411,10 @@ template <typename FTYPE>
 Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms) const
 {
 	using clipper::Coord_frac;
-	using clipper::Coord_orth;
-	using clipper::Coord_map;
 	using clipper::Coord_grid;
-	
+	using clipper::Coord_map;
+	using clipper::Coord_orth;
+
 	Map<FTYPE> result(*this);
 
 	for (auto &atom : atoms)
@@ -422,7 +423,7 @@ Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::ve
 		if (std::isnan(radius))
 			radius = cif::atom_type_traits(atom.get_type()).radius(cif::radius_type::calculated);
 
-		if (std::isnan(radius))	// TODO: now what?
+		if (std::isnan(radius)) // TODO: now what?
 		{
 			std::cerr << "Could not define radius for atom " << atom << '\n';
 			continue;
@@ -525,11 +526,11 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 
 		char tmpFileName[] = "/tmp/mtz-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
-			throw std::runtime_error(std::string("Could not create temp file for mtz: ") + strerror(errno));
+			throw std::system_error(std::error_code(errno, std::system_category()), "Could not create temp file for mtz");
 
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
-		
+
 		out << in.rdbuf();
 	}
 
@@ -566,23 +567,23 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	}
 
 	mtzin.import_hkl_data(mFbData,
-		cif::format("/{}/{}/[{}]", "*", "*", cif::join(fbLabels, ",")));
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(fbLabels, ",")));
 	mtzin.import_hkl_data(mFdData,
-		cif::format("/{}/{}/[{}]", "*", "*", cif::join(fdLabels, ",")));
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(fdLabels, ",")));
 	if (hasFAN)
 		mtzin.import_hkl_data(mFaData,
-			cif::format("/{}/{}/[{}]", "*", "*", cif::join(faLabels, ",")));
+			std::format("/{}/{}/[{}]", "*", "*", cif::join(faLabels, ",")));
 	mtzin.import_hkl_data(mFoData,
-		cif::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
 	mtzin.import_hkl_data(mFcData,
-		cif::format("/{}/{}/[{}]", "*", "*", cif::join(fcLabels, ",")));
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(fcLabels, ",")));
 
 	if (hasFREE)
 		mtzin.import_hkl_data(mFreeData,
-			cif::format("/{}/{}/[{}]", "*", "*", "FREE"));
+			std::format("/{}/{}/[{}]", "*", "*", "FREE"));
 
 	mtzin.import_hkl_data(mPhiFomData,
-		cif::format("/{}/{}/[{}]", "*", "*", "PHWT,FOM"));
+		std::format("/{}/{}/[{}]", "*", "*", "PHWT,FOM"));
 
 	mtzin.close_read();
 
@@ -736,8 +737,8 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 	}
 
 	std::string spacegroupDescr = reflns["symmetry"].front()["space_group_name_H-M"].as<std::string>();
-	auto spacegroup = clipper::Spacegroup(clipper::Spgr_descr{spacegroupDescr});
-	mHKLInfo = clipper::HKL_info(spacegroup, cell, clipper::Resolution{hires}, true);
+	auto spacegroup = clipper::Spacegroup(clipper::Spgr_descr{ spacegroupDescr });
+	mHKLInfo = clipper::HKL_info(spacegroup, cell, clipper::Resolution{ hires }, true);
 
 	//	m_crystal = MTZcrystal(m_xname, m_pname, m_cell);
 
@@ -772,7 +773,7 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 
 		cif::tie(h, k, l, flag, F, sigF) = r.get("index_h", "index_k", "index_l", "status", "F_meas_au", "F_meas_sigma_au");
 
-		int ix = mHKLInfo.index_of(HKL{h, k, l});
+		int ix = mHKLInfo.index_of(HKL{ h, k, l });
 
 		if (ix < 0)
 		{
@@ -837,7 +838,8 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 
 		char tmpFileName[] = "/tmp/map-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
-			throw std::runtime_error(std::string("Could not create temp file for map: ") + strerror(errno));
+			throw std::system_error(std::error_code(errno, std::system_category())
+		, "Could not create temp file for map: ");
 
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
@@ -860,9 +862,9 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 
 	mtzin.import_hkl_info(mHKLInfo);
 	mtzin.import_hkl_data(mFoData,
-		cif::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
 	mtzin.import_hkl_data(mFreeData,
-		cif::format("/{}/{}/[{}]", "*", "*", cif::join(freeLabels, ",")));
+		std::format("/{}/{}/[{}]", "*", "*", cif::join(freeLabels, ",")));
 
 	mtzin.close_read();
 
