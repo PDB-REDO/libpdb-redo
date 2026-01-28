@@ -24,17 +24,16 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#include <exception>
-#include <map>
-#include <mutex>
-#include <numeric>
-#include <shared_mutex>
+#include "pdb-redo/Compound.hpp"
 
+#include "cif++/utilities.hpp"
+#include "pdb-redo/Version.hpp"
+
+#include <exception>
 #include <filesystem>
 #include <fstream>
-
-#include "pdb-redo/Compound.hpp"
-#include "cif++/utilities.hpp"
+#include <map>
+#include <mutex>
 
 namespace fs = std::filesystem;
 
@@ -88,11 +87,11 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 		for (auto row : compoundAtoms)
 		{
 			std::string atom_id, symbol, energy;
-			float charge;
+			float charge, x, y, z;
 
-			cif::tie(atom_id, symbol, energy, charge) = row.get("atom_id", "type_symbol", "type_energy", "partial_charge");
+			cif::tie(atom_id, symbol, energy, charge, x, y, z) = row.get("atom_id", "type_symbol", "type_energy", "partial_charge", "x", "y", "z");
 
-			mAtoms.push_back({ atom_id, atom_type_traits(symbol).type(), energy, charge });
+			mAtoms.push_back({ atom_id, atom_type_traits(symbol).type(), energy, charge, x, y, z });
 		}
 		sort(mAtoms.begin(), mAtoms.end(), CompoundAtomLess());
 
@@ -113,7 +112,7 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 
 			if (not aromatic)
 				cif::tie(aromatic) = row.get("aromatic");
-			
+
 			b.aromatic = cif::iequals(aromatic.value_or("N"), "Y");
 
 			// ... and not only once, but even multiple times
@@ -541,7 +540,7 @@ float Compound::chiralVolume(const std::string &centreID) const
 		// When the atoms are in a plane and the result should be nearly zero
 		// the result of 1 + 2 * cosa * cosb * cosc - cosa^2 - cosb^2 - cosc^2 can become negative
 		// and thus give a nan.
-		
+
 		if (auto v = 1 + 2 * cosa * cosb * cosc - (cosa * cosa) - (cosb * cosb) - (cosc * cosc); v > 0)
 			result = (a * b * c * std::sqrt(v)) / 6;
 		else
@@ -783,7 +782,7 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 			result = (a * b * c * std::sqrt(v)) / 6;
 		else
 			result = 0;
-			
+
 		if (cv.volumeSign == negativ)
 			result = -result;
 
@@ -917,7 +916,7 @@ class RestraintCompoundFactoryImpl : public CompoundFactoryImpl
 
 			cf.emplace_back(c->generateCCDCompound());
 		}
-		
+
 		cif::compound_factory::instance().push_dictionary(cf);
 	}
 
@@ -1028,15 +1027,15 @@ struct TypeMapping
 	std::string restr_type, ccd_type;
 };
 const TypeMapping kTypeMap[] = {
-	{"DNA", "DNA linking" },
-	{"furanose", "saccharide" },
-	{"ketopyranose", "saccharide" },
-	{"M-peptide", "peptide linking" },
-	{"NON-POLYMER", "non-polymer" },
-	{"peptide", "peptide linking" },
-	{"P-peptide", "peptide linking" },
-	{"pyranose", "saccharide" },
-	{"RNA", "RNA linking" }
+	{ "DNA", "DNA linking" },
+	{ "furanose", "saccharide" },
+	{ "ketopyranose", "saccharide" },
+	{ "M-peptide", "peptide linking" },
+	{ "NON-POLYMER", "non-polymer" },
+	{ "peptide", "peptide linking" },
+	{ "P-peptide", "peptide linking" },
+	{ "pyranose", "saccharide" },
+	{ "RNA", "RNA linking" }
 };
 
 cif::datablock Compound::generateCCDCompound() const
@@ -1070,7 +1069,7 @@ cif::datablock Compound::generateCCDCompound() const
 	std::optional<std::string> threeLetterCode;
 	if (mID.length() == 3)
 		threeLetterCode = mID;
-	
+
 	bool pdbx_ideal_coordinates_missing_flag = true;
 
 	// --------------------------------------------------------------------
@@ -1086,8 +1085,7 @@ cif::datablock Compound::generateCCDCompound() const
 		cif::tie(atom_id, type_symbol, atom_charge, atom_x, atom_y, atom_z) =
 			row.get("atom_id", "type_symbol", "charge", "x", "y", "z");
 
-		chemCompAtomCCD.emplace({
-			{ "comp_id", mID },
+		chemCompAtomCCD.emplace({ { "comp_id", mID },
 			{ "atom_id", atom_id },
 			{ "alt_atom_id", atom_id },
 			{ "type_symbol", type_symbol },
@@ -1107,8 +1105,7 @@ cif::datablock Compound::generateCCDCompound() const
 			{ "pdbx_model_Cartn_z_ideal", unknown },
 			{ "pdbx_component_atom_id", unknown },
 			{ "pdbx_component_comp_id", unknown },
-			{ "pdbx_ordinal", nr++ }
-		});
+			{ "pdbx_ordinal", nr++ } });
 
 		if (atom_charge)
 			formalCharge += *atom_charge;
@@ -1126,15 +1123,13 @@ cif::datablock Compound::generateCCDCompound() const
 			case delocalizedBond: valueOrder = "DELO"; break;
 		}
 
-		chemCompBondCCD.emplace({
-			{ "comp_id", mID },
+		chemCompBondCCD.emplace({ { "comp_id", mID },
 			{ "atom_id_1", bond.atomID[0] },
 			{ "atom_id_2", bond.atomID[1] },
 			{ "value_order", valueOrder },
 			{ "pdbx_aromatic_flag", bond.aromatic },
-			{ "pdbx_stereo_config", unknown },			
-			{ "pdbx_ordinal", nr++ }
-		});
+			{ "pdbx_stereo_config", unknown },
+			{ "pdbx_ordinal", nr++ } });
 	}
 
 	// --------------------------------------------------------------------
@@ -1191,6 +1186,8 @@ CompoundFactory::CompoundFactory()
 	}
 	else
 		mImpl = new CLibdMonCompoundFactoryImpl(file, nullptr);
+
+	force_link = 42;
 }
 
 CompoundFactory::~CompoundFactory()

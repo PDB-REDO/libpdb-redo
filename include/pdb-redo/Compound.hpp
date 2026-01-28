@@ -67,6 +67,7 @@ struct CompoundAtom
 	cif::atom_type typeSymbol;
 	std::string typeEnergy;
 	float partialCharge;
+	float x, y, z;
 };
 
 // --------------------------------------------------------------------

@@ -1,3 +1,6 @@
+Version 3.4.0
+- Include coordinates in CompoundAtom
+
 Version 3.2.1
 - Fix bondmap to use the correct compound factory
 

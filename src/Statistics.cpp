@@ -565,10 +565,16 @@ std::vector<ResidueStatistics> StatsCollector::collect() const
 
 std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID) const
 {
+	using namespace std::literals;
+
 	residue_list residues;
 	std::vector<cif::mm::atom> atoms;
 
-	for (auto atom_id : mStructure.get_datablock()["atom_site"].find<std::string>(cif::key("label_asym_id") == asymID, "id"))
+	const auto &atom_site = mStructure.get_datablock()["atom_site"];
+
+	for (auto atom_id : atom_site.find<std::string>(
+		cif::key("label_asym_id") == asymID and
+		cif::key("type_symbol") != "H"sv, "id"))
 	{
 		auto &atom = atoms.emplace_back(mStructure.get_atom_by_id(atom_id));
 
