@@ -306,7 +306,7 @@ TEST_CASE("refine_2")
 
 	auto rmsd = std::sqrt(d_sum / atomsRea.size());
 	std::cout << "RMSd: " << rmsd << '\n';
-	CHECK_THAT(rmsd, Catch::Matchers::WithinAbs(0.35, 0.35 / 2));
+	CHECK(rmsd < 0.35);
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
 }
