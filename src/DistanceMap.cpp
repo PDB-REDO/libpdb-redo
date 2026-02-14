@@ -70,7 +70,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 	using namespace cif::literals;
 
 	// First collect the atoms from the datablock
-	std::vector<cif::row_handle> atoms;
+	std::vector<cif::const_row_handle> atoms;
 
 	auto &db = p.get_datablock();
 

@@ -39,7 +39,7 @@ namespace pdb_redo
 class AtomShape
 {
   public:
-	AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow,
+	AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_aniso, float resHigh, float resLow,
 		bool electronScattering, std::optional<float> bFactor = {});
 
 	AtomShape(const cif::mm::atom &atom, float resHigh, float resLow, bool electronScattering, std::optional<float> bFactor = {})

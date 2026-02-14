@@ -26,7 +26,6 @@
 
 #include "pdb-redo/ShapeFitter.hpp"
 
-#include "cif++/validate.hpp"
 #include "pdb-redo/Minimizer.hpp"
 #include "pdb-redo/Restraints.hpp"
 
@@ -40,8 +39,6 @@
 #include <clipper/core/clipper_types.h>
 #include <clipper/core/coords.h>
 #include <cmath>
-#include <filesystem>
-#include <fstream>
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_multimin.h>

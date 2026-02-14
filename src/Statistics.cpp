@@ -458,6 +458,8 @@ void StatsCollector::initialize()
 					  << atom_type_traits(atom.get_type()).symbol() << '\t'
 					  << radius << '\n';
 
+std::clog << std::format("id: {}, ({},{},{}) r: {}\n", atom.id(), atom.get_location().get_x(), atom.get_location().get_y(), atom.get_location().get_z(), radius);
+
 		atomData.emplace_back(atom, radius);
 	}
 

@@ -31,7 +31,7 @@ namespace pdb_redo
 
 // --------------------------------------------------------------------
 
-clipper::Atom toClipper(cif::row_handle atom, cif::row_handle aniso_row)
+clipper::Atom toClipper(cif::const_row_handle atom, cif::const_row_handle aniso_row)
 {
 	const double kPI = cif::kPI;
 
