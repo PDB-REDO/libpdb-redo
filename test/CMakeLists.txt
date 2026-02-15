@@ -11,7 +11,13 @@ if(NOT Catch2_FOUND)
 	FetchContent_MakeAvailable(Catch2)
 endif()
 
-list(APPEND PDB_REDO_tests pdb-redo-unit restr2ccd shape-fitter)
+list(APPEND PDB_REDO_tests
+	pdb-redo-unit
+	restr2ccd
+	shape-fitter
+	distance-map
+)
+
 if(BUILD_MINIMIZER)
 	list(APPEND PDB_REDO_tests rsr)
 endif()
