@@ -153,9 +153,6 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, const cif::crystal
 	{
 		pts.emplace_back(a.get_location(), a.id());
 
-		if (a.id() == "969")
-			std::cout << "letop\n";
-
 		auto p = a.get_location();
 		key_type k{
 			static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
@@ -190,12 +187,13 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, const cif::crystal
 		m_index.emplace(k, entry{ a.id(), cif::sym_op{} });
 	}
 
-	minX -= std::rint(maxDistance / m_grid_spacing);
-	maxX += std::rint(maxDistance / m_grid_spacing);
-	minY -= std::rint(maxDistance / m_grid_spacing);
-	maxY += std::rint(maxDistance / m_grid_spacing);
-	minZ -= std::rint(maxDistance / m_grid_spacing);
-	maxZ += std::rint(maxDistance / m_grid_spacing);
+	int d = std::rint(maxDistance / m_grid_spacing);
+	minX -= d;
+	maxX += d;
+	minY -= d;
+	maxY += d;
+	minZ -= d;
+	maxZ += d;
 
 	auto &sg = m_crystal.get_spacegroup();
 	auto &cell = m_crystal.get_cell();
@@ -245,6 +243,8 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 {
 	std::vector<cif::mm::atom> result;
 
+	auto maxDistanceSq = maxDistance * maxDistance;
+
 	auto p = atom.get_location();
 
 	key_type k{
@@ -280,7 +280,7 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 					auto a = m_structure.get_atom_by_id(id);
 					auto loc = m_crystal.symmetry_copy(a.get_location(), symop);
 
-					if (auto d = cif::distance(p, loc); d <= maxDistance)
+					if (auto d = cif::distance_squared(p, loc); d <= maxDistanceSq)
 					{
 						if (symop)
 							result.emplace_back(a, loc, symop.string());
@@ -324,50 +324,13 @@ TEST_CASE("test_0")
 	DistanceMap dm2(s, 3.5f);
 	std::cout << "dm2 took: " << std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now() - n0) << "\n";
 
-	// std::vector<int> N1(s.atoms().size()), N2(s.atoms().size());
-
-	// {
-	// 	cif::progress_bar p1(s.atoms().size(), "near in 1");
-	// 	for (size_t ix = 0; auto a : s.atoms())
-	// 	{
-	// 		auto n1 = dm1.near(a);
-
-	// 		std::erase_if(n1, [a](const cif::mm::atom &b)
-	// 			{ return cif::distance(a.get_location(), b.get_location()) >= 3.5f; });
-
-	// 		N1[ix++] = n1.size();
-	// 		p1.consumed(1);
-	// 	}
-	// }
-
-	// {
-	// 	cif::progress_bar p2(s.atoms().size(), "near in 2");
-	// 	for (size_t ix = 0; auto a : s.atoms())
-	// 	{
-	// 		auto n2 = dm2.near(a);
-
-	// 		N2[ix++] = n2.size();
-	// 		p2.consumed(1);
-	// 	}
-	// }
-
-	// int N = N1.size();
-	// int M = 0, O = 0;
-	// for (size_t ix = 0; ix < N; ++ix)
-	// {
-	// 	if (N1[ix] > N2[ix])
-	// 		++M;
-	// 	if (N1[ix] < N2[ix])
-	// 		++O;
-	// }
-
 	for (auto a : s.atoms())
 	{
 		auto n1 = dm1.near(a);
 		auto n2 = dm2.near(a);
 
 		std::erase_if(n1, [a](const cif::mm::atom &b)
-			{ return cif::distance(a.get_location(), b.get_location()) >= 3.5f; });
+			{ return cif::distance(a.get_location(), b.get_location()) > 3.5f; });
 		std::ranges::sort(n1, [](auto &a, auto &b)
 			{ return a.id().compare(b.id()) < 0; });
 
@@ -392,6 +355,11 @@ TEST_CASE("test_0")
 		if (oi1.empty() and oi2.empty())
 			continue;
 
+		CHECK(oi1.size() == 0);
+
+		if (oi1.size() == 0)
+			continue;
+
 		std::cout << "For a = " << a.id() << ": " << a << " @ " << a.symmetry() << " d: " << cif::distance(a.get_location(), a.get_location()) << ' ' << a.get_location() << "\n";
 
 		std::cout << "only in n1:\n";
@@ -399,9 +367,9 @@ TEST_CASE("test_0")
 		for (auto ai : oi1)
 			std::cout << ai.id() << ": " << ai << " @ " << ai.symmetry() << " d: " << cif::distance(a.get_location(), ai.get_location()) << ' ' << ai.get_location() << "\n";
 
-		std::cout << "only in n2:\n";
-		for (auto ai : oi2)
-			std::cout << ai.id() << ": " << ai << " @ " << ai.symmetry() << " d: " << cif::distance(a.get_location(), ai.get_location()) << ' ' << ai.get_location() << "\n";
+		// std::cout << "only in n2:\n";
+		// for (auto ai : oi2)
+		// 	std::cout << ai.id() << ": " << ai << " @ " << ai.symmetry() << " d: " << cif::distance(a.get_location(), ai.get_location()) << ' ' << ai.get_location() << "\n";
 	}
 
 	// std::cout << "test: " << N << " less: " << M << " more: "
