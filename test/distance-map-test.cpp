@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <catch2/catch_test_macros.hpp>
 #include <chrono>
+#include <cif++/condition.hpp>
 #include <cif++/model.hpp>
 #include <cif++/point.hpp>
 #include <cif++/symmetry.hpp>
@@ -109,15 +110,20 @@ class DistanceMap
 	cif::crystal m_crystal;
 	float m_grid_spacing;
 
-	using key_type = std::tuple<int, int, int>;
+	struct key_type
+	{
+		int x, y, z;
+
+		constexpr bool operator<=>(const key_type &) const noexcept = default;
+	};
 
 	struct key_type_hash
 	{
 		std::size_t operator()(const key_type &s) const noexcept
 		{
-			auto h0 = std::hash<int>{}(std::get<0>(s));
-			auto h1 = std::hash<int>{}(std::get<1>(s));
-			auto h2 = std::hash<int>{}(std::get<2>(s));
+			auto h0 = std::hash<int>{}(s.x);
+			auto h1 = std::hash<int>{}(s.y);
+			auto h2 = std::hash<int>{}(s.z);
 
 			return h0 ^ (h1 << 1) ^ (h2 << 2);
 		}
@@ -137,101 +143,97 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, const cif::crystal
 	, m_crystal(crystal)
 	, m_grid_spacing(1)
 {
-	std::vector<cif::point> pts;
+	std::vector<std::tuple<cif::point, std::string>> pts;
+
 	pts.reserve(structure.atoms().size());
 
-	for (auto a : structure.atoms())
-		pts.emplace_back(a.get_location());
-
-	auto [center, radius] = cif::smallest_sphere_around_points(pts);
-
-	// radius += maxDistance;
-
-	// auto maxDistanceSq = maxDistance * maxDistance;
-	auto maxAtomDistance = radius + maxDistance + m_grid_spacing;
-	maxAtomDistance *= maxAtomDistance;
-
-	// std::vector<std::tuple<std::string, cif::point, float>> asymSpheres;
-	std::map<std::string, std::vector<cif::point>> asyms;
-	std::map<std::string, std::vector<std::string>> atomIDs;
-
-	cif::progress_bar progress_bar(structure.atoms().size(), "Creating distance map");
+	int minX, maxX, minY, maxY, minZ, maxZ;
 
 	for (auto a : structure.atoms())
 	{
+		pts.emplace_back(a.get_location(), a.id());
+
+		if (a.id() == "969")
+			std::cout << "letop\n";
+
 		auto p = a.get_location();
 		key_type k{
 			static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
 			static_cast<int>(std::rint(p.m_y / m_grid_spacing)),
 			static_cast<int>(std::rint(p.m_z / m_grid_spacing))
 		};
+
+		if (m_index.empty())
+		{
+			minX = maxX = k.x;
+			minY = maxY = k.y;
+			minZ = maxZ = k.z;
+		}
+		else
+		{
+			if (minX > k.x)
+				minX = k.x;
+			else if (maxX < k.x)
+				maxX = k.x;
+
+			if (minY > k.y)
+				minY = k.y;
+			else if (maxY < k.y)
+				maxY = k.y;
+
+			if (minZ > k.z)
+				minZ = k.z;
+			else if (maxZ < k.z)
+				maxZ = k.z;
+		}
+
 		m_index.emplace(k, entry{ a.id(), cif::sym_op{} });
-
-		asyms[a.get_label_asym_id()].emplace_back(p);
-		atomIDs[a.get_label_asym_id()].emplace_back(a.id());
-
-		progress_bar.consumed(1);
 	}
 
-	std::cout << "Number of asyms: " << asyms.size() << "\n";
+	minX -= std::rint(maxDistance / m_grid_spacing);
+	maxX += std::rint(maxDistance / m_grid_spacing);
+	minY -= std::rint(maxDistance / m_grid_spacing);
+	maxY += std::rint(maxDistance / m_grid_spacing);
+	minZ -= std::rint(maxDistance / m_grid_spacing);
+	maxZ += std::rint(maxDistance / m_grid_spacing);
 
-	int N = 0;
-	for (auto &[asym_id, points] : asyms)
+	auto &sg = m_crystal.get_spacegroup();
+	auto &cell = m_crystal.get_cell();
+
+	for (uint8_t i = 1; std::cmp_less(i, sg.size() + 1); ++i)
 	{
-		// auto [asym_center, asym_radius] = cif::smallest_sphere_around_points(points);
-
-		// auto dsq = asym_radius + radius + maxDistance + m_grid_spacing;
-		// dsq *= dsq;
-
-		auto &sg = m_crystal.get_spacegroup();
-		auto &cell = m_crystal.get_cell();
-
-		for (uint8_t i = 1; std::cmp_less(i, sg.size() + 1); ++i)
+		for (uint8_t tx = 1; tx <= 9; ++tx)
 		{
-			for (uint8_t tx = 1; tx <= 9; ++tx)
+			for (uint8_t ty = 1; ty <= 9; ++ty)
 			{
-				for (uint8_t ty = 1; ty <= 9; ++ty)
+				for (uint8_t tz = 1; tz <= 9; ++tz)
 				{
-					for (uint8_t tz = 1; tz <= 9; ++tz)
+					cif::sym_op symop(i, tx, ty, tz);
+
+					if (not symop) // skip the identity symop
+						continue;
+
+					for (auto &[pt, id] : pts)
 					{
-						cif::sym_op symop(i, tx, ty, tz);
+						auto ap = sg(pt, cell, symop);
 
-						// auto p = sg(asym_center, cell, symop);
+						key_type k{
+							static_cast<int>(std::rint(ap.m_x / m_grid_spacing)),
+							static_cast<int>(std::rint(ap.m_y / m_grid_spacing)),
+							static_cast<int>(std::rint(ap.m_z / m_grid_spacing))
+						};
 
-// if (i == 4 and tx == 5 and ty == 5 and tz == 4 and asym_id == "C")
-// 						std::cout << "letop\n";
-
-						// if (cif::distance_squared(p, center) > dsq)
-						// 	continue;
-
-						++N;
-						auto &ids = atomIDs[asym_id];
-
-						for (size_t ix = 0; ix < points.size(); ++ix)
+						if (k.x >= minX and k.x <= maxX and
+							k.y >= minY and k.y <= maxY and
+							k.y >= minZ and k.z <= maxZ)
 						{
-							auto ap = sg(points[ix], cell, symop);
-
-// if (i == 4 and tx == 5 and ty == 5 and tz == 4 and asym_id == "C" and ids[ix] == "1132")
-// 						std::cout << "letop\n";
-
-
-							if (cif::distance_squared(ap, center) <= maxAtomDistance)
-							{
-								key_type k{
-									static_cast<int>(std::rint(ap.m_x / m_grid_spacing)),
-									static_cast<int>(std::rint(ap.m_y / m_grid_spacing)),
-									static_cast<int>(std::rint(ap.m_z / m_grid_spacing))
-								};
-								m_index.emplace(k, entry{ ids[ix], symop });
-							}
+							m_index.emplace(k, entry{ id, symop });
 						}
 					}
 				}
 			}
 		}
 	}
-
-	std::cout << "N: " << N << "\n";
 }
 
 float DistanceMap::operator()(const std::string &a, const std::string &b) const
@@ -245,18 +247,29 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 	auto p = atom.get_location();
 
-	for (float x = p.m_x - maxDistance; x <= p.m_x + maxDistance; x += m_grid_spacing)
-	{
-		for (float y = p.m_y - maxDistance; y <= p.m_y + maxDistance; y += m_grid_spacing)
-		{
-			for (float z = p.m_z - maxDistance; z <= p.m_z + maxDistance; z += m_grid_spacing)
-			{
-				key_type k{
-					static_cast<int>(std::rint(x / m_grid_spacing)),
-					static_cast<int>(std::rint(y / m_grid_spacing)),
-					static_cast<int>(std::rint(z / m_grid_spacing))
-				};
+	key_type k{
+		static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
+		static_cast<int>(std::rint(p.m_y / m_grid_spacing)),
+		static_cast<int>(std::rint(p.m_z / m_grid_spacing))
+	};
 
+	key_type k1 = k, k2 = k;
+
+	int d = static_cast<int>(maxDistance / m_grid_spacing) + 1;
+	k1.x -= d;
+	k1.y -= d;
+	k1.z -= d;
+
+	k2.x += d;
+	k2.y += d;
+	k2.z += d;
+
+	for (k.x = k1.x; k.x <= k2.x; ++k.x)
+	{
+		for (k.y = k1.y; k.y <= k2.y; ++k.y)
+		{
+			for (k.z = k1.z; k.z <= k2.z; ++k.z)
+			{
 				auto r = m_index.equal_range(k);
 				for (auto &[k, e] : std::ranges::subrange(r.first, r.second))
 				{
@@ -295,8 +308,8 @@ TEST_CASE("test_0")
 {
 	std::cout << "reading file..." << std::flush;
 	// cif::file f(gTestDir / "8p4v_final.cif");
-	cif::file f(gTestDir / "4hea_final.cif");
-	// cif::file f(gTestDir / ".." / "examples" / "1cbs.cif.gz");
+	// cif::file f(gTestDir / "4hea_final.cif");
+	cif::file f(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	std::cout << " loading dictionary..." << std::flush;
 	f.front().load_dictionary("mmcif_pdbx.dic");
 	std::cout << " building structure..." << std::flush;
@@ -305,80 +318,93 @@ TEST_CASE("test_0")
 
 	auto n1 = std::chrono::system_clock::now();
 	pdb_redo::DistanceMap dm1(s, 3.5f);
-
 	std::cout << "dm1 took: " << std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now() - n1) << "\n";
 
+	auto n0 = std::chrono::system_clock::now();
 	DistanceMap dm2(s, 3.5f);
+	std::cout << "dm2 took: " << std::chrono::floor<std::chrono::seconds>(std::chrono::system_clock::now() - n0) << "\n";
 
-	std::vector<int> N1(s.atoms().size()), N2(s.atoms().size());
+	// std::vector<int> N1(s.atoms().size()), N2(s.atoms().size());
 
-	{
-		cif::progress_bar p1(s.atoms().size(), "near in 1");
-		for (size_t ix = 0; auto a : s.atoms())
-		{
-			auto n1 = dm1.near(a);
-	
-			std::erase_if(n1, [a](const cif::mm::atom &b)
-				{ return cif::distance(a.get_location(), b.get_location()) >= 3.5f; });
-	
-			N1[ix++] = n1.size();
-			p1.consumed(1);
-		}
-	}
+	// {
+	// 	cif::progress_bar p1(s.atoms().size(), "near in 1");
+	// 	for (size_t ix = 0; auto a : s.atoms())
+	// 	{
+	// 		auto n1 = dm1.near(a);
 
-	{
-		cif::progress_bar p2(s.atoms().size(), "near in 2");
-		for (size_t ix = 0; auto a : s.atoms())
-		{
-			auto n2 = dm2.near(a);
-	
-			N2[ix++] = n2.size();
-			p2.consumed(1);
-		}
-	}
+	// 		std::erase_if(n1, [a](const cif::mm::atom &b)
+	// 			{ return cif::distance(a.get_location(), b.get_location()) >= 3.5f; });
 
-
-	int N = N1.size();
-	int M = 0, O = 0;
-	for (size_t ix = 0; ix < N; ++ix)
-	{
-		if (N1[ix] > N2[ix])
-			++M;
-		if (N1[ix] < N2[ix])
-			++O;
-	}
-
-	// 	auto n2 = dm2.near(a);
-
-	// 	std::erase_if(n1, [a](const cif::mm::atom &b)
-	// 		{ return cif::distance(a.get_location(), b.get_location()) >= 3.5f; });
-	// 	// std::erase_if(n2, [](const cif::mm::atom &a)
-	// 	// 	{ return a.is_symmetry_copy(); });
-
-	// 	++N;
-		
-	// 	if (n1.size() > n2.size())
-	// 		++M;
-
-	// 	if (n2.size() < n2.size())
-	// 		++O;
-
-	// 	// CHECK(n1.size() == n2.size());
-
-	// 	// if (n1.size() == n2.size())
-	// 	// 	continue;
-
-	// 	// std::cout << "a: " << a.id() << ": " << a << ' ' << a.get_location() << "\n";
-
-	// 	// std::cout << "n1:\n";
-	// 	// for (auto ai : n1)
-	// 	// 	std::cout << ai.id() << ": " << ai << " @ " << ai.symmetry() << " d: " << cif::distance(a.get_location(), ai.get_location()) << ' ' << ai.get_location() << "\n";
-	// 	// std::cout << "n2:\n";
-	// 	// for (auto ai : n2)
-	// 	// 	std::cout << ai.id() << ": " << ai << " @ " << ai.symmetry() << " d: " << cif::distance(a.get_location(), ai.get_location()) << ' ' << ai.get_location() << "\n";
+	// 		N1[ix++] = n1.size();
+	// 		p1.consumed(1);
+	// 	}
 	// }
+
+	// {
+	// 	cif::progress_bar p2(s.atoms().size(), "near in 2");
+	// 	for (size_t ix = 0; auto a : s.atoms())
+	// 	{
+	// 		auto n2 = dm2.near(a);
+
+	// 		N2[ix++] = n2.size();
+	// 		p2.consumed(1);
+	// 	}
+	// }
+
+	// int N = N1.size();
+	// int M = 0, O = 0;
+	// for (size_t ix = 0; ix < N; ++ix)
+	// {
+	// 	if (N1[ix] > N2[ix])
+	// 		++M;
+	// 	if (N1[ix] < N2[ix])
+	// 		++O;
+	// }
+
+	for (auto a : s.atoms())
+	{
+		auto n1 = dm1.near(a);
+		auto n2 = dm2.near(a);
+
+		std::erase_if(n1, [a](const cif::mm::atom &b)
+			{ return cif::distance(a.get_location(), b.get_location()) >= 3.5f; });
+		std::ranges::sort(n1, [](auto &a, auto &b)
+			{ return a.id().compare(b.id()) < 0; });
+
+		std::vector<cif::mm::atom> oi1, oi2;
+
+		auto b1 = n1.begin(), b2 = n2.begin();
+		while (b1 != n1.end() and b2 != n2.end())
+		{
+			if (*b1 == *b2)
+				++b1, ++b2;
+			else if (b1->id().compare(b2->id()) < 0)
+				oi1.emplace_back(*b1++);
+			else
+				oi2.emplace_back(*b1++);
+		}
+
+		while (b1 != n1.end())
+			oi1.emplace_back(*b1++);
+		while (b2 != n2.end())
+			oi2.emplace_back(*b2++);
+
+		if (oi1.empty() and oi2.empty())
+			continue;
+
+		std::cout << "For a = " << a.id() << ": " << a << " @ " << a.symmetry() << " d: " << cif::distance(a.get_location(), a.get_location()) << ' ' << a.get_location() << "\n";
+
+		std::cout << "only in n1:\n";
+
+		for (auto ai : oi1)
+			std::cout << ai.id() << ": " << ai << " @ " << ai.symmetry() << " d: " << cif::distance(a.get_location(), ai.get_location()) << ' ' << ai.get_location() << "\n";
+
+		std::cout << "only in n2:\n";
+		for (auto ai : oi2)
+			std::cout << ai.id() << ": " << ai << " @ " << ai.symmetry() << " d: " << cif::distance(a.get_location(), ai.get_location()) << ' ' << ai.get_location() << "\n";
+	}
 
 	// std::cout << "test: " << N << " less: " << M << " more: "
 	// std::println(std::cout, "test: {}, less: {}, more: {}\n", N, M, O);
-	std::cout << std::format("test: {}, less: {}, more: {}\n", N, M, O);
+	// std::cout << std::format("test: {}, less: {}, more: {}\n", N, M, O);
 }
