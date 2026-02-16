@@ -28,9 +28,6 @@
 
 #include <cif++/utilities.hpp>
 
-#include <atomic>
-#include <mutex>
-
 namespace pdb_redo
 {
 
@@ -38,7 +35,7 @@ using cif::point;
 
 // --------------------------------------------------------------------
 
-std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<std::size_t,point>> &atoms)
+std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<std::size_t, point>> &atoms)
 {
 	std::vector<point> pts;
 	for (const auto &[ix, pt] : atoms)
@@ -49,7 +46,7 @@ std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<s
 
 	for (auto &pt : pts)
 	{
-		float d = static_cast<float>(distance(pt, center));
+		auto d = static_cast<float>(distance(pt, center));
 		if (radius < d)
 			radius = d;
 	}
@@ -77,7 +74,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 	for (auto a : p.atoms())
 		atoms.push_back(a.get_row());
 
-	dim = uint32_t(atoms.size());
+	dim = static_cast<uint32_t>(atoms.size());
 
 	std::vector<point> locations(dim);
 
@@ -116,18 +113,18 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 
 	DistMap dist;
 
-	std::vector<std::tuple<cif::point, float, std::vector<std::tuple<std::size_t,point>>>> residues;
+	std::vector<std::tuple<cif::point, float, std::vector<std::tuple<std::size_t, point>>>> residues;
 
 	// loop over poly_seq_scheme
 	for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].rows<std::string, int>("asym_id", "seq_id"))
 	{
-		std::vector<std::tuple<std::size_t,point>> rAtoms;
+		std::vector<std::tuple<std::size_t, point>> rAtoms;
 		for (std::size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asymID and atoms[i]["label_seq_id"] == seqID)
 				rAtoms.emplace_back(i, locations[i]);
 		}
-		
+
 		AddDistancesForAtoms(rAtoms, rAtoms, dist);
 
 		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
@@ -143,7 +140,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 			if (atoms[i]["label_entity_id"] == *water_entity_id)
 			{
 				auto pt = locations[i];
-				residues.emplace_back(pt, 0.f, std::vector<std::tuple<std::size_t,point>>{ { i, pt } });
+				residues.emplace_back(pt, 0.f, std::vector<std::tuple<std::size_t, point>>{ { i, pt } });
 			}
 		}
 	}
@@ -154,13 +151,13 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 		if (water_entity_id.has_value() and entityID == *water_entity_id)
 			continue;
 
-		std::vector<std::tuple<std::size_t,point>> rAtoms;
+		std::vector<std::tuple<std::size_t, point>> rAtoms;
 		for (std::size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asymID)
 				rAtoms.emplace_back(i, locations[i]);
 		}
-		
+
 		AddDistancesForAtoms(rAtoms, rAtoms, dist);
 
 		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
@@ -170,13 +167,13 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 	// loop over pdbx_branch_scheme
 	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].rows<std::string, std::string>("asym_id", "num"))
 	{
-		std::vector<std::tuple<std::size_t,point>> rAtoms;
+		std::vector<std::tuple<std::size_t, point>> rAtoms;
 		for (std::size_t i = 0; i < dim; ++i)
 		{
 			if (atoms[i]["label_asym_id"] == asym_id and atoms[i]["auth_seq_id"] == pdb_seq_num)
 				rAtoms.emplace_back(i, locations[i]);
 		}
-		
+
 		AddDistancesForAtoms(rAtoms, rAtoms, dist);
 
 		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
@@ -241,7 +238,7 @@ DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crysta
 
 // --------------------------------------------------------------------
 
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,point>> &a, const std::vector<std::tuple<std::size_t,point>> &b, DistMap &dm)
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t, point>> &a, const std::vector<std::tuple<std::size_t, point>> &b, DistMap &dm)
 {
 	for (const auto &[ixa, loc_a] : a)
 	{
@@ -263,7 +260,7 @@ void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,
 	}
 }
 
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,point>> &a, const std::vector<std::tuple<std::size_t,point>> &b,
+void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t, point>> &a, const std::vector<std::tuple<std::size_t, point>> &b,
 	DistMap &dm, cif::sym_op symop)
 {
 	for (const auto &[ixa, loc_a] : a)

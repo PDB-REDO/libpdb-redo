@@ -52,10 +52,10 @@ class AtomLocationProvider
 		: mAtoms(atoms)
 	{
 	}
-	virtual ~AtomLocationProvider() {}
+	virtual ~AtomLocationProvider() = default;
 
 	virtual DPoint operator[](AtomRef atomID) const;
-	virtual std::string atom(AtomRef atomID) const;
+	[[nodiscard]] virtual std::string atom(AtomRef atomID) const;
 
   protected:
 	std::vector<cif::mm::atom> &mAtoms;
@@ -69,8 +69,8 @@ class DFCollector
 	DFCollector(const DFCollector &) = delete;
 	DFCollector &operator=(const DFCollector &) = delete;
 
-	DFCollector() {}
-	virtual ~DFCollector() {}
+	DFCollector() = default;
+	virtual ~DFCollector() = default;
 
 	virtual void add(AtomRef atom, double dx, double dy, double dz) = 0;
 	void add(AtomRef atom, DPoint &&d)
@@ -84,12 +84,12 @@ class DFCollector
 class Minimizer
 {
   public:
-	typedef clipper::Xmap<float> XMap;
+	using XMap = clipper::Xmap<float>;
 
 	Minimizer(const Minimizer &) = delete;
 	Minimizer &operator=(const Minimizer &) = delete;
 
-	virtual ~Minimizer() {}
+	virtual ~Minimizer() = default;
 
 	// factory method:
 	static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last, const XMap &xMap);
@@ -114,7 +114,7 @@ class Minimizer
 	void filterTorsionRestraints(F &&cb)
 	{
 		auto e = std::remove_if(mTorsionRestraints.begin(), mTorsionRestraints.end(),
-			[this, cb = std::move(cb)](TorsionRestraint &r)
+			[this, cb = std::forward<F>(cb)](TorsionRestraint &r)
 			{
 				return r.mA >= mAtoms.size() or r.mB >= mAtoms.size() or r.mC >= mAtoms.size() or r.mD >= mAtoms.size() or
 					cb(mAtoms[r.mA], mAtoms[r.mB], mAtoms[r.mC], mAtoms[r.mD]);
@@ -139,7 +139,7 @@ class Minimizer
 
 	virtual double refine(bool storeAtoms) = 0;
 	double score();
-	virtual std::vector<std::pair<std::string, cif::point>> getAtoms() const = 0;
+	[[nodiscard]] virtual std::vector<std::pair<std::string, cif::point>> getAtoms() const = 0;
 	virtual void storeAtomLocations() = 0;
 
   protected:
@@ -172,7 +172,7 @@ class Minimizer
 		const std::string &atom_id_a, const std::string &atom_id_b);
 
 	template <typename R>
-	std::tuple<double, double> rmsz(const AtomLocationProvider &atoms, const std::vector<R> &a) const
+	[[nodiscard]] std::tuple<double, double> rmsz(const AtomLocationProvider &atoms, const std::vector<R> &a) const
 	{
 		double z = 0, sum = 0;
 

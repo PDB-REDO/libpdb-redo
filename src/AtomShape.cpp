@@ -26,6 +26,7 @@
 
 #include "pdb-redo/AtomShape.hpp"
 
+#include <algorithm>
 #include <cif++.hpp>
 
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
@@ -215,14 +216,14 @@ class DensityIntegration
 
 	static DensityIntegration &instance(float resolutionLow, float resolutionHigh);
 
-	double integrateRadius(float perc, float occupancy, double yi, const std::vector<double> &fst) const;
-	double integrateDensity(double r, int ks, const std::vector<double> &fst) const;
+	[[nodiscard]] double integrateRadius(float perc, float occupancy, double yi, const std::vector<double> &fst) const;
+	[[nodiscard]] double integrateDensity(double r, int ks, const std::vector<double> &fst) const;
 
-	float a() const { return mA; }
-	float b() const { return mB; }
-	const std::vector<double> &st() const { return mST; }
-	const std::vector<double> &sts() const { return mSTS; }
-	const std::vector<double> &wa() const { return mWA; }
+	[[nodiscard]] float a() const { return mA; }
+	[[nodiscard]] float b() const { return mB; }
+	[[nodiscard]] const std::vector<double> &st() const { return mST; }
+	[[nodiscard]] const std::vector<double> &sts() const { return mSTS; }
+	[[nodiscard]] const std::vector<double> &wa() const { return mWA; }
 
   private:
 	float mA, mB;
@@ -237,7 +238,7 @@ class DensityIntegration
 	double findMinGlobal(DensityIntegration::CallbackParams &params) const;
 	static double integrateDensityCallback(const gsl_vector *v, void *param)
 	{
-		CallbackParams *params = reinterpret_cast<CallbackParams *>(param);
+		auto *params = reinterpret_cast<CallbackParams *>(param);
 		return params->self->integrateDensity(gsl_vector_get(v, 0), -1, params->fst);
 	}
 
@@ -251,11 +252,11 @@ std::list<DensityIntegration> DensityIntegration::sInstances;
 DensityIntegration &DensityIntegration::instance(float resolutionLow, float resolutionHigh)
 {
 	static std::mutex m;
-	std::lock_guard lock(m);
+	std::scoped_lock lock(m);
 
 	float a = 0.5f / resolutionLow, b = 0.5f / resolutionHigh;
 
-	auto i = find_if(sInstances.begin(), sInstances.end(), [=](const DensityIntegration &di)
+	auto i = std::ranges::find_if(sInstances, [=](const DensityIntegration &di)
 		{ return di.mA == a and di.mB == b; });
 
 	if (i == sInstances.end())
@@ -315,7 +316,7 @@ DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh
 		mST[j - 1] = xm + xh * z;
 	}
 
-	transform(mST.begin(), mST.end(), mSTS.begin(), [](double s)
+	std::ranges::transform(mST, mSTS.begin(), [](double s)
 		{ return s * s; });
 }
 
@@ -349,7 +350,7 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 double DensityIntegration::findMinGlobal(DensityIntegration::CallbackParams &params) const
 {
 	const gsl_multimin_fminimizer_type *T = gsl_multimin_fminimizer_nmsimplex2;
-	gsl_multimin_fminimizer *s = NULL;
+	gsl_multimin_fminimizer *s = nullptr;
 	gsl_vector *ss, *x;
 	gsl_multimin_function minex_func;
 
@@ -516,16 +517,16 @@ struct AtomShapeImpl
 	std::vector<double> mFst;
 	float mAW[6], mBW[6];
 
-	virtual float integratedRadius(float perc) const
+	[[nodiscard]] virtual float integratedRadius(float perc) const
 	{
-		float result = static_cast<float>(mIntegrator.integrateRadius(perc, mOccupancy, mYi, mFst));
+		auto result = static_cast<float>(mIntegrator.integrateRadius(perc, mOccupancy, mYi, mFst));
 
 		assert(not std::isnan(result));
 
 		return result;
 	}
 
-	virtual float calculatedDensity(float r) const
+	[[nodiscard]] virtual float calculatedDensity(float r) const
 	{
 		float rsq = r * r;
 		return mOccupancy *
@@ -534,7 +535,7 @@ struct AtomShapeImpl
 				   mAW[4] * std::exp(mBW[4] * rsq) + mAW[5] * std::exp(mBW[5] * rsq));
 	}
 
-	virtual float calculatedDensity(point p) const
+	[[nodiscard]] virtual float calculatedDensity(point p) const
 	{
 		return calculatedDensity(distance(mLocation, p));
 	}
@@ -549,8 +550,8 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 		auto D =
 			mElectronScattering ? atom_type_traits(symbol).elsf() : atom_type_traits(symbol).wksf(charge);
 
-		const float fourpi2 = static_cast<float>(4 * kPI * kPI);
-		const float pi3 = static_cast<float>(kPI * kPI * kPI);
+		const auto fourpi2 = static_cast<float>(4 * kPI * kPI);
+		const auto pi3 = static_cast<float>(kPI * kPI * kPI);
 
 		for (int i = 0; i < 6; ++i)
 		{
@@ -570,7 +571,7 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 		}
 	}
 
-	float calculatedDensity(point p) const override
+	[[nodiscard]] float calculatedDensity(point p) const override
 	{
 		const point l = p - mLocation;
 		const clipper::Coord_orth dxyz(l.m_x, l.m_y, l.m_z);

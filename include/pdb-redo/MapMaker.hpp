@@ -44,8 +44,8 @@ template <typename FTYPE = float>
 class Map
 {
   public:
-	typedef FTYPE ftype;
-	typedef typename clipper::Xmap<ftype> Xmap;
+	using ftype = FTYPE;
+	using Xmap = typename clipper::Xmap<ftype>;
 
 	Map();
 	Map(const Map &rhs) = default;
@@ -55,13 +55,13 @@ class Map
 
 	void calculateStats();
 
-	double rmsDensity() const { return mRMSDensity; }
-	double meanDensity() const { return mMeanDensity; }
+	[[nodiscard]] double rmsDensity() const { return mRMSDensity; }
+	[[nodiscard]] double meanDensity() const { return mMeanDensity; }
 
 	operator Xmap &() { return mMap; }
 	operator const Xmap &() const { return mMap; }
 	Xmap &get() { return mMap; }
-	const Xmap &get() const { return mMap; }
+	[[nodiscard]] const Xmap &get() const { return mMap; }
 
 	// These routines work with CCP4 map files
 	void read(const std::filesystem::path &f);
@@ -71,14 +71,14 @@ class Map
 	void write_masked(const std::filesystem::path &f,
 		clipper::Grid_range range);
 
-	clipper::Spacegroup spacegroup() const { return mMap.spacegroup(); }
-	clipper::Cell cell() const { return mMap.cell(); }
+	[[nodiscard]] clipper::Spacegroup spacegroup() const { return mMap.spacegroup(); }
+	[[nodiscard]] clipper::Cell cell() const { return mMap.cell(); }
 
 	/// \brief Create a masked map blotting out the density for all \a atom_ids in the structure contained in \a db
-	Map masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const;
+	[[nodiscard]] Map masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const;
 
 	/// \brief Return the z-weighted density sum for the atoms \a atom_ids in the structure contained in \a db
-	float z_weighted_density(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const;
+	[[nodiscard]] float z_weighted_density(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const;
 
   private:
 	Xmap mMap;
@@ -96,8 +96,8 @@ template <typename FTYPE = float>
 class MapMaker
 {
   public:
-	typedef Map<FTYPE> MapType;
-	typedef typename MapType::Xmap Xmap;
+	using MapType = Map<FTYPE>;
+	using Xmap = typename MapType::Xmap;
 
 	enum AnisoScalingFlag
 	{
@@ -146,16 +146,16 @@ class MapMaker
 	MapType &fd() { return mFd; }
 	MapType &fa() { return mFa; }
 
-	const MapType &fb() const { return mFb; }
-	const MapType &fd() const { return mFd; }
-	const MapType &fa() const { return mFa; }
+	[[nodiscard]] const MapType &fb() const { return mFb; }
+	[[nodiscard]] const MapType &fd() const { return mFd; }
+	[[nodiscard]] const MapType &fa() const { return mFa; }
 
-	double resLow() const { return mResLow; }
-	double resHigh() const { return mResHigh; }
+	[[nodiscard]] double resLow() const { return mResLow; }
+	[[nodiscard]] double resHigh() const { return mResHigh; }
 
-	const clipper::Spacegroup &spacegroup() const { return mHKLInfo.spacegroup(); }
-	const clipper::Cell &cell() const { return mHKLInfo.cell(); }
-	const clipper::Grid_sampling &gridSampling() const { return mGrid; }
+	[[nodiscard]] const clipper::Spacegroup &spacegroup() const { return mHKLInfo.spacegroup(); }
+	[[nodiscard]] const clipper::Cell &cell() const { return mHKLInfo.cell(); }
+	[[nodiscard]] const clipper::Grid_sampling &gridSampling() const { return mGrid; }
 
   private:
 	void loadFoFreeFromReflectionsFile(const std::filesystem::path &hklin);

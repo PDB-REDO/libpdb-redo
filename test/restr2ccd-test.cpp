@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2024 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -26,28 +26,23 @@
 
 #define CATCH_CONFIG_RUNNER
 
+#include <pdb-redo/Compound.hpp>
+
 #include <catch2/catch_all.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-
-#include <stdexcept>
-#include <filesystem>
-
 #include <cif++.hpp>
-
-#include "pdb-redo/AtomShape.hpp"
-#include "pdb-redo/MapMaker.hpp"
-#include "pdb-redo/Statistics.hpp"
-#include "pdb-redo/DistanceMap.hpp"
-#include "pdb-redo/Minimizer.hpp"
+#include <filesystem>
 
 namespace fs = std::filesystem;
 
 // --------------------------------------------------------------------
 
-std::filesystem::path gTestDir = std::filesystem::current_path();
+std::filesystem::path gTestDir;
 
 int main(int argc, char *argv[])
 {
+	gTestDir = std::filesystem::current_path();
+
 	cif::VERBOSE = 1;
 
 	Catch::Session session; // There must be exactly one instance
@@ -81,7 +76,6 @@ int main(int argc, char *argv[])
 
 // --------------------------------------------------------------------
 
-
 TEST_CASE("een")
 {
 	auto &cf = pdb_redo::CompoundFactory::instance();
@@ -92,7 +86,7 @@ TEST_CASE("een")
 
 		if (not fn.ends_with(".cif"))
 			continue;
-		
+
 		auto comp_id = i->path().filename().stem().string();
 
 		cf.pushDictionary(i->path());
@@ -106,7 +100,7 @@ TEST_CASE("een")
 
 		REQUIRE(ccompound != nullptr);
 		CHECK(ccompound->id() == comp_id);
-		
+
 		cf.popDictionary();
 	}
 }

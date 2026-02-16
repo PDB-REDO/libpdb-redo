@@ -156,10 +156,8 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 					}
 				}
 
-				result.erase(
-					std::remove_if(result.begin(), result.end(), [x, y, min_z, max_z](const clipper::Coord_grid &p)
-						{ return p[0] == x and p[1] == y and p[2] > min_z and p[2] < max_z; }),
-					result.end());
+				std::erase_if(result, [x, y, min_z, max_z](const clipper::Coord_grid &p)
+						{ return p[0] == x and p[1] == y and p[2] > min_z and p[2] < max_z; });
 			}
 		}
 
@@ -184,10 +182,8 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 					}
 				}
 
-				result.erase(
-					std::remove_if(result.begin(), result.end(), [x, z, min_y, max_y](const clipper::Coord_grid &p)
-						{ return p[0] == x and p[2] == z and p[1] > min_y and p[1] < max_y; }),
-					result.end());
+				std::erase_if(result, [x, z, min_y, max_y](const clipper::Coord_grid &p)
+						{ return p[0] == x and p[2] == z and p[1] > min_y and p[1] < max_y; });
 			}
 		}
 
@@ -212,10 +208,8 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 					}
 				}
 
-				result.erase(
-					std::remove_if(result.begin(), result.end(), [y, z, min_x, max_x](const clipper::Coord_grid &p)
-						{ return p[1] == y and p[2] == z and p[0] > min_x and p[0] < max_x; }),
-					result.end());
+				std::erase_if(result, [y, z, min_x, max_x](const clipper::Coord_grid &p)
+						{ return p[1] == y and p[2] == z and p[0] > min_x and p[0] < max_x; });
 			}
 		}
 	}
@@ -246,7 +240,7 @@ class JiggleFitter
 
 	static double F(const gsl_vector *v, void *params)
 	{
-		JiggleFitter *self = reinterpret_cast<JiggleFitter *>(params);
+		auto *self = reinterpret_cast<JiggleFitter *>(params);
 		return self->F(v);
 	}
 
@@ -276,7 +270,7 @@ JiggleFitter::JiggleFitter(cif::mm::residue &res, clipper::Xmap<float> &xmap, fl
 	std::vector<std::pair<pdb_redo::AtomRef, double>> densityAtoms;
 	densityAtoms.reserve(mAtoms.size());
 
-	std::transform(mAtoms.begin(), mAtoms.end(), std::back_inserter(densityAtoms),
+	std::ranges::transform(mAtoms, std::back_inserter(densityAtoms),
 		[&densityAtoms](const cif::mm::atom &a)
 		{
 			double z = static_cast<int>(a.get_type());
@@ -290,7 +284,7 @@ JiggleFitter::JiggleFitter(cif::mm::residue &res, clipper::Xmap<float> &xmap, fl
 			return std::make_pair(densityAtoms.size(), z * weight * occupancy);
 		});
 
-	mDensityDestraint.reset(new DensityRestraint(std::move(densityAtoms), xmap, mapWeight));
+	mDensityDestraint = std::make_unique<DensityRestraint>(std::move(densityAtoms), xmap, mapWeight);
 
 	// This is where to set step sizes that are used during the rigid body fit
 	mVariables = { 0, 0, 0, 0, 0 };
@@ -300,7 +294,8 @@ JiggleFitter::JiggleFitter(cif::mm::residue &res, clipper::Xmap<float> &xmap, fl
 void JiggleFitter::transform()
 {
 	// get the variables assigned
-	const double alpha = mVariables[0], beta = mVariables[1], x = mVariables[2], y = mVariables[3], z = mVariables[4];
+	// NOLINTNEXTLINE(bugprone-narrowing-conversions)
+	const float alpha = mVariables[0], beta = mVariables[1], x = mVariables[2], y = mVariables[3], z = mVariables[4];
 
 	// rotations
 	auto q0 = cif::construct_from_angle_axis(alpha, { 1, 0, 0 }); // construct quaternion from float angle, point axis
@@ -417,7 +412,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		auto axis = cif::cross_product(dots[0], dots[i]);
 		auto angle = cif::angle(dots[0], {}, dots[i]);
 
-		auto q = cif::construct_from_angle_axis(angle, axis);
+		auto q = cif::construct_from_angle_axis(angle, axis); // NOLINT(bugprone-narrowing-conversions)
 
 		for (auto li = atomLocations.begin(); auto a : ligand.atoms())
 		{

@@ -123,7 +123,7 @@ enum CCP4MapFileMode : uint32_t
 struct CCP4MapFileHeader
 {
 	uint32_t NC, NR, NS;
-	CCP4MapFileMode MODE;
+	CCP4MapFileMode MODE{ AS_REALS };
 	int32_t NCSTART, NRSTART, NSSTART;
 	uint32_t NX, NY, NZ;
 	float cellLengths[3];
@@ -170,8 +170,8 @@ std::tuple<FTYPE, FTYPE, FTYPE, FTYPE> CalculateMapStatistics(const clipper::Xma
 				++n;
 			}
 
-	FTYPE mean = static_cast<FTYPE>(asum / n);
-	FTYPE rmsd = static_cast<FTYPE>(std::sqrt((asum2 / n) - (mean * mean)));
+	auto mean = static_cast<FTYPE>(asum / n);
+	auto rmsd = static_cast<FTYPE>(std::sqrt((asum2 / n) - (mean * mean)));
 
 	return std::make_tuple(amin, amax, mean, rmsd);
 }
@@ -179,7 +179,7 @@ std::tuple<FTYPE, FTYPE, FTYPE, FTYPE> CalculateMapStatistics(const clipper::Xma
 template <typename FTYPE>
 void writeCCP4MapFile(std::ostream &os, clipper::Xmap<FTYPE> &xmap, clipper::Grid_range range)
 {
-	static_assert(sizeof(CCP4MapFileHeader) == 256 * 4, "Map header is of incorrect size");
+	static_assert(sizeof(CCP4MapFileHeader) == 256UL * 4, "Map header is of incorrect size");
 	// static_assert(__BYTE_ORDER == __LITTLE_ENDIAN, "Code for big endian systems is not implemented yet");
 
 	auto &spacegroup = xmap.spacegroup();
@@ -202,6 +202,7 @@ void writeCCP4MapFile(std::ostream &os, clipper::Xmap<FTYPE> &xmap, clipper::Gri
 			orderFMS[0] = 2;
 			orderFMS[2] = 3;
 			break;
+		default:;
 	}
 
 	int orderXYZ[3];
@@ -222,7 +223,7 @@ void writeCCP4MapFile(std::ostream &os, clipper::Xmap<FTYPE> &xmap, clipper::Gri
 
 	auto cellDescription = xmap.cell().descr();
 
-	CCP4MapFileHeader h = {};
+	CCP4MapFileHeader h{};
 
 	int r = snprintf(h.LABEL, sizeof(h.LABEL), "%s", "Map created with map-maker from the PDB-REDO suite of applications");
 	for (std::size_t i = r; i < sizeof(h.LABEL); ++i)
@@ -302,14 +303,10 @@ bool IsMTZFile(const fs::path &p)
 // --------------------------------------------------------------------
 
 template <typename FTYPE>
-Map<FTYPE>::Map()
-{
-}
+Map<FTYPE>::Map() = default;
 
 template <typename FTYPE>
-Map<FTYPE>::~Map()
-{
-}
+Map<FTYPE>::~Map() = default;
 
 template <typename FTYPE>
 void Map<FTYPE>::calculateStats()
@@ -353,9 +350,6 @@ void Map<FTYPE>::read(const std::filesystem::path &f)
 	if (mapFile.extension() == ".gz")
 	{
 		// file is compressed
-
-		fs::path p = mapFile.parent_path();
-		std::string s = mapFile.filename().string();
 
 		cif::gzio::ifstream in(mapFile);
 
@@ -493,14 +487,10 @@ template class Map<double>;
 // --------------------------------------------------------------------
 
 template <typename FTYPE>
-MapMaker<FTYPE>::MapMaker()
-{
-}
+MapMaker<FTYPE>::MapMaker() = default;
 
 template <typename FTYPE>
-MapMaker<FTYPE>::~MapMaker()
-{
-}
+MapMaker<FTYPE>::~MapMaker() = default;
 
 template <typename FTYPE>
 void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
@@ -523,9 +513,6 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	if (hklin.extension() == ".gz")
 	{
 		// file is compressed
-
-		fs::path p = hklin.parent_path();
-		std::string s = hklin.filename().string();
 
 		cif::gzio::ifstream in(hklin);
 
@@ -835,9 +822,6 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 	if (hklin.extension() == ".gz")
 	{
 		// file is compressed
-
-		fs::path p = hklin.parent_path();
-		std::string s = hklin.filename().string();
 
 		cif::gzio::ifstream in(hklin);
 

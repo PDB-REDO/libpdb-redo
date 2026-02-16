@@ -52,9 +52,9 @@ class AtomShape
 	AtomShape(const AtomShape &) = delete;
 	AtomShape &operator=(const AtomShape &) = delete;
 
-	float radius() const;
-	float calculatedDensity(float r) const;
-	float calculatedDensity(cif::point p) const;
+	[[nodiscard]] float radius() const;
+	[[nodiscard]] float calculatedDensity(float r) const;
+	[[nodiscard]] float calculatedDensity(cif::point p) const;
 
   private:
 	struct AtomShapeImpl *mImpl;

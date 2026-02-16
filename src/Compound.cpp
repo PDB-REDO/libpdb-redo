@@ -29,11 +29,14 @@
 #include "cif++/utilities.hpp"
 #include "pdb-redo/Version.hpp"
 
+#include <algorithm>
 #include <exception>
 #include <filesystem>
 #include <fstream>
 #include <map>
 #include <mutex>
+#include <utility>
+#include <utility>
 
 namespace fs = std::filesystem;
 
@@ -74,11 +77,11 @@ struct CompoundBondLess
 // Compound
 
 Compound::Compound(const cif::datablock &db, const std::string &id,
-	const std::string &name, const std::string &group)
+	std::string name, std::string group)
 	: mCF(db)
 	, mID(id)
-	, mName(name)
-	, mGroup(group)
+	, mName(std::move(name))
+	, mGroup(std::move(group))
 {
 	try
 	{
@@ -93,7 +96,7 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 
 			mAtoms.push_back({ atom_id, atom_type_traits(symbol).type(), energy, charge, x, y, z });
 		}
-		sort(mAtoms.begin(), mAtoms.end(), CompoundAtomLess());
+		std::ranges::sort(mAtoms, CompoundAtomLess());
 
 		auto &compBonds = db["chem_comp_bond"];
 
@@ -150,7 +153,7 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 
 			mBonds.push_back(b);
 		}
-		sort(mBonds.begin(), mBonds.end(), CompoundBondLess());
+		std::ranges::sort(mBonds, CompoundBondLess());
 
 		for (auto row : db["chem_comp_angle"])
 		{
@@ -207,7 +210,7 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 
 			cif::tie(atom_id, plane_id, esd) = row.get("atom_id", "plane_id", "dist_esd");
 
-			auto i = find_if(mPlanes.begin(), mPlanes.end(), [&](auto &p)
+			auto i = std::ranges::find_if(mPlanes, [&](auto &p)
 				{ return p.id == plane_id; });
 			if (i == mPlanes.end())
 				mPlanes.emplace_back(CompoundPlane{ plane_id, { atom_id }, esd });
@@ -360,7 +363,7 @@ CompoundAtom Compound::get_atom_by_atom_id(const std::string &atomID) const
 
 bool Compound::atomsBonded(const std::string &atomId_1, const std::string &atomId_2) const
 {
-	auto i = find_if(mBonds.begin(), mBonds.end(),
+	auto i = std::ranges::find_if(mBonds,
 		[&](const CompoundBond &b)
 		{
 			return (b.atomID[0] == atomId_1 and b.atomID[1] == atomId_2) or (b.atomID[0] == atomId_2 and b.atomID[1] == atomId_1);
@@ -371,7 +374,7 @@ bool Compound::atomsBonded(const std::string &atomId_1, const std::string &atomI
 
 float Compound::atomBondValue(const std::string &atomId_1, const std::string &atomId_2) const
 {
-	auto i = find_if(mBonds.begin(), mBonds.end(),
+	auto i = std::ranges::find_if(mBonds,
 		[&](const CompoundBond &b)
 		{
 			return (b.atomID[0] == atomId_1 and b.atomID[1] == atomId_2) or (b.atomID[0] == atomId_2 and b.atomID[1] == atomId_1);
@@ -533,9 +536,9 @@ float Compound::chiralVolume(const std::string &centreID) const
 		float beta = bondAngle(cv.atomID[1], cv.atomIDCentre, cv.atomID[2]);
 		float gamma = bondAngle(cv.atomID[2], cv.atomIDCentre, cv.atomID[0]);
 
-		float cosa = static_cast<float>(std::cos(alpha * kPI / 180));
-		float cosb = static_cast<float>(std::cos(beta * kPI / 180));
-		float cosc = static_cast<float>(std::cos(gamma * kPI / 180));
+		auto cosa = static_cast<float>(std::cos(alpha * kPI / 180));
+		auto cosb = static_cast<float>(std::cos(beta * kPI / 180));
+		auto cosc = static_cast<float>(std::cos(gamma * kPI / 180));
 
 		// When the atoms are in a plane and the result should be nearly zero
 		// the result of 1 + 2 * cosa * cosb * cosc - cosa^2 - cosb^2 - cosc^2 can become negative
@@ -568,7 +571,7 @@ Link::Link(cif::datablock &db)
 	for (auto row : linkBonds)
 	{
 		LinkBond b;
-		std::string type, aromatic;
+		std::string type;
 
 		cif::tie(b.atom[0].compID, b.atom[0].atomID,
 			b.atom[1].compID, b.atom[1].atomID, type, b.distance, b.esd) =
@@ -666,7 +669,7 @@ Link::Link(cif::datablock &db)
 
 		cif::tie(planeID, compID, atomID, esd) = row.get("plane_id", "atom_comp_id", "atom_id", "dist_esd");
 
-		auto i = find_if(mPlanes.begin(), mPlanes.end(), [&](auto &p)
+		auto i = std::ranges::find_if(mPlanes, [&](auto &p)
 			{ return p.id == planeID; });
 		if (i == mPlanes.end())
 		{
@@ -680,7 +683,7 @@ Link::Link(cif::datablock &db)
 
 float Link::atomBondValue(const LinkAtom &atom1, const LinkAtom &atom2) const
 {
-	auto i = find_if(mBonds.begin(), mBonds.end(),
+	auto i = std::ranges::find_if(mBonds,
 		[&](auto &b)
 		{
 			return (b.atom[0] == atom1 and b.atom[1] == atom2) or (b.atom[0] == atom2 and b.atom[1] == atom1);
@@ -770,9 +773,9 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 		float beta = angle(cv.atom[1], cv.atomCentre, cv.atom[2]);
 		float gamma = angle(cv.atom[2], cv.atomCentre, cv.atom[0]);
 
-		float cosa = static_cast<float>(std::cos(alpha * kPI / 180));
-		float cosb = static_cast<float>(std::cos(beta * kPI / 180));
-		float cosc = static_cast<float>(std::cos(gamma * kPI / 180));
+		auto cosa = static_cast<float>(std::cos(alpha * kPI / 180));
+		auto cosb = static_cast<float>(std::cos(beta * kPI / 180));
+		auto cosc = static_cast<float>(std::cos(gamma * kPI / 180));
 
 		// When the atoms are in a plane and the result should be nearly zero
 		// the result of 1 + 2 * cosa * cosb * cosc - cosa^2 - cosb^2 - cosc^2 can become negative
@@ -920,7 +923,7 @@ class RestraintCompoundFactoryImpl : public CompoundFactoryImpl
 		cif::compound_factory::instance().push_dictionary(cf);
 	}
 
-	~RestraintCompoundFactoryImpl()
+	~RestraintCompoundFactoryImpl() override
 	{
 		cif::compound_factory::instance().pop_dictionary();
 	}
@@ -966,9 +969,7 @@ const Compound *RestraintCompoundFactoryImpl::createSelf(std::string id)
 class CLibdMonCompoundFactoryImpl : public CompoundFactoryImpl
 {
   public:
-	CLibdMonCompoundFactoryImpl()
-	{
-	}
+	CLibdMonCompoundFactoryImpl() = default;
 
 	CLibdMonCompoundFactoryImpl(std::istream &inData, CompoundFactoryImpl *inNext)
 		: CompoundFactoryImpl(inData, inNext)
@@ -1170,7 +1171,6 @@ cif::datablock Compound::generateCCDCompound() const
 // --------------------------------------------------------------------
 
 CompoundFactory::CompoundFactory()
-	: mImpl(nullptr)
 {
 	fs::path mon_lib_list;
 	if (const char *clibdMon = getenv("CLIBD_MON"))

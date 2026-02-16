@@ -40,7 +40,7 @@ struct tls_residue;
 
 struct tls_selection
 {
-	virtual ~tls_selection() {}
+	virtual ~tls_selection() = default;
 	virtual void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel = 0) const = 0;
 	std::vector<std::tuple<std::string, int, int>> get_ranges(cif::datablock &db) const;
 };

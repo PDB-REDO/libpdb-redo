@@ -29,8 +29,6 @@
    Date: dinsdag 19 juni, 2018
 */
 
-#define _USE_MATH_DEFINES
-
 #include <cassert>
 #include <cmath>
 
@@ -44,7 +42,7 @@
 namespace pdb_redo
 {
 
-const double kPI = M_PI;
+const double kPI = std::numbers::pi;
 
 // --------------------------------------------------------------------
 
@@ -53,7 +51,7 @@ class RamachandranTables
   public:
 	static RamachandranTables &instance()
 	{
-		std::lock_guard lock(sMutex);
+		std::scoped_lock lock(sMutex);
 
 		static RamachandranTables sInstance;
 		return sInstance;
@@ -61,7 +59,7 @@ class RamachandranTables
 
 	clipper::Ramachandran &table(const std::string &aa, bool prePro)
 	{
-		std::lock_guard lock(sMutex);
+		std::scoped_lock lock(sMutex);
 
 		auto i = mTables.find(std::make_tuple(aa, prePro));
 		if (i == mTables.end())
@@ -79,7 +77,7 @@ class RamachandranTables
 			else
 				type = clipper::Ramachandran::NoGPIVpreP2;
 
-			i = mTables.emplace(make_pair(std::make_tuple(aa, prePro), clipper::Ramachandran(type))).first;
+			i = mTables.emplace(std::make_tuple(aa, prePro), clipper::Ramachandran(type)).first;
 		}
 
 		return i->second;
