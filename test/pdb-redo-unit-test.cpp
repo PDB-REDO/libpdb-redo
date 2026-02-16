@@ -30,8 +30,6 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
-#include "pdb-redo/ClipperWrapper.hpp"
-#include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/Statistics.hpp"
 #include "pdb-redo/SkipList.hpp"
@@ -39,7 +37,6 @@
 #include <clipper/clipper-ccp4.h>
 #include <clipper/clipper-contrib.h>
 
-#include <stdexcept>
 #include <filesystem>
 
 #include <cif++.hpp>
@@ -348,22 +345,22 @@ TEST_CASE("stats_1")
 		CHECK(ri.asymID == t.asymID);
 		CHECK(ri.compID == t.compID);
 
-		CHECK_THAT(std::abs(ri.RSR - t.RSR), Catch::Matchers::WithinAbs(0.01, 0.01));
-		CHECK_THAT(std::abs(ri.SRSR - t.SRSR), Catch::Matchers::WithinAbs(0.01, 0.01));
+		CHECK_THAT(std::abs(ri.RSR), Catch::Matchers::WithinAbs(t.RSR, 0.01));
+		CHECK_THAT(std::abs(ri.SRSR), Catch::Matchers::WithinAbs(t.SRSR, 0.01));
 
 		if (not (std::isnan(ri.RSCCS) and std::isnan(t.RSCCS)))
-			CHECK_THAT(std::abs(ri.RSCCS - t.RSCCS), Catch::Matchers::WithinAbs(0.1, 0.1));
+			CHECK_THAT(std::abs(ri.RSCCS), Catch::Matchers::WithinAbs(t.RSCCS, 0.1));
 		else
 			CHECK(std::isnan(ri.RSCCS) == std::isnan(t.RSCCS));
 
 		if (not (std::isnan(ri.EDIAm) or std::isnan(t.EDIAm)))
 		{
-			CHECK_THAT(std::abs(ri.EDIAm - t.EDIAm), Catch::Matchers::WithinAbs(0.1, 0.1));
+			CHECK_THAT(std::abs(ri.EDIAm), Catch::Matchers::WithinAbs(t.EDIAm, 0.1));
 
-			if (std::abs(ri.EDIAm - t.EDIAm) > 0.1)
-				std::cerr << ri << '\n';
+			// if (std::abs(ri.EDIAm - t.EDIAm) > 0.1)
+			// 	std::cerr << ri << '\n';
 
-			CHECK_THAT(std::abs(ri.OPIA - t.OPIA), Catch::Matchers::WithinAbs(0.1, 0.1));
+			CHECK_THAT(std::abs(ri.OPIA), Catch::Matchers::WithinAbs(t.OPIA, 0.1));
 		}
 		else
 		{

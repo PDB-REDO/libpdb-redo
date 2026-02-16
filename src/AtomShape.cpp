@@ -25,7 +25,6 @@
  */
 
 #include "pdb-redo/AtomShape.hpp"
-#include "pdb-redo/ClipperWrapper.hpp"
 
 #include <cif++.hpp>
 
@@ -33,7 +32,6 @@
 #include <gsl/gsl_multimin.h>
 
 #include <mutex>
-#include <thread>
 
 namespace pdb_redo
 {
@@ -592,7 +590,7 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 
 // --------------------------------------------------------------------
 
-AtomShape::AtomShape(cif::row_handle atom, cif::row_handle atom_aniso, float resHigh, float resLow, bool electronScattering, std::optional<float> bFactor)
+AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_aniso, float resHigh, float resLow, bool electronScattering, std::optional<float> bFactor)
 	: mImpl(nullptr)
 {
 	const auto &[x, y, z, charge, type_symbol, occupancy, compound_id] =

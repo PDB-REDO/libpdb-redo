@@ -1266,15 +1266,7 @@ BondMap EDIAStatsCollector::createBondMap(std::vector<AtomData> &atomData) const
 	for (auto a : atomData)
 		pts.emplace_back(a.atom.get_location());
 	
-	cif::point center = cif::centroid(pts);
-	float radius = 0;
-
-	for (auto pt : pts)
-	{
-		auto d = distance(pt, center);
-		if (radius < d)
-			radius = d;
-	}
+	auto [center, radius] = cif::smallest_sphere_around_points(pts);
 
 	return { mStructure.get_datablock(), std::make_tuple(center, radius + 3.5f) };
 }

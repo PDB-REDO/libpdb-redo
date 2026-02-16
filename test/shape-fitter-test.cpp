@@ -35,18 +35,13 @@
 #include <clipper/core/xmap.h>
 #define CATCH_CONFIG_RUNNER
 
-#include "pdb-redo/AtomShape.hpp"
-#include "pdb-redo/DistanceMap.hpp"
 #include "pdb-redo/MapMaker.hpp"
-#include "pdb-redo/Minimizer.hpp"
 #include "pdb-redo/ShapeFitter.hpp"
-#include "pdb-redo/Statistics.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cif++.hpp>
 #include <filesystem>
-#include <stdexcept>
 
 namespace fs = std::filesystem;
 
@@ -134,7 +129,7 @@ _symmetry.Int_Tables_number                19
 
 	// Create a ligand
 	cif::datablock &db = cf.front(); // almost empty
-	db.set_validator(&cif::validator_factory::instance().get("mmcif_pdbx.dic"));
+	db.set_validator(cif::validator_factory::instance().get("mmcif_pdbx.dic"));
 	cif::mm::structure s(db);
 
 	pdb_redo::BlobFinder bf(xmap, 0);

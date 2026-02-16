@@ -169,7 +169,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 	auto &compoundBondInfo = CompoundBondMap::instance();
 
 	// First collect the atoms from the datablock
-	std::vector<cif::row_handle> atoms;
+	std::vector<cif::const_row_handle> atoms;
 
 	cif::crystal crystal(db);
 
@@ -294,7 +294,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 			continue;
 		}
 
-		auto bonded = [c, &compoundBondInfo](cif::row_handle a, cif::row_handle b)
+		auto bonded = [c, &compoundBondInfo](cif::const_row_handle a, cif::const_row_handle b)
 		{
 			auto label_a = a.get<std::string>("label_atom_id");
 			auto label_b = b.get<std::string>("label_atom_id");
@@ -305,9 +305,9 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 		// loop over poly_seq_scheme
 		for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].find<std::string, int>(cif::key("mon_id") == c, "asym_id", "seq_id"))
 		{
-			std::vector<cif::row_handle> rAtoms;
+			std::vector<cif::const_row_handle> rAtoms;
 			copy_if(atoms.begin(), atoms.end(), back_inserter(rAtoms),
-				[asymID=asymID,seqID=seqID](cif::row_handle a)
+				[asymID=asymID,seqID=seqID](cif::const_row_handle a)
 				{ return a["label_asym_id"] == asymID and a["label_seq_id"] == seqID; });
 
 			for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
@@ -326,9 +326,9 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 			std::string asymID;
 			cif::tie(asymID) = r.get("asym_id");
 
-			std::vector<cif::row_handle> rAtoms;
+			std::vector<cif::const_row_handle> rAtoms;
 			copy_if(atoms.begin(), atoms.end(), back_inserter(rAtoms),
-				[&](cif::row_handle a)
+				[&](cif::const_row_handle a)
 				{ return a["label_asym_id"] == asymID; });
 
 			for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
@@ -349,9 +349,9 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 		// loop over pdbx_branch_scheme
 		for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].find<std::string, std::string>(cif::key("mon_id") == c, "asym_id", "pdb_seq_num"))
 		{
-			std::vector<cif::row_handle> rAtoms;
+			std::vector<cif::const_row_handle> rAtoms;
 			copy_if(atoms.begin(), atoms.end(), back_inserter(rAtoms),
-				[id = asym_id, nr = pdb_seq_num](cif::row_handle a)
+				[id = asym_id, nr = pdb_seq_num](cif::const_row_handle a)
 				{ return a["label_asym_id"] == id and a["auth_seq_id"] == nr; });
 
 			for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
