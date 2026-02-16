@@ -26,9 +26,6 @@
 
 #pragma once
 
-#include <map>
-#include <set>
-#include <tuple>
 #include <vector>
 
 #include "cif++.hpp"
@@ -144,36 +141,36 @@ struct CompoundChiralCentre
 class Compound
 {
   public:
-	Compound(const cif::datablock &db, const std::string &id, const std::string &name,
-		const std::string &group);
+	Compound(const cif::datablock &db, const std::string &id, std::string name,
+		std::string group);
 
 	// accessors
-	std::string id() const { return mID; }
-	std::string name() const { return mName; }
-	std::string type() const;
-	std::string group() const { return mGroup; }
-	std::vector<CompoundAtom> atoms() const { return mAtoms; }
-	std::vector<CompoundBond> bonds() const { return mBonds; }
-	std::vector<CompoundAngle> angles() const { return mAngles; }
-	std::vector<CompoundChiralCentre> chiralCentres() const
+	[[nodiscard]] std::string id() const { return mID; }
+	[[nodiscard]] std::string name() const { return mName; }
+	[[nodiscard]] std::string type() const;
+	[[nodiscard]] std::string group() const { return mGroup; }
+	[[nodiscard]] std::vector<CompoundAtom> atoms() const { return mAtoms; }
+	[[nodiscard]] std::vector<CompoundBond> bonds() const { return mBonds; }
+	[[nodiscard]] std::vector<CompoundAngle> angles() const { return mAngles; }
+	[[nodiscard]] std::vector<CompoundChiralCentre> chiralCentres() const
 	{
 		return mChiralCentres;
 	}
-	std::vector<CompoundPlane> planes() const { return mPlanes; }
-	std::vector<CompoundTorsion> torsions() const { return mTorsions; }
+	[[nodiscard]] std::vector<CompoundPlane> planes() const { return mPlanes; }
+	[[nodiscard]] std::vector<CompoundTorsion> torsions() const { return mTorsions; }
 
-	CompoundAtom get_atom_by_atom_id(const std::string &atomID) const;
+	[[nodiscard]] CompoundAtom get_atom_by_atom_id(const std::string &atomID) const;
 
-	bool atomsBonded(const std::string &atomId_1, const std::string &atomId_2) const;
-	float atomBondValue(const std::string &atomId_1, const std::string &atomId_2) const;
-	float bondAngle(const std::string &atomId_1, const std::string &atomId_2, const std::string &atomId_3) const;
-	float chiralVolume(const std::string &centreID) const;
+	[[nodiscard]] bool atomsBonded(const std::string &atomId_1, const std::string &atomId_2) const;
+	[[nodiscard]] float atomBondValue(const std::string &atomId_1, const std::string &atomId_2) const;
+	[[nodiscard]] float bondAngle(const std::string &atomId_1, const std::string &atomId_2, const std::string &atomId_3) const;
+	[[nodiscard]] float chiralVolume(const std::string &centreID) const;
 
-	std::string formula() const;
-	float formulaWeight() const;
-	int charge() const;
-	bool isWater() const;
-	bool isSugar() const;
+	[[nodiscard]] std::string formula() const;
+	[[nodiscard]] float formulaWeight() const;
+	[[nodiscard]] int charge() const;
+	[[nodiscard]] bool isWater() const;
+	[[nodiscard]] bool isSugar() const;
 
 	// std::vector<std::string> isomers() const;
 	// bool isIsomerOf(const Compound &c) const;
@@ -181,7 +178,7 @@ class Compound
 
 	/// @brief Return the content of this restraint compound in a CCD format
 	/// @return Datablock containing the CCD information for this compound
-	cif::datablock generateCCDCompound() const;
+	[[nodiscard]] cif::datablock generateCCDCompound() const;
 
   private:
 	cif::datablock mCF;
@@ -272,19 +269,19 @@ class Link
 	Link(cif::datablock &db);
 
 	// accessors
-	std::string id() const { return mID; }
-	std::vector<LinkBond> bonds() const { return mBonds; }
-	std::vector<LinkAngle> angles() const { return mAngles; }
-	std::vector<LinkChiralCentre> chiralCentres() const { return mChiralCentres; }
-	std::vector<LinkPlane> planes() const { return mPlanes; }
-	std::vector<LinkTorsion> torsions() const { return mTorsions; }
+	[[nodiscard]] std::string id() const { return mID; }
+	[[nodiscard]] std::vector<LinkBond> bonds() const { return mBonds; }
+	[[nodiscard]] std::vector<LinkAngle> angles() const { return mAngles; }
+	[[nodiscard]] std::vector<LinkChiralCentre> chiralCentres() const { return mChiralCentres; }
+	[[nodiscard]] std::vector<LinkPlane> planes() const { return mPlanes; }
+	[[nodiscard]] std::vector<LinkTorsion> torsions() const { return mTorsions; }
 
-	float atomBondValue(const LinkAtom &atomId_1, const LinkAtom &atomId_2) const;
-	float bondAngle(const LinkAtom &atomId_1, const LinkAtom &atomId_2, const LinkAtom &atomId_3) const;
+	[[nodiscard]] float atomBondValue(const LinkAtom &atomId_1, const LinkAtom &atomId_2) const;
+	[[nodiscard]] float bondAngle(const LinkAtom &atomId_1, const LinkAtom &atomId_2, const LinkAtom &atomId_3) const;
 
 	/// \brief Calculate the target chiral volume for \a id for the link between \a compound_id_1 and \a compound_id_2
 	/// The compound id's are required to calculate standard bond lengths in case these are not recorded in the link record
-	float chiralVolume(const std::string &id, const std::string &compound_id_1, const std::string &compound_id_2) const;
+	[[nodiscard]] float chiralVolume(const std::string &id, const std::string &compound_id_1, const std::string &compound_id_2) const;
 
   private:
 
@@ -319,7 +316,7 @@ class CompoundFactory
   private:
 	CompoundFactory();
 
-	class CompoundFactoryImpl *mImpl;
+	class CompoundFactoryImpl *mImpl{};
 };
 
 } // namespace pdb_redo

@@ -91,7 +91,7 @@ clipper::Atom toClipper(const cif::mm::atom &atom)
 
 clipper::Spacegroup getSpacegroup(const cif::datablock &db)
 {
-	std::string spacegroup = db["symmetry"].find_first<std::string>(cif::key("entry_id") == db.name(), "space_group_name_H-M");
+	auto spacegroup = db["symmetry"].find_first<std::string>(cif::key("entry_id") == db.name(), "space_group_name_H-M");
 
 	if (spacegroup == "P 1-")
 		spacegroup = "P -1";
@@ -106,16 +106,14 @@ clipper::Spacegroup getSpacegroup(const cif::datablock &db)
 	}
 	catch (const clipper::Message_fatal &m)
 	{
-		// std::cout << m.text() << '\n';
-	}
-
-	try
-	{
-		return clipper::Spacegroup{ clipper::Spgr_descr(spacegroup) };
-	}
-	catch (const clipper::Message_fatal &e)
-	{
-		std::cerr << e.text() << '\n';
+		try
+		{
+			return clipper::Spacegroup{ clipper::Spgr_descr(spacegroup) };
+		}
+		catch (const clipper::Message_fatal &e)
+		{
+			std::cerr << e.text() << '\n';
+		}
 	}
 
 	throw std::runtime_error("Unsupported spacegroup: " + spacegroup);
@@ -176,6 +174,7 @@ cif::symop_data GetSymOpDataForRTop_frac(const clipper::RTop_frac &rt)
 				krt[13] = n;
 				krt[14] = d;
 				break;
+			default:;
 		}
 	}
 

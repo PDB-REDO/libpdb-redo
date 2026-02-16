@@ -24,13 +24,14 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-#include <cif++.hpp>
+#include "pdb-redo/Statistics.hpp"
 
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/BondMap.hpp"
 #include "pdb-redo/DistanceMap.hpp"
-#include "pdb-redo/Statistics.hpp"
+
+#include <algorithm>
+#include <cif++.hpp>
 
 // --------------------------------------------------------------------
 
@@ -76,8 +77,9 @@ double phinvs(double p)
 	// Coefficients for P close to 0.5
 	const double A[8] = {
 		3.3871328727963666080, 1.3314166789178437745e+2, 1.9715909503065514427e+3, 1.3731693765509461125e+4,
-		4.5921953931549871457e+4, 6.7265770927008700853e+4, 3.3430575583588128105e+4, 2.5090809287301226727e+3},
-				 B[8] = {0, 4.2313330701600911252e+1, 6.8718700749205790830e+2, 5.3941960214247511077e+3, 2.1213794301586595867e+4, 3.9307895800092710610e+4, 2.8729085735721942674e+4, 5.2264952788528545610e+3};
+		4.5921953931549871457e+4, 6.7265770927008700853e+4, 3.3430575583588128105e+4, 2.5090809287301226727e+3
+	},
+				 B[8] = { 0, 4.2313330701600911252e+1, 6.8718700749205790830e+2, 5.3941960214247511077e+3, 2.1213794301586595867e+4, 3.9307895800092710610e+4, 2.8729085735721942674e+4, 5.2264952788528545610e+3 };
 
 	// Coefficients for P not close to 0, 0.5 or 1.
 	const double C[8] = {
@@ -90,7 +92,7 @@ double phinvs(double p)
 		2.27238449892691845833e-2,
 		7.74545014278341407640e-4,
 	},
-				 D[8] = {0, 2.05319162663775882187e0, 1.67638483018380384940e0, 6.89767334985100004550e-1, 1.48103976427480074590e-1, 1.51986665636164571966e-2, 5.47593808499534494600e-4, 1.05075007164441684324e-9};
+				 D[8] = { 0, 2.05319162663775882187e0, 1.67638483018380384940e0, 6.89767334985100004550e-1, 1.48103976427480074590e-1, 1.51986665636164571966e-2, 5.47593808499534494600e-4, 1.05075007164441684324e-9 };
 
 	// Coefficients for P near 0 or 1.
 	const double E[8] = {
@@ -103,7 +105,7 @@ double phinvs(double p)
 		2.71155556874348757815e-5,
 		2.01033439929228813265e-7,
 	},
-				 F[8] = {0, 5.99832206555887937690e-1, 1.36929880922735805310e-1, 1.48753612908506148525e-2, 7.86869131145613259100e-4, 1.84631831751005468180e-5, 1.42151175831644588870e-7, 2.04426310338993978564e-15};
+				 F[8] = { 0, 5.99832206555887937690e-1, 1.36929880922735805310e-1, 1.48753612908506148525e-2, 7.86869131145613259100e-4, 1.84631831751005468180e-5, 1.42151175831644588870e-7, 2.04426310338993978564e-15 };
 
 	if (p < 0 or p > 1)
 		throw std::runtime_error("P should be >=0 and <=1");
@@ -183,9 +185,9 @@ class PointWeightFunction
 		: m_Center(center)
 		, m_Radius(atomRadius)
 	{
-		m_P[0] = P{-1.0f, 0, 1.0f, 1.0822f};
-		m_P[1] = P{5.1177f, 1.29366f, -0.4f, 1.4043f};
-		m_P[2] = P{-0.9507f, 2, 0, 2};
+		m_P[0] = P{ -1.0f, 0, 1.0f, 1.0822f };
+		m_P[1] = P{ 5.1177f, 1.29366f, -0.4f, 1.4043f };
+		m_P[2] = P{ -0.9507f, 2, 0, 2 };
 	}
 
 	float operator()(cif::point p) const
@@ -264,13 +266,13 @@ struct AtomDataSums
 		return *this;
 	}
 
-	double cc() const
+	[[nodiscard]] double cc() const
 	{
 		double s = (ccSums[1] - (edSums[0] * edSums[0]) / ngrid) * (ccSums[2] - (edSums[1] * edSums[1]) / ngrid);
 		return (ccSums[0] - edSums[0] * edSums[1] / ngrid) / std::sqrt(s);
 	}
 
-	double srg() const
+	[[nodiscard]] double srg() const
 	{
 		double rgsq = rgSums[0] / rgSums[1];
 		double rg = std::sqrt(rgsq);
@@ -322,8 +324,8 @@ std::tuple<float, float> CalculateMapStatistics(const clipper::Xmap<float> &f)
 		sum2 += v * v;
 	}
 
-	float meanDensity = static_cast<float>(sum / count);
-	float rmsDensity = static_cast<float>(std::sqrt((sum2 / count) - (meanDensity * meanDensity)));
+	auto meanDensity = static_cast<float>(sum / count);
+	auto rmsDensity = static_cast<float>(std::sqrt((sum2 / count) - (meanDensity * meanDensity)));
 
 	return std::make_tuple(meanDensity, rmsDensity);
 }
@@ -333,7 +335,6 @@ std::tuple<float, float> CalculateMapStatistics(const clipper::Xmap<float> &f)
 class BoundingBox
 {
   public:
-
 	template <class List>
 	BoundingBox(const cif::mm::structure &structure, List atoms, float margin)
 	{
@@ -365,7 +366,7 @@ class BoundingBox
 		mZMax += margin;
 	}
 
-	bool contains(const cif::point &p) const
+	[[nodiscard]] bool contains(const cif::point &p) const
 	{
 		return p.m_x >= mXMin and p.m_x <= mXMax and p.m_y >= mYMin and p.m_y <= mYMax and p.m_z >= mZMin and p.m_z <= mZMax;
 	}
@@ -474,17 +475,17 @@ void StatsCollector::initialize()
 		auto &z = zdca0;
 		auto vf = mVF;
 
-		sort(z.begin(), z.end());
+		std::ranges::sort(z);
 
 		double qa = 0, qb = 1;
 
 		std::size_t nd = z.size();
-		std::size_t n = static_cast<std::size_t>(round(vf * nd));
+		auto n = static_cast<std::size_t>(round(vf * nd));
 
 		if (n > 100)
 		{
 			std::size_t i1 = static_cast<std::size_t>((n + 1) * anorm(-1.5)) + 1;
-			std::size_t i2 = static_cast<std::size_t>((n + 1) * anorm(1.5));
+			auto i2 = static_cast<std::size_t>((n + 1) * anorm(1.5));
 
 			std::size_t ns = i2 - i1 + 1;
 
@@ -495,7 +496,7 @@ void StatsCollector::initialize()
 			{
 				double qx = phinvs(static_cast<double>(i) / (n + 1));
 				double x = vr * i;
-				std::size_t j = static_cast<std::size_t>(x);
+				auto j = static_cast<std::size_t>(x);
 				x -= j;
 
 				//		assert(j < z.size());
@@ -573,8 +574,9 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 	const auto &atom_site = mStructure.get_datablock()["atom_site"];
 
 	for (auto atom_id : atom_site.find<std::string>(
-		cif::key("label_asym_id") == asymID and
-		cif::key("type_symbol") != "H"sv, "id"))
+			 cif::key("label_asym_id") == asymID and
+				 cif::key("type_symbol") != "H"sv,
+			 "id"))
 	{
 		auto &atom = atoms.emplace_back(mStructure.get_atom_by_id(atom_id));
 
@@ -590,7 +592,6 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 	BoundingBox bbox(mStructure, atoms, 5.0f);
 	return collect(residues, bbox, false);
 }
-
 
 std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID, int resFirst, int resLast, bool authNameSpace) const
 {
@@ -735,10 +736,8 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 						break;
 					}
 
-					resAtomData.erase(
-						std::remove_if(resAtomData.begin(), resAtomData.end(), [id = compAtom](const AtomData *d)
-							{ return d->atom.get_label_atom_id() == id; }),
-						resAtomData.end());
+					std::erase_if(resAtomData, [id = compAtom](const AtomData *d)
+						{ return d->atom.get_label_atom_id() == id; });
 				}
 			}
 		}
@@ -839,14 +838,14 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 			OPIA /= OCC;
 		}
 
-		result.emplace_back(ResidueStatistics{asymID, seqID, compID,
+		result.emplace_back(ResidueStatistics{ asymID, seqID, compID,
 			authSeqID,
-			(sums.rfSums[0] / sums.rfSums[1]),           // rsr
-			sums.srg(),                                  // srsr
-			sums.cc(),                                   // rsccs
-			EDIAm,                                       // ediam
-			OPIA,                                        // opia
-			static_cast<int>(round(mVF * sums.ngrid))}); // ngrid
+			(sums.rfSums[0] / sums.rfSums[1]),            // rsr
+			sums.srg(),                                   // srsr
+			sums.cc(),                                    // rsccs
+			EDIAm,                                        // ediam
+			OPIA,                                         // opia
+			static_cast<int>(round(mVF * sums.ngrid)) }); // ngrid
 	}
 
 	if (addWaters)
@@ -858,13 +857,13 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 			if (not atom.is_water())
 				continue;
 
-			result.emplace_back(ResidueStatistics{d.asymID, d.seqID, "HOH", d.authSeqID,
-				(d.sums.rfSums[0] / d.sums.rfSums[1]),         // rsr
-				d.sums.srg(),                                  // srsr
-				d.sums.cc(),                                   // rsccs
-				d.edia,                                        // ediam
-				(d.edia > 0.8 ? 100. : 0.),                    // opia
-				static_cast<int>(round(mVF * d.sums.ngrid))}); // ngrid
+			result.emplace_back(ResidueStatistics{ d.asymID, d.seqID, "HOH", d.authSeqID,
+				(d.sums.rfSums[0] / d.sums.rfSums[1]),          // rsr
+				d.sums.srg(),                                   // srsr
+				d.sums.cc(),                                    // rsccs
+				d.edia,                                         // ediam
+				(d.edia > 0.8 ? 100. : 0.),                     // opia
+				static_cast<int>(round(mVF * d.sums.ngrid)) }); // ngrid
 		}
 	}
 
@@ -920,7 +919,7 @@ ResidueStatistics StatsCollector::collect(const std::vector<cif::mm::atom> &atom
 	{
 		++n;
 
-		auto ci = find_if(atomData.begin(), atomData.end(),
+		auto ci = std::ranges::find_if(atomData,
 			[=](auto &d)
 			{ return d.asymID == atom.get_label_asym_id() and d.seqID == atom.get_label_seq_id() and d.atom.get_label_atom_id() == atom.get_label_atom_id(); });
 
@@ -964,13 +963,13 @@ void StatsCollector::sumDensity(std::vector<AtomData> &atomData,
 
 		if (atom.get_occupancy() == 0)
 			continue;
-		
+
 		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
 
 		std::string asymID = data.asymID;
 		if (atom.is_water())
 			asymID = "0";
-		
+
 		auto radius = data.radius;
 		double sumDensity = 0;
 
@@ -1085,20 +1084,19 @@ EDIAStatsCollector::EDIAStatsCollector(const MapMaker<float> &mm, cif::mm::struc
 {
 	// create a atom radius map, for EDIA
 
-	const double kResolutions[] =
-		{
-			0.5, 1.0, 1.5, 2.0, 2.5};
+	const float kResolutions[] = {
+		0.5, 1.0, 1.5, 2.0, 2.5
+	};
 
 	// The following numbers were harvested with the application collect-b-factors
-	const double kAverageBFactors[] =
-		{
-			6.31912, // 0.5
-			14.4939, // 1.0
-			20.8827, // 1.5
-			27.7075, // 2.0
-			55.6378  // 2.5
-		};
-	const int kAverageBFactorCount = sizeof(kAverageBFactors) / sizeof(double);
+	const float kAverageBFactors[] = {
+		6.31912, // 0.5
+		14.4939, // 1.0
+		20.8827, // 1.5
+		27.7075, // 2.0
+		55.6378  // 2.5
+	};
+	const int kAverageBFactorCount = sizeof(kAverageBFactors) / sizeof(float);
 
 	int i = static_cast<int>(floor(mResHigh / 0.5)) - 1;
 	if (i > kAverageBFactorCount - 1)
@@ -1141,7 +1139,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 		bool operator()(const cif::mm::atom &a, const cif::mm::atom &b) const { return a.id().compare(b.id()) < 0; }
 	};
 
-	typedef std::set<cif::mm::atom, lessAtom> atomSet;
+	using atomSet = std::set<cif::mm::atom, lessAtom>;
 
 	// Calculate EDIA scores
 
@@ -1166,14 +1164,14 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 		float ediaSum[2] = {};
 
 		iterateGrid(atom.get_location(), radius, Fb, [&](auto iw)
-		{
+			{
 			cif::point p = iw.coord_orth();
 			
 			// EDIA calculations
 			auto fb = Fb[iw];
 
 			// fix z calculation, thanks to Dmytro Guzenko for spotting the error
-			float z = static_cast<float>((fb - mMeanDensityFb) / mRMSDensityFb);
+			auto z = static_cast<float>((fb - mMeanDensityFb) / mRMSDensityFb);
 
 			if (z < 0)
 				z = 0;
@@ -1249,8 +1247,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 			ediaSum[0] += z * wp * o;
 			if (wp > 0)
-				ediaSum[1] += wp;
-		});
+				ediaSum[1] += wp; });
 
 		data.edia = ediaSum[0] / ediaSum[1];
 		if (data.edia < 0)
@@ -1265,7 +1262,7 @@ BondMap EDIAStatsCollector::createBondMap(std::vector<AtomData> &atomData) const
 	std::vector<cif::point> pts;
 	for (auto a : atomData)
 		pts.emplace_back(a.atom.get_location());
-	
+
 	auto [center, radius] = cif::smallest_sphere_around_points(pts);
 
 	return { mStructure.get_datablock(), std::make_tuple(center, radius + 3.5f) };

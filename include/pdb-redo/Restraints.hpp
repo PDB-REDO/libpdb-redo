@@ -47,16 +47,16 @@ class DFCollector;
 
 // --------------------------------------------------------------------
 
-typedef std::size_t AtomRef;
-typedef typename Map<float>::Xmap Xmap;
+using AtomRef = std::size_t;
+using Xmap = typename Map<float>::Xmap;
 
 // --------------------------------------------------------------------
 
 struct Restraint
 {
-	virtual ~Restraint() {}
+	virtual ~Restraint() = default;
 
-	virtual double f(const AtomLocationProvider &atoms) const = 0;
+	[[nodiscard]] virtual double f(const AtomLocationProvider &atoms) const = 0;
 	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const = 0;
 
 	virtual void print(const AtomLocationProvider &atoms) const = 0;
@@ -72,9 +72,9 @@ struct BondRestraint : public Restraint
 	{
 	}
 
-	virtual double f(const AtomLocationProvider &atoms) const;
-	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const;
-	virtual void print(const AtomLocationProvider &atoms) const;
+	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
+	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
+	void print(const AtomLocationProvider &atoms) const override;
 
 	AtomRef mA, mB;
 	double mDist, mDistESD;
@@ -91,9 +91,9 @@ struct AngleRestraint : public Restraint
 	{
 	}
 
-	virtual double f(const AtomLocationProvider &atoms) const;
-	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const;
-	virtual void print(const AtomLocationProvider &atoms) const;
+	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
+	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
+	void print(const AtomLocationProvider &atoms) const override;
 
 	AtomRef mA, mB, mC;
 	double mAngle, mESD;
@@ -112,16 +112,16 @@ struct TorsionRestraint : public Restraint
 	{
 	}
 
-	virtual double f(const AtomLocationProvider &atoms) const;
-	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const;
-	virtual void print(const AtomLocationProvider &atoms) const;
+	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
+	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
+	void print(const AtomLocationProvider &atoms) const override;
 
 	AtomRef mA, mB, mC, mD;
 	int mPeriodicity;
 	double mTarget, mESD;
 
   private:
-	std::tuple<DPoint, DPoint, DPoint, DPoint> CalculateTorsionGradients(float theta, DPoint p[4]) const;
+	std::tuple<DPoint, DPoint, DPoint, DPoint> CalculateTorsionGradients(double theta, DPoint p[4]) const;
 };
 
 struct TransPeptideRestraint : public TorsionRestraint
@@ -146,9 +146,9 @@ struct ChiralVolumeRestraint : public Restraint
 	{
 	}
 
-	virtual double f(const AtomLocationProvider &atoms) const;
-	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const;
-	virtual void print(const AtomLocationProvider &atoms) const;
+	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
+	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
+	void print(const AtomLocationProvider &atoms) const override;
 
 	AtomRef mCentre, mA1, mA2, mA3;
 	double mVolume, mESD = kChiralVolumeESD;
@@ -164,9 +164,9 @@ struct PlanarityRestraint : public Restraint
 			throw std::runtime_error("Insufficient number of atoms in planar restraint");
 	}
 
-	virtual double f(const AtomLocationProvider &atoms) const;
-	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const;
-	virtual void print(const AtomLocationProvider &atoms) const;
+	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
+	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
+	void print(const AtomLocationProvider &atoms) const override;
 
 	void calculatePlaneFunction(const AtomLocationProvider &atoms, double abcd[4]) const;
 
@@ -185,9 +185,9 @@ struct NonBondedContactRestraint : public Restraint
 	{
 	}
 
-	virtual double f(const AtomLocationProvider &atoms) const;
-	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const;
-	virtual void print(const AtomLocationProvider &atoms) const;
+	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
+	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
+	void print(const AtomLocationProvider &atoms) const override;
 
 	AtomRef mA, mB;
 	double mMinDist, mMinDistSq, mDistESD;
@@ -198,9 +198,9 @@ struct DensityRestraint : public Restraint
 	DensityRestraint(std::vector<std::pair<AtomRef, double>> &&atoms,
 		const Xmap &xMap, double mapWeight = 60);
 
-	virtual double f(const AtomLocationProvider &atoms) const;
-	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const;
-	virtual void print(const AtomLocationProvider &atoms) const;
+	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
+	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
+	void print(const AtomLocationProvider &atoms) const override;
 
 	std::vector<std::pair<AtomRef, double>> mAtoms;
 	const Xmap &mXMap;

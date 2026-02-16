@@ -24,6 +24,7 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <algorithm>
 #include <cassert>
 
 #include <algorithm>
@@ -45,7 +46,7 @@ struct CompoundBondInfo
 	std::string mID;
 	std::set<std::tuple<uint32_t, uint32_t>> mBonded;
 
-	bool bonded(uint32_t a1, uint32_t a2) const
+	[[nodiscard]] bool bonded(uint32_t a1, uint32_t a2) const
 	{
 		return mBonded.count({a1, a2}) > 0;
 	}
@@ -65,7 +66,7 @@ class CompoundBondMap
 	bool bonded(const std::string &compoundID, const std::string &atomID1, const std::string &atomID2);
 
   private:
-	CompoundBondMap() {}
+	CompoundBondMap() = default;
 
 	uint32_t getAtomID(const std::string &atomID)
 	{
@@ -76,7 +77,7 @@ class CompoundBondMap
 		auto i = mAtomIDIndex.find(id);
 		if (i == mAtomIDIndex.end())
 		{
-			result = uint32_t(mAtomIDIndex.size());
+			result = static_cast<uint32_t>(mAtomIDIndex.size());
 			mAtomIDIndex[id] = result;
 		}
 		else
@@ -92,7 +93,7 @@ class CompoundBondMap
 
 bool CompoundBondMap::bonded(const std::string &compoundID, const std::string &atomID1, const std::string &atomID2)
 {
-	std::lock_guard lock(mMutex);
+	std::scoped_lock lock(mMutex);
 
 	using namespace std::literals;
 
@@ -189,10 +190,10 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 			atoms.push_back(rh);
 	}
 
-	dim = uint32_t(atoms.size());
+	dim = static_cast<uint32_t>(atoms.size());
 
 	for (auto &atom : atoms)
-		index[atom["id"].as<std::string>()] = uint32_t(index.size());
+		index[atom["id"].as<std::string>()] = static_cast<uint32_t>(index.size());
 
 	auto bindAtoms = [this](const std::string &a, const std::string &b)
 	{
@@ -306,7 +307,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 		for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].find<std::string, int>(cif::key("mon_id") == c, "asym_id", "seq_id"))
 		{
 			std::vector<cif::const_row_handle> rAtoms;
-			copy_if(atoms.begin(), atoms.end(), back_inserter(rAtoms),
+			std::ranges::copy_if(atoms, back_inserter(rAtoms),
 				[asymID=asymID,seqID=seqID](cif::const_row_handle a)
 				{ return a["label_asym_id"] == asymID and a["label_seq_id"] == seqID; });
 
@@ -327,7 +328,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 			cif::tie(asymID) = r.get("asym_id");
 
 			std::vector<cif::const_row_handle> rAtoms;
-			copy_if(atoms.begin(), atoms.end(), back_inserter(rAtoms),
+			std::ranges::copy_if(atoms, back_inserter(rAtoms),
 				[&](cif::const_row_handle a)
 				{ return a["label_asym_id"] == asymID; });
 
@@ -350,7 +351,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,f
 		for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].find<std::string, std::string>(cif::key("mon_id") == c, "asym_id", "pdb_seq_num"))
 		{
 			std::vector<cif::const_row_handle> rAtoms;
-			copy_if(atoms.begin(), atoms.end(), back_inserter(rAtoms),
+			std::ranges::copy_if(atoms, back_inserter(rAtoms),
 				[id = asym_id, nr = pdb_seq_num](cif::const_row_handle a)
 				{ return a["label_asym_id"] == id and a["auth_seq_id"] == nr; });
 

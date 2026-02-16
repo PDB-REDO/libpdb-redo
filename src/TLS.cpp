@@ -26,10 +26,13 @@
 
 #include "pdb-redo/TLS.hpp"
 
+#include <algorithm>
 #include <cif++.hpp>
 
-#include <iomanip>
 #include <iostream>
+#include <memory>
+#include <stdexcept>
+#include <utility>
 
 namespace pdb_redo
 {
@@ -201,7 +204,7 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 	// selected might consist of multiple ranges
 	// output per chain
 
-	stable_sort(selected.begin(), selected.end(), [](auto &a, auto &b) -> bool
+	std::ranges::stable_sort(selected, [](auto &a, auto &b) -> bool
 		{
 			int d = a.chainID.compare(b.chainID);
 			if (d == 0)
@@ -227,13 +230,13 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 		// return ranges with strict increasing sequence numbers.
 		// So when there's a gap in the sequence we split the range.
 		// Beware of iCodes though
-		result.push_back(std::make_tuple(b->chainID, b->seqNr, b->seqNr));
+		result.emplace_back(b->chainID, b->seqNr, b->seqNr);
 		for (auto j = b + 1; j != e; ++j)
 		{
 			if (j->seqNr == std::get<2>(result.back()) + 1)
 				std::get<2>(result.back()) = j->seqNr;
 			else if (j->seqNr != std::get<2>(result.back())) // probably an insertion code
-				result.push_back(std::make_tuple(b->chainID, j->seqNr, j->seqNr));
+				result.emplace_back(b->chainID, j->seqNr, j->seqNr);
 		}
 
 		i = e;
@@ -274,7 +277,7 @@ struct tls_selection_not : public tls_selection
 
 struct tls_selection_all : public tls_selection
 {
-	tls_selection_all() {}
+	tls_selection_all() = default;
 
 	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
@@ -291,8 +294,8 @@ struct tls_selection_all : public tls_selection
 
 struct tls_selection_chain : public tls_selection_all
 {
-	tls_selection_chain(const std::string &chainID)
-		: m_chain(chainID)
+	tls_selection_chain(std::string chainID)
+		: m_chain(std::move(chainID))
 	{
 	}
 
@@ -382,13 +385,13 @@ struct tls_selection_range_id : public tls_selection_all
 
 		for (std::string chain : chains)
 		{
-			auto f = find_if(residues.begin(), residues.end(),
+			auto f = std::ranges::find_if(residues,
 				[this,chain](auto r) -> bool
 				{
 					return r.chainID == chain and r.seqNr == m_first and r.iCode == m_icode_first;
 				});
 
-			auto l = find_if(residues.begin(), residues.end(),
+			auto l = std::ranges::find_if(residues,
 				[this,chain](auto r) -> bool
 				{
 					return r.chainID == chain and r.seqNr == m_last and r.iCode == m_icode_last;
@@ -431,11 +434,11 @@ struct tls_selection_union : public tls_selection
 	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		auto a = residues;
-		for_each(a.begin(), a.end(), [](auto &r)
+		std::ranges::for_each(a, [](auto &r)
 			{ r.selected = false; });
 
 		auto b = residues;
-		for_each(b.begin(), b.end(), [](auto &r)
+		std::ranges::for_each(b, [](auto &r)
 			{ r.selected = false; });
 
 		lhs->collect_residues(db, a, indentLevel + 1);
@@ -472,11 +475,11 @@ struct tls_selection_intersection : public tls_selection
 	void collect_residues(cif::datablock &db, std::vector<tls_residue> &residues, std::size_t indentLevel) const override
 	{
 		auto a = residues;
-		for_each(a.begin(), a.end(), [](auto &r)
+		std::ranges::for_each(a, [](auto &r)
 			{ r.selected = false; });
 
 		auto b = residues;
-		for_each(b.begin(), b.end(), [](auto &r)
+		std::ranges::for_each(b, [](auto &r)
 			{ r.selected = false; });
 
 		lhs->collect_residues(db, a, indentLevel + 1);
@@ -499,8 +502,8 @@ struct tls_selection_intersection : public tls_selection
 struct tls_selection_by_name : public tls_selection_all
 {
   public:
-	tls_selection_by_name(const std::string &resname)
-		: m_name(resname)
+	tls_selection_by_name(std::string resname)
+		: m_name(std::move(resname))
 	{
 	}
 
@@ -522,8 +525,8 @@ struct tls_selection_by_name : public tls_selection_all
 struct tls_selection_by_element : public tls_selection_all
 {
   public:
-	tls_selection_by_element(const std::string &element)
-		: m_element(element)
+	tls_selection_by_element(std::string element)
+		: m_element(std::move(element))
 	{
 	}
 
@@ -552,8 +555,8 @@ struct tls_selection_by_element : public tls_selection_all
 class tls_selection_parser_impl
 {
   public:
-	tls_selection_parser_impl(const std::string &selection)
-		: m_selection(selection)
+	tls_selection_parser_impl(std::string selection)
+		: m_selection(std::move(selection))
 		, m_p(m_selection.begin())
 		, m_end(m_selection.end())
 	{
@@ -582,13 +585,13 @@ void tls_selection_parser_impl::match(int token)
 		if (token >= 256)
 			expected = to_string(token);
 		else
-			expected = { char(token) };
+			expected = { static_cast<char>(token) };
 
 		std::string found;
 		if (m_lookahead >= 256)
 			found = to_string(m_lookahead) + " (" + m_token + ')';
 		else
-			found = { char(m_lookahead) };
+			found = { static_cast<char>(m_lookahead) };
 
 		throw std::runtime_error("Expected " + expected + " but found " + found);
 	}
@@ -605,7 +608,7 @@ class TLSSelectionParserImplPhenix : public tls_selection_parser_impl
 		m_lookahead = get_next_token();
 	}
 
-	virtual std::unique_ptr<tls_selection> Parse();
+	std::unique_ptr<tls_selection> Parse() override;
 
   private:
 	std::unique_ptr<tls_selection> ParseAtomSelection();
@@ -616,27 +619,27 @@ class TLSSelectionParserImplPhenix : public tls_selection_parser_impl
 	{
 		pt_NONE = 0,
 		pt_IDENT = 256,
-		pt_STRING,
-		pt_NUMBER,
-		pt_RESID,
-		pt_EOLN,
-		pt_KW_ALL,
-		pt_KW_CHAIN,
-		pt_KW_RESSEQ,
-		pt_KW_RESID,
-		pt_KW_ICODE,
-		pt_KW_RESNAME,
-		pt_KW_ELEMENT,
-		pt_KW_AND,
-		pt_KW_OR,
-		pt_KW_NOT,
-		pt_KW_PDB,
-		pt_KW_ENTRY,
-		pt_KW_THROUGH
+		pt_STRING = 257,
+		pt_NUMBER = 258,
+		pt_RESID = 259,
+		pt_EOLN = 260,
+		pt_KW_ALL = 261,
+		pt_KW_CHAIN = 262,
+		pt_KW_RESSEQ = 263,
+		pt_KW_RESID = 264,
+		pt_KW_ICODE = 265,
+		pt_KW_RESNAME = 266,
+		pt_KW_ELEMENT = 267,
+		pt_KW_AND = 268,
+		pt_KW_OR = 269,
+		pt_KW_NOT = 270,
+		pt_KW_PDB = 271,
+		pt_KW_ENTRY = 272,
+		pt_KW_THROUGH = 273
 	};
 
-	virtual int get_next_token();
-	virtual std::string to_string(int token);
+	int get_next_token() override;
+	std::string to_string(int token) override;
 
 	int m_value_i;
 	std::string m_value_s;
@@ -648,7 +651,7 @@ int TLSSelectionParserImplPhenix::get_next_token()
 	int result = pt_NONE;
 	enum STATE
 	{
-		st_START,
+		st_START = 0,
 		st_RESID = 200,
 		st_NUM = 300,
 		st_IDENT = 400,
@@ -676,6 +679,7 @@ int TLSSelectionParserImplPhenix::get_next_token()
 			case st_IDENT: state = start = st_QUOTED; break;
 			case st_QUOTED: state = start = st_DQUOTED; break;
 			case st_DQUOTED: state = start = st_OTHER; break;
+			default:;
 		}
 		m_token.clear();
 		m_p = s;
@@ -857,8 +861,11 @@ int TLSSelectionParserImplPhenix::get_next_token()
 
 			// OTHER block
 			case st_OTHER:
-				result = ch;
+				result = static_cast<unsigned char>(ch);
 				break;
+
+			default:
+				throw std::runtime_error("invalid state in TLS parser");
 		}
 	}
 
@@ -955,7 +962,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseAtomSelection(
 	while (m_lookahead == pt_KW_OR)
 	{
 		match(pt_KW_OR);
-		result.reset(new tls_selection_union(result, ParseTerm()));
+		result = std::make_unique<tls_selection_union>(result, ParseTerm());
 	}
 
 	return result;
@@ -968,7 +975,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseTerm()
 	while (m_lookahead == pt_KW_AND)
 	{
 		match(pt_KW_AND);
-		result.reset(new tls_selection_intersection(result, ParseFactor()));
+		result = std::make_unique<tls_selection_intersection>(result, ParseFactor());
 	}
 
 	return result;
@@ -991,7 +998,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 
 		case pt_KW_NOT:
 			match(pt_KW_NOT);
-			result.reset(new tls_selection_not(ParseAtomSelection()));
+			result = std::make_unique<tls_selection_not>(ParseAtomSelection());
 			break;
 
 		case pt_KW_CHAIN:
@@ -1007,7 +1014,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 			else
 				match(m_lookahead == pt_STRING ? pt_STRING : pt_IDENT);
 
-			result.reset(new tls_selection_chain(chainID));
+			result = std::make_unique<tls_selection_chain>(chainID);
 			break;
 		}
 
@@ -1016,7 +1023,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 			match(pt_KW_RESNAME);
 			std::string name = m_value_s;
 			match(pt_IDENT);
-			result.reset(new tls_selection_by_name(name));
+			result = std::make_unique<tls_selection_by_name>(name);
 			break;
 		}
 
@@ -1025,7 +1032,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 			match(pt_KW_ELEMENT);
 			std::string element = m_value_s;
 			match(pt_IDENT);
-			result.reset(new tls_selection_by_element(element));
+			result = std::make_unique<tls_selection_by_element>(element);
 			break;
 		}
 
@@ -1044,7 +1051,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 				match(pt_NUMBER);
 			}
 
-			result.reset(new tls_selection_range_seq(from, to));
+			result = std::make_unique<tls_selection_range_seq>(from, to);
 			break;
 		}
 
@@ -1082,24 +1089,24 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 				}
 
 				if (through)
-					result.reset(new tls_selection_range_id(from, to, icode_from, icode_to));
+					result = std::make_unique<tls_selection_range_id>(from, to, icode_from, icode_to);
 				else
 				{
 					if (cif::VERBOSE and (icode_from or icode_to))
 						std::cerr << "Warning, ignoring insertion codes\n";
 
-					result.reset(new tls_selection_range_seq(from, to));
+					result = std::make_unique<tls_selection_range_seq>(from, to);
 				}
 			}
 			else
-				result.reset(new tls_selection_res_id(from, icode_from));
+				result = std::make_unique<tls_selection_res_id>(from, icode_from);
 
 			break;
 		}
 
 		case pt_KW_ALL:
 			match(pt_KW_ALL);
-			result.reset(new tls_selection_all());
+			result = std::make_unique<tls_selection_all>();
 			break;
 
 		default:
@@ -1116,19 +1123,19 @@ class TLSSelectionParserImplBuster : public tls_selection_parser_impl
   public:
 	TLSSelectionParserImplBuster(const std::string &selection);
 
-	virtual std::unique_ptr<tls_selection> Parse();
+	std::unique_ptr<tls_selection> Parse() override;
 
   protected:
 	enum TOKEN
 	{
 		bt_NONE = 0,
 		bt_IDENT = 256,
-		bt_NUMBER,
-		bt_EOLN,
+		bt_NUMBER = 257,
+		bt_EOLN = 258,
 	};
 
-	virtual int get_next_token();
-	virtual std::string to_string(int token);
+	int get_next_token() override;
+	std::string to_string(int token) override;
 
 	std::unique_ptr<tls_selection> ParseGroup();
 	std::tuple<std::string, int> ParseAtom();
@@ -1189,7 +1196,7 @@ int TLSSelectionParserImplBuster::get_next_token()
 					state = st_NEGATE;
 				}
 				else
-					result = ch;
+					result = static_cast<unsigned char>(ch);
 				break;
 
 			case st_NEGATE:
@@ -1261,7 +1268,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBuster::ParseGroup()
 		if (result == nullptr)
 			result.reset(s.release());
 		else
-			result.reset(new tls_selection_union{ result, s });
+			result = std::make_unique<tls_selection_union>( result, s );
 	};
 
 	match('{');
@@ -1304,7 +1311,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBuster::ParseGroup()
 					if (result == nullptr)
 						result.reset(s.release());
 					else
-						result.reset(new tls_selection_union{ result, s });
+						result = std::make_unique<tls_selection_union>( result, s );
 
 					chain1.clear();
 				}
@@ -1374,7 +1381,7 @@ class TLSSelectionParserImplBusterOld : public tls_selection_parser_impl
 		m_lookahead = get_next_token();
 	}
 
-	virtual std::unique_ptr<tls_selection> Parse();
+	std::unique_ptr<tls_selection> Parse() override;
 
   private:
 	std::unique_ptr<tls_selection> ParseAtomSelection();
@@ -1388,28 +1395,28 @@ class TLSSelectionParserImplBusterOld : public tls_selection_parser_impl
 	{
 		pt_NONE = 0,
 		pt_IDENT = 256,
-		pt_CHAINRESID,
-		pt_STRING,
-		pt_NUMBER,
-		pt_RANGE,
-		pt_EOLN,
+		pt_CHAINRESID = 257,
+		pt_STRING = 258,
+		pt_NUMBER = 259,
+		pt_RANGE = 260,
+		pt_EOLN = 261,
 
-		pt_KW_ALL,
-		pt_KW_CHAIN,
-		pt_KW_RESSEQ,
-		pt_KW_RESID,
-		pt_KW_RESNAME,
-		pt_KW_ELEMENT,
-		pt_KW_AND,
-		pt_KW_OR,
-		pt_KW_NOT,
-		pt_KW_PDB,
-		pt_KW_ENTRY,
-		pt_KW_THROUGH
+		pt_KW_ALL = 262,
+		pt_KW_CHAIN = 263,
+		pt_KW_RESSEQ = 264,
+		pt_KW_RESID = 265,
+		pt_KW_RESNAME = 266,
+		pt_KW_ELEMENT = 267,
+		pt_KW_AND = 268,
+		pt_KW_OR = 269,
+		pt_KW_NOT = 270,
+		pt_KW_PDB = 271,
+		pt_KW_ENTRY = 272,
+		pt_KW_THROUGH = 273
 	};
 
-	virtual int get_next_token();
-	virtual std::string to_string(int token);
+	int get_next_token() override;
+	std::string to_string(int token) override;
 
 	int m_value_i;
 	std::string m_value_s;
@@ -1469,7 +1476,7 @@ int TLSSelectionParserImplBusterOld::get_next_token()
 					state = st_QUOTED_1;
 				}
 				else
-					result = ch;
+					result = static_cast<unsigned char>(ch);
 				break;
 
 			case st_NEGATE:
@@ -1673,7 +1680,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseAtomSelecti
 	while (m_lookahead == pt_KW_OR)
 	{
 		match(pt_KW_OR);
-		result.reset(new tls_selection_union(result, ParseTerm()));
+		result = std::make_unique<tls_selection_union>(result, ParseTerm());
 	}
 
 	return result;
@@ -1686,7 +1693,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseTerm()
 	while (m_lookahead == pt_KW_AND)
 	{
 		match(pt_KW_AND);
-		result.reset(new tls_selection_intersection(result, ParseFactor()));
+		result = std::make_unique<tls_selection_intersection>(result, ParseFactor());
 	}
 
 	return result;
@@ -1706,7 +1713,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseFactor()
 
 		case pt_KW_NOT:
 			match(pt_KW_NOT);
-			result.reset(new tls_selection_not(ParseAtomSelection()));
+			result = std::make_unique<tls_selection_not>(ParseAtomSelection());
 			break;
 
 		case pt_KW_CHAIN:
@@ -1722,7 +1729,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseFactor()
 			else
 				match(m_lookahead == pt_STRING ? pt_STRING : pt_IDENT);
 
-			result.reset(new tls_selection_chain(chainID));
+			result = std::make_unique<tls_selection_chain>(chainID);
 			break;
 		}
 
@@ -1731,7 +1738,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseFactor()
 			match(pt_KW_RESNAME);
 			std::string name = m_value_s;
 			match(pt_IDENT);
-			result.reset(new tls_selection_by_name(name));
+			result = std::make_unique<tls_selection_by_name>(name);
 			break;
 		}
 
@@ -1747,7 +1754,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseFactor()
 
 		case pt_KW_ALL:
 			match(pt_KW_ALL);
-			result.reset(new tls_selection_all());
+			result = std::make_unique<tls_selection_all>();
 			break;
 
 		case pt_CHAINRESID:
@@ -1792,7 +1799,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseResid()
 		std::unique_ptr<tls_selection> range(new tls_selection_range_seq(from, to));
 
 		if (result)
-			result.reset(new tls_selection_union(result, range));
+			result = std::make_unique<tls_selection_union>(result, range);
 		else
 			result.reset(range.release());
 
@@ -1837,7 +1844,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseChainResid(
 		std::unique_ptr<tls_selection> range(new tls_selection_intersection(sc, sr));
 
 		if (result)
-			result.reset(new tls_selection_union(result, range));
+			result = std::make_unique<tls_selection_union>(result, range);
 		else
 			result.reset(range.release());
 
@@ -1858,15 +1865,15 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseChainResid(
 class TLSSelectionParserBase
 {
   public:
-	virtual std::unique_ptr<tls_selection> Parse(const std::string &selection) const = 0;
-	virtual ~TLSSelectionParserBase() {}
+	[[nodiscard]] virtual std::unique_ptr<tls_selection> Parse(const std::string &selection) const = 0;
+	virtual ~TLSSelectionParserBase() = default;
 };
 
 template <typename IMPL>
 class TLSSelectionParser
 {
   public:
-	virtual std::unique_ptr<tls_selection> Parse(const std::string &selection) const
+	[[nodiscard]] virtual std::unique_ptr<tls_selection> Parse(const std::string &selection) const
 	{
 		std::unique_ptr<tls_selection> result;
 

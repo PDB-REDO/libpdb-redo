@@ -33,6 +33,7 @@
 
 #include "pdb-redo/Minimizer.hpp"
 
+#include <algorithm>
 #include <cif++.hpp>
 
 #include <gsl/gsl_eigen.h>
@@ -153,7 +154,7 @@ void AngleRestraint::print(const AtomLocationProvider &atoms) const
 // --------------------------------------------------------------------
 
 std::tuple<DPoint, DPoint, DPoint, DPoint>
-TorsionRestraint::CalculateTorsionGradients(float theta, DPoint p[4]) const
+TorsionRestraint::CalculateTorsionGradients(double theta, DPoint p[4]) const
 {
 	auto a = p[1] - p[0], b = p[2] - p[1], c = p[3] - p[2];
 
@@ -412,7 +413,7 @@ double PlanarityRestraint::f(const AtomLocationProvider &atoms) const
 	if (cif::VERBOSE > 2)
 	{
 		std::vector<std::string> as;
-		transform(mAtoms.begin(), mAtoms.end(), back_inserter(as),
+		std::ranges::transform(mAtoms, back_inserter(as),
 			[](auto &a)
 			{
 				std::stringstream s;
@@ -431,7 +432,7 @@ void PlanarityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) 
 	if (cif::VERBOSE > 2)
 	{
 		std::vector<std::string> as;
-		transform(mAtoms.begin(), mAtoms.end(), back_inserter(as),
+		std::ranges::transform(mAtoms, back_inserter(as),
 			[](auto &a)
 			{
 				std::stringstream s;

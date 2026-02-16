@@ -50,10 +50,12 @@ using namespace pdb_redo;
 
 // --------------------------------------------------------------------
 
-std::filesystem::path gTestDir = std::filesystem::current_path();
+std::filesystem::path gTestDir;
 
 int main(int argc, char *argv[])
 {
+	gTestDir = std::filesystem::current_path();
+
 	Catch::Session session; // There must be exactly one instance
 
 	// Build a new parser on top of Catch2's

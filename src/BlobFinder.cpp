@@ -26,6 +26,7 @@
 
 #include "pdb-redo/BlobFinder.hpp"
 
+#include <algorithm>
 #include <cif++/point.hpp>
 #include <pdb-redo/Restraints.hpp>
 #include <stdexcept>
@@ -49,10 +50,10 @@ BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, float growingPercentile)
 		throw std::runtime_error("No gridpoints with density height above 0");
 
 	// Sort vector on density height (from high to low numbers)
-	std::sort(mPotentialGridPoints.begin(), mPotentialGridPoints.end(), [this](GridPoint a, GridPoint b)
+	std::ranges::sort(mPotentialGridPoints, [this](GridPoint a, GridPoint b)
 		{ return mXmap[a] < mXmap[b]; });
 
-	size_t ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
+	auto ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
 	mGrowingThreshold = mXmap[mPotentialGridPoints.at(ix)];
 	if (mGrowingThreshold == 0)
 		mGrowingThreshold = 1e-6;
@@ -134,10 +135,10 @@ BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
 		throw std::runtime_error("No gridpoints with density height above 0");
 
 	// Sort vector on density height (from high to low numbers)
-	std::sort(mPotentialGridPoints.begin(), mPotentialGridPoints.end(), [this](GridPoint a, GridPoint b)
+	std::ranges::sort(mPotentialGridPoints, [this](GridPoint a, GridPoint b)
 		{ return mXmap[a] < mXmap[b]; });
 
-	size_t ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
+	auto ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
 	mGrowingThreshold = mXmap[mPotentialGridPoints.at(ix)];
 	if (mGrowingThreshold == 0)
 		mGrowingThreshold = 1e-6;
@@ -156,22 +157,20 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 		auto newblob = pop();
 
 		// Erase all gridpoints from the potential list, including symmetry copies
-		mPotentialGridPoints.erase(
-			std::remove_if(mPotentialGridPoints.begin(), mPotentialGridPoints.end(),
+		std::erase_if(mPotentialGridPoints,
 				[&newblob](const GridPoint &gp)
 				{
-					return std::find_if(newblob.begin(), newblob.end(), [gp](const GridPoint &p)
+					return std::ranges::find_if(newblob, [gp](const GridPoint &p)
 							   { return gp.index() == p.index(); }) != newblob.end();
-				}),
-			mPotentialGridPoints.end());
+				});
 
 		std::vector<cif::point> result;
 
 		for (auto &gp : newblob)
 			result.emplace_back(gp.coord_orth());
 
-		std::sort(result.begin(), result.end());
-		result.erase(std::unique(result.begin(), result.end()), result.end());
+		std::ranges::sort(result);
+		result.erase(std::ranges::unique(result).begin(), result.end());
 
 		if (result.size() < 30 or gridPointVolume * result.size() < minimalVolume)
 			continue;
@@ -179,11 +178,11 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 		// Check if found blob is in proximity of protein atoms
 		if (not mProteinAtoms.empty())
 		{
-			auto [c, r] = cif::smallest_sphere_around_points(result);
-			auto max_d = (10 + r) * (10 + r);
+			auto [center, radius] = cif::smallest_sphere_around_points(result);
+			auto max_d = (10 + radius) * (10 + radius);
 
-			if (std::find_if(mProteinAtoms.begin(), mProteinAtoms.end(), [max_d, c](const cif::mm::atom &a)
-					{ return cif::distance_squared(a.get_location(), c) < max_d; }) == mProteinAtoms.end())
+			if (std::ranges::find_if(mProteinAtoms, [=](const cif::mm::atom &a)
+					{ return cif::distance_squared(a.get_location(), center) < max_d; }) == mProteinAtoms.end())
 				continue;
 		}
 
@@ -222,7 +221,7 @@ std::vector<BlobFinder::GridPoint> BlobFinder::pop()
 
 					auto n_gp = clipper::Xmap_base::Map_reference_coord(mXmap, { u, v, w });
 
-					if (std::find_if(blob.begin(), blob.end(), [ix = n_gp.index()](const GridPoint &p)
+					if (std::ranges::find_if(blob, [ix = n_gp.index()](const GridPoint &p)
 							{ return p.index() == ix; }) != blob.end())
 						continue;
 

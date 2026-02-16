@@ -30,13 +30,16 @@
 */
 
 #include "pdb-redo/Minimizer.hpp"
+
 #include "pdb-redo/Restraints.hpp"
 
+#include <algorithm>
 #include <cmath>
 #include <filesystem>
 #include <format>
 #include <initializer_list>
 #include <iomanip>
+#include <memory>
 #include <regex>
 #include <stdexcept>
 
@@ -54,7 +57,7 @@ const double
 	kMaxPeptideBondLength = 3.5,
 	kMaxPeptideBondLengthSq = kMaxPeptideBondLength * kMaxPeptideBondLength;
 
-const double
+const float
 	kDefaultMapWeight = 60,
 	kDefaultPlane5ESD = 0.11;
 
@@ -65,7 +68,7 @@ struct lessAtom
 	bool operator()(const cif::mm::atom &a, const cif::mm::atom &b) const { return a.id().compare(b.id()) < 0; }
 };
 
-typedef std::set<cif::mm::atom, lessAtom> AtomSet;
+using AtomSet = std::set<cif::mm::atom, lessAtom>;
 
 // --------------------------------------------------------------------
 
@@ -292,11 +295,11 @@ void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last
 						cif::mm::atom ca1 = prev->get_atom_by_atom_id("CA");
 						cif::mm::atom ca2 = r.get_atom_by_atom_id("CA");
 
-						mTransPeptideRestraints.emplace_back(TransPeptideRestraint{
+						mTransPeptideRestraints.emplace_back(
 							ref(ca1),
 							ref(c),
 							ref(n),
-							ref(ca2) });
+							ref(ca2));
 					}
 
 					// add planar restraints
@@ -308,7 +311,7 @@ void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last
 						ref(r.get_atom_by_atom_id("CA"))
 					};
 
-					mPlanarityRestraints.emplace_back(PlanarityRestraint{ std::move(atoms), kDefaultPlane5ESD });
+					mPlanarityRestraints.emplace_back(std::move(atoms), kDefaultPlane5ESD);
 				}
 			}
 			catch (const std::exception &ex)
@@ -336,7 +339,7 @@ void Minimizer::addDensityMap(const XMap &xMap, float mapWeight)
 	std::vector<std::pair<AtomRef, double>> densityAtoms;
 	densityAtoms.reserve(mAtoms.size());
 
-	transform(mAtoms.begin(), mAtoms.end(), back_inserter(densityAtoms),
+	std::ranges::transform(mAtoms, back_inserter(densityAtoms),
 		[this](const cif::mm::atom &a)
 		{
 			double z = static_cast<int>(a.get_type());
@@ -351,7 +354,7 @@ void Minimizer::addDensityMap(const XMap &xMap, float mapWeight)
 			return std::make_pair(ref(a), z * weight * occupancy);
 		});
 
-	mDensityRestraint.reset(new DensityRestraint(std::move(densityAtoms), xMap, mapWeight));
+	mDensityRestraint = std::make_unique<DensityRestraint>(std::move(densityAtoms), xMap, mapWeight);
 }
 
 void Minimizer::Finish(const cif::crystal &crystal)
@@ -363,7 +366,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 	if (auto clibd_mon = getenv("CLIBD_MON"))
 		enerLibFilePath = clibd_mon;
 	else
-	 	throw std::runtime_error("Did you source the CCP4 environment?");
+		throw std::runtime_error("Did you source the CCP4 environment?");
 	enerLibFilePath /= "ener_lib.cif";
 
 	cif::file enerLibFile(enerLibFilePath);
@@ -383,7 +386,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 		if (nbc.count(std::make_tuple(ra1, ra2)))
 			return;
 
-		if (find_if(mAngleRestraints.begin(), mAngleRestraints.end(),
+		if (std::ranges::find_if(mAngleRestraints,
 				[&](auto &ar)
 				{ return (ar.mA == ra1 and ar.mC == ra2) or (ar.mA == ra2 and ar.mC == ra1); }) != mAngleRestraints.end())
 			return;
@@ -487,29 +490,28 @@ void Minimizer::Finish(const cif::crystal &crystal)
 
 				// so-called strange exceptions in coot code
 
-				if (find(mAtoms.begin(), mAtoms.end(), a2) == mAtoms.end())
+				if (std::ranges::find(mAtoms, a2) == mAtoms.end())
 				{
-					switch (std::abs(a1.get_label_seq_id() - a2.get_label_seq_id()))
+					if (auto distance = std::abs(a1.get_label_seq_id() - a2.get_label_seq_id()); distance == 1)
 					{
-						case 1:
-							if ((a1.get_label_atom_id() == "O" and a2.get_label_atom_id() == "CA") or
-								(a1.get_label_atom_id() == "CA" and a2.get_label_atom_id() == "O") or
-								(a1.get_label_atom_id() == "N" and a2.get_label_atom_id() == "CB") or
-								(a1.get_label_atom_id() == "CB" and a2.get_label_atom_id() == "N") or
-								(a1.get_label_atom_id() == "C" and a2.get_label_atom_id() == "CB") or
-								(a1.get_label_atom_id() == "CB" and a2.get_label_atom_id() == "C"))
-							{
-								minDist = 2.7;
-							}
-							break;
 
-						case 2:
-							if ((a1.get_label_atom_id() == "C" and a2.get_label_atom_id() == "N") or
-								(a1.get_label_atom_id() == "N" and a2.get_label_atom_id() == "C"))
-							{
-								minDist = 2.7;
-							}
-							break;
+						if ((a1.get_label_atom_id() == "O" and a2.get_label_atom_id() == "CA") or
+							(a1.get_label_atom_id() == "CA" and a2.get_label_atom_id() == "O") or
+							(a1.get_label_atom_id() == "N" and a2.get_label_atom_id() == "CB") or
+							(a1.get_label_atom_id() == "CB" and a2.get_label_atom_id() == "N") or
+							(a1.get_label_atom_id() == "C" and a2.get_label_atom_id() == "CB") or
+							(a1.get_label_atom_id() == "CB" and a2.get_label_atom_id() == "C"))
+						{
+							minDist = 2.7;
+						}
+					}
+					else if (distance == 2)
+					{
+						if ((a1.get_label_atom_id() == "C" and a2.get_label_atom_id() == "N") or
+							(a1.get_label_atom_id() == "N" and a2.get_label_atom_id() == "C"))
+						{
+							minDist = 2.7;
+						}
 					}
 				}
 			}
@@ -603,7 +605,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 void Minimizer::dropTorsionRestraints()
 {
 	for (auto &r : mTorsionRestraints)
-		mRestraints.erase(std::remove(mRestraints.begin(), mRestraints.end(), &r), mRestraints.end());
+		std::erase(mRestraints, &r);
 
 	mTorsionRestraints.clear();
 }
@@ -803,7 +805,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			}
 
 			if (atoms.size() > 3)
-				mPlanarityRestraints.emplace_back(PlanarityRestraint{ std::move(atoms), plane.esd });
+				mPlanarityRestraints.emplace_back( std::move(atoms), plane.esd );
 		}
 		catch (const std::exception &ex)
 		{
@@ -833,7 +835,7 @@ void Minimizer::printStats()
 	auto print = [](std::string_view name, std::tuple<double, double> v)
 	{
 		auto [z, sum] = v;
-		std::cerr << std::format("  {:15} {:10.1f} {:6.2f}\n", name, sum, z );
+		std::cerr << std::format("  {:15} {:10.1f} {:6.2f}\n", name, sum, z);
 	};
 
 	print("bond", rmsz(loc, mBondRestraints));
@@ -845,8 +847,8 @@ void Minimizer::printStats()
 	print("nbc", rmsz(loc, mNonBondedContactRestraints));
 
 	double densityScore = mDensityRestraint ? mDensityRestraint->f(loc) : 0;
-	std::cerr << std::format("  {:15} {:10.1f}\n", "density", densityScore );
-}	
+	std::cerr << std::format("  {:15} {:10.1f}\n", "density", densityScore);
+}
 
 double Minimizer::score()
 {
@@ -902,7 +904,7 @@ class GSLAtomLocation : public AtomLocationProvider
 		}
 	}
 
-	virtual DPoint operator[](AtomRef atom) const;
+	DPoint operator[](AtomRef atom) const override;
 
 	void storeLocations();
 
@@ -921,10 +923,10 @@ DPoint GSLAtomLocation::operator[](AtomRef atomID) const
 	if (ix == kRefSentinel)
 		return mFixedLocations.at(atomID);
 
-	return DPoint(
+	return {
 		gsl_vector_get(mV, ix * 3 + 0),
 		gsl_vector_get(mV, ix * 3 + 1),
-		gsl_vector_get(mV, ix * 3 + 2));
+		gsl_vector_get(mV, ix * 3 + 2)};
 }
 
 void GSLAtomLocation::storeLocations()
@@ -966,13 +968,13 @@ class GSLDFCollector : public DFCollector
 		}
 	}
 
-	~GSLDFCollector();
+	~GSLDFCollector() override;
 
-	virtual void add(AtomRef atom, double dx, double dy, double dz);
+	void add(AtomRef atom, double dx, double dy, double dz) override;
 
   private:
 	// for debugging
-	std::string label(AtomRef atom) const
+	[[nodiscard]] std::string label(AtomRef atom) const
 	{
 		std::string atomName = " " + mAtoms[atom].get_label_atom_id();
 		atomName += std::string(5 - atomName.length(), ' ');
@@ -986,26 +988,26 @@ class GSLDFCollector : public DFCollector
 
 GSLDFCollector::~GSLDFCollector()
 {
-	if (cif::VERBOSE > 2)
-	{
-		std::cerr << std::string(19, '-') << '\n'
-				  << "Collected gradient:\n";
+	// if (cif::VERBOSE > 2)
+	// {
+	// 	std::cerr << std::string(19, '-') << '\n'
+	// 			  << "Collected gradient:\n";
 
-		for (std::size_t i = 0; i < mAtoms.size(); ++i)
-		{
-			std::size_t ix = mIndex[i];
-			if (ix == kRefSentinel)
-				continue;
+	// 	for (std::size_t i = 0; i < mAtoms.size(); ++i)
+	// 	{
+	// 		std::size_t ix = mIndex[i];
+	// 		if (ix == kRefSentinel)
+	// 			continue;
 
-			double dx = gsl_vector_get(mDF, ix * 3 + 0);
-			double dy = gsl_vector_get(mDF, ix * 3 + 1);
-			double dz = gsl_vector_get(mDF, ix * 3 + 2);
+	// 		double dx = gsl_vector_get(mDF, ix * 3 + 0);
+	// 		double dy = gsl_vector_get(mDF, ix * 3 + 1);
+	// 		double dz = gsl_vector_get(mDF, ix * 3 + 2);
 
-			std::cerr << "atom: " << label(i) << " d: " << std::setprecision(10) << dx << " " << dy << " " << dz << '\n';
-		}
+	// 		std::cerr << "atom: " << label(i) << " d: " << std::setprecision(10) << dx << " " << dy << " " << dz << '\n';
+	// 	}
 
-		std::cerr << std::string(19, '-') << '\n';
-	}
+	// 	std::cerr << std::string(19, '-') << '\n';
+	// }
 }
 
 void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
@@ -1034,7 +1036,7 @@ class GSLMinimizer : public Minimizer
 	{
 	}
 
-	virtual void Finish(const cif::crystal &crystal)
+	void Finish(const cif::crystal &crystal) override
 	{
 		Minimizer::Finish(crystal);
 
@@ -1042,15 +1044,15 @@ class GSLMinimizer : public Minimizer
 			mFixedLocations.push_back(a.get_location());
 	}
 
-	~GSLMinimizer()
+	~GSLMinimizer() override
 	{
 		if (m_s != nullptr)
 			gsl_multimin_fdfminimizer_free(m_s);
 	}
 
-	virtual double refine(bool storeAtoms);
-	virtual std::vector<std::pair<std::string, cif::point>> getAtoms() const;
-	virtual void storeAtomLocations();
+	double refine(bool storeAtoms) override;
+	[[nodiscard]] std::vector<std::pair<std::string, cif::point>> getAtoms() const override;
+	void storeAtomLocations() override;
 
   private:
 	static double F(const gsl_vector *v, void *params);
@@ -1193,19 +1195,19 @@ void GSLMinimizer::storeAtomLocations()
 
 double GSLMinimizer::F(const gsl_vector *v, void *params)
 {
-	GSLMinimizer *self = reinterpret_cast<GSLMinimizer *>(params);
+	auto *self = reinterpret_cast<GSLMinimizer *>(params);
 	return self->F(v);
 }
 
 void GSLMinimizer::Df(const gsl_vector *v, void *params, gsl_vector *df)
 {
-	GSLMinimizer *self = reinterpret_cast<GSLMinimizer *>(params);
+	auto *self = reinterpret_cast<GSLMinimizer *>(params);
 	self->Df(v, df);
 }
 
 void GSLMinimizer::Fdf(const gsl_vector *v, void *params, double *f, gsl_vector *df)
 {
-	GSLMinimizer *self = reinterpret_cast<GSLMinimizer *>(params);
+	auto *self = reinterpret_cast<GSLMinimizer *>(params);
 	self->Fdf(v, f, df);
 
 	if (cif::VERBOSE > 2)
@@ -1266,7 +1268,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 	{
 		auto &res = structure.get_residue(atom);
 
-		auto ri = std::find_if(residues.begin(), residues.end(), [rp = &res](const cif::mm::residue *r)
+		auto ri = std::ranges::find_if(residues, [rp = &res](const cif::mm::residue *r)
 			{ return r == rp; });
 		if (ri != residues.end())
 			continue;
@@ -1276,7 +1278,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 
 	// sort by asym, seq_id
 
-	sort(residues.begin(), residues.end(), [](const cif::mm::residue *a, const cif::mm::residue *b)
+	std::ranges::sort(residues, [](const cif::mm::residue *a, const cif::mm::residue *b)
 		{
 		int d = a->get_asym_id().compare(b->get_asym_id());
 		if (d == 0)
@@ -1307,7 +1309,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 			++ri;
 		}
 
-		auto pi = find_if(polymers.begin(), polymers.end(), [id = monomer->get_asym_id()](cif::mm::polymer &poly)
+		auto pi = std::ranges::find_if(polymers, [id = monomer->get_asym_id()](cif::mm::polymer &poly)
 			{ return poly.get_asym_id() == id; });
 		if (pi == polymers.end())
 			throw std::runtime_error("cif::mm::polymer not found for asym ID " + monomer->get_asym_id());
@@ -1329,11 +1331,11 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		const auto &[ptnr2_label_asym_id, ptnr2_label_seq_id, ptnr2_auth_seq_id] =
 			r.get<std::string, int, std::string>("ptnr2_label_asym_id", "ptnr2_label_seq_id", "ptnr2_auth_seq_id");
 
-		auto ai = find_if(residues.begin(), residues.end(),
+		auto ai = std::ranges::find_if(residues,
 			[asym_id = ptnr1_label_asym_id, seq_id = ptnr1_label_seq_id, pdb_seq_num = ptnr1_auth_seq_id](const cif::mm::residue *res)
 			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_pdb_seq_num() == pdb_seq_num; });
 
-		auto bi = find_if(residues.begin(), residues.end(),
+		auto bi = std::ranges::find_if(residues,
 			[asym_id = ptnr2_label_asym_id, seq_id = ptnr2_label_seq_id, pdb_seq_num = ptnr2_auth_seq_id](const cif::mm::residue *res)
 			{ return res->get_asym_id() == asym_id and res->get_seq_id() == seq_id and res->get_pdb_seq_num() == pdb_seq_num; });
 

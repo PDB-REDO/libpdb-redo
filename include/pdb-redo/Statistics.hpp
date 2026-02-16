@@ -86,18 +86,18 @@ class StatsCollector
 	StatsCollector(const MapMaker<float> &mm,
 		cif::mm::structure &structure, bool electronScattering);
 
-	virtual std::vector<ResidueStatistics> collect() const;
+	[[nodiscard]] virtual std::vector<ResidueStatistics> collect() const;
 
-	virtual std::vector<ResidueStatistics> collect(const std::string &asymID) const;
+	[[nodiscard]] virtual std::vector<ResidueStatistics> collect(const std::string &asymID) const;
 
-	virtual std::vector<ResidueStatistics> collect(const std::string &asymID,
+	[[nodiscard]] virtual std::vector<ResidueStatistics> collect(const std::string &asymID,
 		int resFirst, int resLast, bool authNameSpace = false) const;
 
-	virtual ResidueStatistics collect(std::initializer_list<const cif::mm::residue *> residues) const;
+	[[nodiscard]] virtual ResidueStatistics collect(std::initializer_list<const cif::mm::residue *> residues) const;
 
-	virtual ResidueStatistics collect(std::initializer_list<cif::mm::atom> atoms) const;
+	[[nodiscard]] virtual ResidueStatistics collect(std::initializer_list<cif::mm::atom> atoms) const;
 
-	virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
+	[[nodiscard]] virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
 
   protected:
 	using residue_list = std::vector<std::tuple<std::string, int, std::string>>;
@@ -122,7 +122,7 @@ class StatsCollector
 		}
 	};
 
-	typedef std::map<clipper::Coord_grid, double, cmpGPt> GridPtDataMap;
+	using GridPtDataMap = std::map<clipper::Coord_grid, double, cmpGPt>;
 
 	cif::mm::structure &mStructure;
 	const MapMaker<float> &mMapMaker;
@@ -156,7 +156,7 @@ class EDIAStatsCollector : public StatsCollector
 		cif::mm::structure &structure, bool electronScattering);
 
   protected:
-	virtual void calculate(std::vector<AtomData> &atomData) const;
+	void calculate(std::vector<AtomData> &atomData) const override;
 
 	BondMap createBondMap(std::vector<AtomData> &atomData) const;
 

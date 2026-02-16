@@ -37,26 +37,24 @@
 #include <unordered_map>
 #define CATCH_CONFIG_RUNNER
 
-#include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/DistanceMap.hpp"
-#include "pdb-redo/MapMaker.hpp"
-#include "pdb-redo/Minimizer.hpp"
-#include "pdb-redo/Statistics.hpp"
 
 #include <catch2/catch_all.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cif++.hpp>
 #include <filesystem>
-#include <stdexcept>
+#include <utility>
 
 namespace fs = std::filesystem;
 
 // --------------------------------------------------------------------
 
-std::filesystem::path gTestDir = std::filesystem::current_path();
+std::filesystem::path gTestDir;
 
 int main(int argc, char *argv[])
 {
+	gTestDir = std::filesystem::current_path();
+
 	Catch::Session session; // There must be exactly one instance
 
 	// Build a new parser on top of Catch2's
@@ -91,7 +89,7 @@ int main(int argc, char *argv[])
 class DistanceMap
 {
   public:
-	DistanceMap(const cif::mm::structure &p, const cif::crystal &crystal, float maxDistance);
+	DistanceMap(const cif::mm::structure &p, cif::crystal crystal, float maxDistance);
 
 	DistanceMap(const cif::mm::structure &p, float maxDistance)
 		: DistanceMap(p, cif::crystal(p.get_datablock()), maxDistance)
@@ -138,16 +136,16 @@ class DistanceMap
 	std::unordered_multimap<key_type, entry, key_type_hash> m_index;
 };
 
-DistanceMap::DistanceMap(const cif::mm::structure &structure, const cif::crystal &crystal, float maxDistance)
+DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal crystal, float maxDistance)
 	: m_structure(structure)
-	, m_crystal(crystal)
+	, m_crystal(std::move(crystal))
 	, m_grid_spacing(1)
 {
 	std::vector<std::tuple<cif::point, std::string>> pts;
 
 	pts.reserve(structure.atoms().size());
 
-	int minX, maxX, minY, maxY, minZ, maxZ;
+	key_type k1{}, k2{};
 
 	for (auto a : structure.atoms())
 	{
@@ -162,38 +160,38 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, const cif::crystal
 
 		if (m_index.empty())
 		{
-			minX = maxX = k.x;
-			minY = maxY = k.y;
-			minZ = maxZ = k.z;
+			k1.x = k2.x = k.x;
+			k1.y = k2.y = k.y;
+			k1.z = k2.z = k.z;
 		}
 		else
 		{
-			if (minX > k.x)
-				minX = k.x;
-			else if (maxX < k.x)
-				maxX = k.x;
+			if (k1.x > k.x)
+				k1.x = k.x;
+			else if (k2.x < k.x)
+				k2.x = k.x;
 
-			if (minY > k.y)
-				minY = k.y;
-			else if (maxY < k.y)
-				maxY = k.y;
+			if (k1.y > k.y)
+				k1.y = k.y;
+			else if (k2.y < k.y)
+				k2.y = k.y;
 
-			if (minZ > k.z)
-				minZ = k.z;
-			else if (maxZ < k.z)
-				maxZ = k.z;
+			if (k1.z > k.z)
+				k1.z = k.z;
+			else if (k2.z < k.z)
+				k2.z = k.z;
 		}
 
 		m_index.emplace(k, entry{ a.id(), cif::sym_op{} });
 	}
 
-	int d = std::rint(maxDistance / m_grid_spacing);
-	minX -= d;
-	maxX += d;
-	minY -= d;
-	maxY += d;
-	minZ -= d;
-	maxZ += d;
+	int d = static_cast<int>(std::rint(maxDistance / m_grid_spacing));
+	k1.x -= d;
+	k2.x += d;
+	k1.y -= d;
+	k2.y += d;
+	k1.z -= d;
+	k2.z += d;
 
 	auto &sg = m_crystal.get_spacegroup();
 	auto &cell = m_crystal.get_cell();
@@ -221,9 +219,9 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, const cif::crystal
 							static_cast<int>(std::rint(ap.m_z / m_grid_spacing))
 						};
 
-						if (k.x >= minX and k.x <= maxX and
-							k.y >= minY and k.y <= maxY and
-							k.y >= minZ and k.z <= maxZ)
+						if (k.x >= k1.x and k.x <= k2.x and
+							k.y >= k1.y and k.y <= k2.y and
+							k.y >= k1.z and k.z <= k2.z)
 						{
 							m_index.emplace(k, entry{ id, symop });
 						}

@@ -33,17 +33,9 @@
 
 #pragma once
 
-#include <filesystem>
-
 #include <cif++.hpp>
-
-#if __has_include(<experimental/optional>)
-#include <experimental/optional>
-using std::experimental::optional;
-#else
+#include <filesystem>
 #include <optional>
-using std::optional;
-#endif
 
 namespace pdb_redo
 {
@@ -53,29 +45,25 @@ struct ResidueSpec
 	std::string pdb_asym_id;
 	std::string pdb_comp_id;
 	std::string pdb_seq_id;
-	optional<char> pdbx_PDB_ins_code;
+	std::optional<char> pdbx_PDB_ins_code;
 	std::string label_asym_id;
 	std::string label_comp_id;
 	int label_seq_id;
 
-	ResidueSpec() {}
-	ResidueSpec(const std::string &auth_asym_id,
-		const std::string &auth_comp_id,
-		const std::string &auth_seq_id,
+	ResidueSpec() = default;
+	ResidueSpec(std::string auth_asym_id,
+		std::string auth_comp_id,
+		std::string auth_seq_id,
 		const std::string &pdbx_PDB_ins_code,
-		const std::string &label_asym_id,
-		const std::string &label_comp_id,
+		std::string label_asym_id,
+		std::string label_comp_id,
 		int label_seq_id)
-		: pdb_asym_id(auth_asym_id)
-		, pdb_comp_id(auth_comp_id)
-		, pdb_seq_id(auth_seq_id)
-#if __has_include(<experimental/optional>)
-		, pdbx_PDB_ins_code(pdbx_PDB_ins_code.empty() ? optional<char>{} : std::experimental::make_optional(pdbx_PDB_ins_code.c_str()[0]))
-#else
-		, pdbx_PDB_ins_code(pdbx_PDB_ins_code.empty() ? optional<char>{} : std::make_optional(pdbx_PDB_ins_code.c_str()[0]))
-#endif
-		, label_asym_id(label_asym_id)
-		, label_comp_id(label_comp_id)
+		: pdb_asym_id(std::move(auth_asym_id))
+		, pdb_comp_id(std::move(auth_comp_id))
+		, pdb_seq_id(std::move(auth_seq_id))
+		, pdbx_PDB_ins_code(pdbx_PDB_ins_code.empty() ? std::optional<char>{} : std::make_optional(pdbx_PDB_ins_code.c_str()[0]))
+		, label_asym_id(std::move(label_asym_id))
+		, label_comp_id(std::move(label_comp_id))
 		, label_seq_id(label_seq_id)
 	{
 	}

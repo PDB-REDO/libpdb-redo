@@ -24,15 +24,15 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define _USE_MATH_DEFINES
 #include <cmath>
+#include <numbers>
 
 #include "pdb-redo/ResolutionCalculator.hpp"
 
 namespace pdb_redo
 {
 
-const double kPI = M_PI;
+const double kPI = std::numbers::pi;
 
 ResolutionCalculator::ResolutionCalculator(const clipper::Cell &cell)
 	: ResolutionCalculator(cell.a(), cell.b(), cell.c(),

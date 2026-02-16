@@ -52,7 +52,7 @@ class BlobFinder
 
 	std::vector<GridPoint> pop();
 
-	bool blobIsInProximityOfAtoms(const std::vector<GridPoint> &blob) const;
+	[[nodiscard]] bool blobIsInProximityOfAtoms(const std::vector<GridPoint> &blob) const;
 
 	const clipper::Xmap<float> &mXmap;
 	std::vector<GridPoint> mPotentialGridPoints;
