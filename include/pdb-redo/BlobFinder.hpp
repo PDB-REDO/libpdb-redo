@@ -26,14 +26,13 @@
 
 #pragma once
 
+
 #include <cif++.hpp>
 #include <clipper/clipper.h>
 #include <clipper/core/coords.h>
 
 namespace pdb_redo
 {
-
-struct GridPoint;
 
 class BlobFinder
 {

@@ -28,10 +28,9 @@
 
 #include <algorithm>
 #include <cif++.hpp>
-
+#include <cmath>
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
 #include <gsl/gsl_multimin.h>
-
 #include <mutex>
 
 namespace pdb_redo
@@ -214,8 +213,6 @@ class DensityIntegration
   public:
 	DensityIntegration(float resolutionLow, float resolutionHigh);
 
-	static DensityIntegration &instance(float resolutionLow, float resolutionHigh);
-
 	[[nodiscard]] double integrateRadius(float perc, float occupancy, double yi, const std::vector<double> &fst) const;
 	[[nodiscard]] double integrateDensity(double r, int ks, const std::vector<double> &fst) const;
 
@@ -226,6 +223,8 @@ class DensityIntegration
 	[[nodiscard]] const std::vector<double> &wa() const { return mWA; }
 
   private:
+	friend class DensityIntegrationTable;
+
 	float mA, mB;
 	int mM;
 
@@ -244,29 +243,44 @@ class DensityIntegration
 
 	// Gauss-Legendre quadrature weights and abscissae
 	std::vector<double> mWA, mST, mSTS;
-	static std::list<DensityIntegration> sInstances;
 };
 
-std::list<DensityIntegration> DensityIntegration::sInstances;
+// --------------------------------------------------------------------
 
-DensityIntegration &DensityIntegration::instance(float resolutionLow, float resolutionHigh)
+class DensityIntegrationTable : public std::list<DensityIntegration>
 {
-	static std::mutex m;
-	std::scoped_lock lock(m);
+  public:
+	DensityIntegrationTable(const DensityIntegrationTable &) = delete;
+	DensityIntegrationTable &operator=(const DensityIntegrationTable &) = delete;
 
-	float a = 0.5f / resolutionLow, b = 0.5f / resolutionHigh;
-
-	auto i = std::ranges::find_if(sInstances, [=](const DensityIntegration &di)
-		{ return di.mA == a and di.mB == b; });
-
-	if (i == sInstances.end())
+	static DensityIntegrationTable &instance()
 	{
-		sInstances.emplace_back(resolutionLow, resolutionHigh);
-		i = prev(sInstances.end());
+		static DensityIntegrationTable sInstance;
+		return sInstance;
 	}
 
-	return *i;
-}
+	const DensityIntegration &operator()(float resolutionLow, float resolutionHigh)
+	{
+		std::scoped_lock lock(mMutex);
+
+		float a = 0.5f / resolutionLow, b = 0.5f / resolutionHigh;
+
+		for (auto &di : *this)
+		{
+			if (di.mA == a and di.mB == b)
+				return di;
+		}
+
+		return emplace_back(resolutionLow, resolutionHigh);
+	}
+
+  private:
+	DensityIntegrationTable() = default;
+
+	std::mutex mMutex;
+};
+
+// --------------------------------------------------------------------
 
 DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh)
 {
@@ -461,7 +475,7 @@ struct AtomShapeImpl
 		, mResLow(resLow)
 		, mElectronScattering(electronScattering)
 		, mLocation(location)
-		, mIntegrator(DensityIntegration::instance(resLow, resHigh))
+		, mIntegrator(DensityIntegrationTable::instance()(resLow, resHigh))
 	{
 		auto st = mIntegrator.st();
 		auto sts = mIntegrator.sts();

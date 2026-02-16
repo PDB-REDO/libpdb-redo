@@ -578,7 +578,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 				 cif::key("type_symbol") != "H"sv,
 			 "id"))
 	{
-		auto &atom = atoms.emplace_back(mStructure.get_atom_by_id(atom_id));
+		auto atom = atoms.emplace_back(mStructure.get_atom_by_id(atom_id));
 
 		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id());
 

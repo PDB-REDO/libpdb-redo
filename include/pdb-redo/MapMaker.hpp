@@ -150,8 +150,8 @@ class MapMaker
 	[[nodiscard]] const MapType &fd() const { return mFd; }
 	[[nodiscard]] const MapType &fa() const { return mFa; }
 
-	[[nodiscard]] double resLow() const { return mResLow; }
-	[[nodiscard]] double resHigh() const { return mResHigh; }
+	[[nodiscard]] float resLow() const { return mResLow; }
+	[[nodiscard]] float resHigh() const { return mResHigh; }
 
 	[[nodiscard]] const clipper::Spacegroup &spacegroup() const { return mHKLInfo.spacegroup(); }
 	[[nodiscard]] const clipper::Cell &cell() const { return mHKLInfo.cell(); }
@@ -167,7 +167,7 @@ class MapMaker
 
 	MapType mFb, mFd, mFa;
 	clipper::Grid_sampling mGrid;
-	double mResLow, mResHigh;
+	float mResLow, mResHigh;
 	int mNumRefln = 1000, mNumParam = 20;
 
 	// Cached raw data
