@@ -113,7 +113,7 @@ find_package(GSL REQUIRED)
 CPMFindPackage(
 	NAME cifpp
 	GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git
-	VERSION 10)
+	GIT_TAG v10.0.0)
 # find_package(cifpp 10 REQUIRED)
 
 # Create a revision file, containing the current git version info
