@@ -1069,7 +1069,7 @@ class GSLMinimizer : public Minimizer
 
 double GSLMinimizer::refine(bool storeAtoms)
 {
-	const std::size_t iterations = 4000;
+	const std::size_t iterations = 500;
 
 	gsl_multimin_function_fdf fdf = {};
 	fdf.f = &GSLMinimizer::F;
@@ -1078,8 +1078,8 @@ double GSLMinimizer::refine(bool storeAtoms)
 	fdf.n = mAtoms.size() * 3;
 	fdf.params = this;
 
-	// auto T = gsl_multimin_fdfminimizer_conjugate_pr;
-	auto T = gsl_multimin_fdfminimizer_vector_bfgs2;
+	auto T = gsl_multimin_fdfminimizer_conjugate_pr;
+	// auto T = gsl_multimin_fdfminimizer_vector_bfgs2;
 	auto x = gsl_vector_alloc(3 * mAtoms.size());
 
 	std::size_t ix = 0;
@@ -1095,12 +1095,15 @@ double GSLMinimizer::refine(bool storeAtoms)
 
 	// float tolerance = 0.06f;
 	// double stepSize = 0.25 * gsl_blas_dnrm2(x);
-	float tolerance = 0.1f;
-	double stepSize = 0.25;
+	// float tolerance = 0.1f;
+	// double stepSize = 0.25;
+
+	float tolerance = 0;
+	float stepSize = 0.1f;
 
 	gsl_multimin_fdfminimizer_set(m_s, &fdf, x, stepSize, tolerance);
 
-	double gradLim = std::sqrt(mRestraints.size()) * 0.15;
+	double gradLim = std::pow(mRestraints.size(), 0.7) * 0.03;
 	if (gradLim < 0.3)
 		gradLim = 0.3;
 
