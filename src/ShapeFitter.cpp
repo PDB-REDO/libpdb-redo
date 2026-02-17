@@ -317,7 +317,7 @@ void JiggleFitter::transform()
 
 double JiggleFitter::refine()
 {
-	const int kMaxIterations = 4000;
+	const int kMaxIterations = 500;
 
 	gsl_multimin_function f = {
 		.f = &JiggleFitter::F,
@@ -325,7 +325,7 @@ double JiggleFitter::refine()
 		.params = this
 	};
 
-	auto T = gsl_multimin_fminimizer_nmsimplex2;
+	auto T = gsl_multimin_fminimizer_nmsimplex;
 
 	auto x = gsl_vector_alloc(mVariables.size());
 	for (size_t i = 0; i < mVariables.size(); ++i)
@@ -349,7 +349,7 @@ double JiggleFitter::refine()
 			break;
 
 		double size = gsl_multimin_fminimizer_size(s);
-		status = gsl_multimin_test_size(size, 1e-5);
+		status = gsl_multimin_test_size(size, 1e-3);
 
 		if (status == GSL_SUCCESS)
 		{
