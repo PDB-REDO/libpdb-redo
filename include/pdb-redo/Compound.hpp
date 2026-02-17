@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include <cif++/datablock.hpp>
 #include <vector>
 
 #include "cif++.hpp"
@@ -180,6 +181,8 @@ class Compound
 	/// @return Datablock containing the CCD information for this compound
 	[[nodiscard]] cif::datablock generateCCDCompound() const;
 
+	[[nodiscard]] std::string getDescriptor(std::string_view type) const;
+
   private:
 	cif::datablock mCF;
 	std::string mID;
@@ -311,6 +314,8 @@ class CompoundFactory
 
 	void pushDictionary(const std::filesystem::path &inDictFile);
 	void pushDictionary(std::istream &inDictionary);
+	void pushDictionary(cif::file cf);
+
 	void popDictionary();
 
   private:

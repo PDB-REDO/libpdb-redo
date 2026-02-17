@@ -26,6 +26,7 @@
 
 #include "pdb-redo/Compound.hpp"
 
+#include "cif++/datablock.hpp"
 #include "cif++/utilities.hpp"
 #include "pdb-redo/Version.hpp"
 
@@ -35,7 +36,7 @@
 #include <fstream>
 #include <map>
 #include <mutex>
-#include <utility>
+#include <stdexcept>
 #include <utility>
 
 namespace fs = std::filesystem;
@@ -806,9 +807,14 @@ class CompoundFactoryImpl
 	}
 
 	CompoundFactoryImpl(std::istream &inData, CompoundFactoryImpl *inNext = nullptr)
-		: CompoundFactoryImpl(inNext)
+		: CompoundFactoryImpl(cif::file(inData))
 	{
-		mFile.load(inData);
+	}
+
+	CompoundFactoryImpl(cif::file file, CompoundFactoryImpl *inNext = nullptr)
+		: mNext(inNext)
+		, mFile(std::move(file))
+	{
 	}
 
 	virtual ~CompoundFactoryImpl()
@@ -904,8 +910,8 @@ const Link *CompoundFactoryImpl::createLink(std::string id)
 class RestraintCompoundFactoryImpl : public CompoundFactoryImpl
 {
   public:
-	RestraintCompoundFactoryImpl(std::istream &inData, CompoundFactoryImpl *inNext)
-		: CompoundFactoryImpl(inData, inNext)
+	RestraintCompoundFactoryImpl(cif::file file, CompoundFactoryImpl *inNext)
+		: CompoundFactoryImpl(std::move(file), inNext)
 	{
 		cif::file cf;
 
@@ -913,9 +919,12 @@ class RestraintCompoundFactoryImpl : public CompoundFactoryImpl
 		{
 			auto c = createSelf(id);
 
+			if (c == nullptr)
+				throw std::runtime_error("Error creating restraint for " + id);
+
 			// Only forward compounds that are not known yet
-			if (cif::compound_factory::instance().exists(id))
-				continue;
+			// if (cif::compound_factory::instance().exists(id))
+			// 	continue;
 
 			cf.emplace_back(c->generateCCDCompound());
 		}
@@ -1019,6 +1028,15 @@ const Compound *CLibdMonCompoundFactoryImpl::createSelf(std::string id)
 		std::cerr << "Is the CCP4 environment sourced?\n";
 
 	return result;
+}
+
+std::string Compound::getDescriptor(std::string_view type) const
+{
+	auto cat = mCF.get("pdbx_chem_comp_descriptor");
+	if (cat == nullptr)
+		throw std::runtime_error("pdbx_chem_comp_descriptor is missing in restraints file for " + mID);
+
+	return cat->find1<std::string>(cif::key("type") == type, "descriptor");
 }
 
 // --------------------------------------------------------------------
@@ -1212,7 +1230,7 @@ void CompoundFactory::pushDictionary(const fs::path &inDictFile)
 		if (not file.is_open())
 			throw std::system_error(errno, std::generic_category(), inDictFile.string());
 
-		mImpl = new RestraintCompoundFactoryImpl(file, mImpl);
+		mImpl = new RestraintCompoundFactoryImpl(cif::file(file), mImpl);
 	}
 	catch (const std::exception &ex)
 	{
@@ -1223,7 +1241,12 @@ void CompoundFactory::pushDictionary(const fs::path &inDictFile)
 
 void CompoundFactory::pushDictionary(std::istream &is)
 {
-	mImpl = new RestraintCompoundFactoryImpl(is, mImpl);
+	mImpl = new RestraintCompoundFactoryImpl(cif::file(is), mImpl);
+}
+
+void CompoundFactory::pushDictionary(cif::file file)
+{
+	mImpl = new RestraintCompoundFactoryImpl(std::move(file), mImpl);
 }
 
 void CompoundFactory::popDictionary()
