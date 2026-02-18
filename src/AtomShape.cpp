@@ -27,7 +27,7 @@
 #include "pdb-redo/AtomShape.hpp"
 
 #include <algorithm>
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 #include <cmath>
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
 #include <gsl/gsl_multimin.h>

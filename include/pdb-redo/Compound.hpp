@@ -26,10 +26,8 @@
 
 #pragma once
 
-#include <cif++/datablock.hpp>
+#include <cif++/cif++.hpp>
 #include <vector>
-
-#include "cif++.hpp"
 
 namespace pdb_redo
 {
@@ -287,7 +285,6 @@ class Link
 	[[nodiscard]] float chiralVolume(const std::string &id, const std::string &compound_id_1, const std::string &compound_id_2) const;
 
   private:
-
 	std::string mID;
 	std::vector<LinkBond> mBonds;
 	std::vector<LinkAngle> mAngles;

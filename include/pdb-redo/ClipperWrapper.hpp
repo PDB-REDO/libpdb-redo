@@ -26,7 +26,7 @@
 
 #pragma once
 
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 #include <clipper/core/coords.h>
 
 namespace pdb_redo

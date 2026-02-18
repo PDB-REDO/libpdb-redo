@@ -4,7 +4,7 @@
 
 #include <pdb-redo/Statistics.hpp>
 #include <pdb-redo/BondMap.hpp>
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 
 namespace fs = std::filesystem;
 

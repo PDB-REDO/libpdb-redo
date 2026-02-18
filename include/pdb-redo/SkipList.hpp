@@ -33,7 +33,7 @@
 
 #pragma once
 
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 #include <filesystem>
 #include <optional>
 

@@ -34,7 +34,7 @@
 #include "pdb-redo/Minimizer.hpp"
 
 #include <algorithm>
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_math.h>

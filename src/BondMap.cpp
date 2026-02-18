@@ -31,7 +31,7 @@
 #include <fstream>
 #include <mutex>
 
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 
 #include <pdb-redo/BondMap.hpp>
 #include <pdb-redo/Compound.hpp>

@@ -32,7 +32,7 @@
 #include <stdexcept>
 #include <filesystem>
 
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 
 #include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/MapMaker.hpp"

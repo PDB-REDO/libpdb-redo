@@ -39,7 +39,7 @@
 
 #include <filesystem>
 
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 #include <cif++/text.hpp>
 
 namespace fs = std::filesystem;

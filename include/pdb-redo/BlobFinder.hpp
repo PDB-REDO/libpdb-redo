@@ -27,7 +27,7 @@
 #pragma once
 
 
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 #include <clipper/clipper.h>
 #include <clipper/core/coords.h>
 

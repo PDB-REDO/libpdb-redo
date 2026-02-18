@@ -27,7 +27,7 @@
 #include "pdb-redo/TLS.hpp"
 
 #include <algorithm>
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 
 #include <iostream>
 #include <memory>

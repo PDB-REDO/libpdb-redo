@@ -31,7 +31,7 @@
 #include "pdb-redo/DistanceMap.hpp"
 
 #include <algorithm>
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 
 // --------------------------------------------------------------------
 

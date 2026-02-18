@@ -32,7 +32,7 @@
 #include <stdexcept>
 #include <unordered_map>
 
-#include <cif++.hpp>
+#include <cif++/cif++.hpp>
 
 namespace pdb_redo
 {
