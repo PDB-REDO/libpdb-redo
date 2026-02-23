@@ -110,10 +110,12 @@ find_package(Eigen3 REQUIRED)
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(GSL REQUIRED)
 
-CPMFindPackage(
-	NAME cifpp
-	GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git
-	GIT_TAG v10.0.0)
+if(NOT (TARGET cifpp OR cifpp_FOUND))
+	CPMFindPackage(
+		NAME cifpp
+		GIT_REPOSITORY https://github.com/PDB-REDO/libcifpp.git
+		GIT_TAG v10.0.0)
+endif()
 # find_package(cifpp 10 REQUIRED)
 
 # Create a revision file, containing the current git version info
