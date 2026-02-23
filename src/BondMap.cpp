@@ -313,7 +313,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, 
 	for (auto atom : atoms)
 	{
 		const auto [asym_id, seq_id, auth_seq_id, entity_id, comp_id] = atom.get<std::string, int, std::string, std::string, std::string>(
-			"label_asym_id", "label_seq_id", "auth_seq_id", "entity_id", "label_comp_id");
+			"label_asym_id", "label_seq_id", "auth_seq_id", "label_entity_id", "label_comp_id");
 
 		if (asym_id == lastAsymID and entity_id == lastEntityID and lastCompID == comp_id and lastSeqID == seq_id and lastAuthSeqID == auth_seq_id)
 		{
