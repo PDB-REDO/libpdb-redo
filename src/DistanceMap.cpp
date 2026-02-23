@@ -56,334 +56,166 @@ std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<s
 
 // --------------------------------------------------------------------
 
-DistanceMap::DistanceMap(const cif::mm::structure &p, const cif::crystal &crystal,
-	float maxDistance)
-	: mStructure(p)
-	, crystal(crystal)
-	, dim(0)
-	, mMaxDistance(maxDistance)
-	, mMaxDistanceSQ(maxDistance * maxDistance)
+DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal crystal, float maxDistance)
+	: m_structure(structure)
+	, m_crystal(std::move(crystal))
+	, m_grid_spacing(1)
 {
-	using namespace cif::literals;
+	std::vector<std::tuple<cif::point, std::string>> pts;
 
-	// First collect the atoms from the datablock
-	std::vector<cif::const_row_handle> atoms;
+	pts.reserve(structure.atoms().size());
 
-	auto &db = p.get_datablock();
+	key_type k1{}, k2{};
 
-	for (auto a : p.atoms())
-		atoms.push_back(a.get_row());
-
-	dim = static_cast<uint32_t>(atoms.size());
-
-	std::vector<point> locations(dim);
-
-	// bounding box
-	point pMin(std::numeric_limits<float>::max(), std::numeric_limits<float>::max(), std::numeric_limits<float>::max()),
-		pMax(std::numeric_limits<float>::min(), std::numeric_limits<float>::min(), std::numeric_limits<float>::min());
-
-	for (auto &atom : atoms)
+	for (auto a : structure.atoms())
 	{
-		const auto &[id, x, y, z] = atom.get<std::string, float, float, float>("id", "Cartn_x", "Cartn_y", "Cartn_z");
+		pts.emplace_back(a.get_location(), a.id());
 
-		std::size_t ix = index.size();
-		index[id] = ix;
-		rIndex[ix] = id;
+		auto p = a.get_location();
+		key_type k{
+			static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
+			static_cast<int>(std::rint(p.m_y / m_grid_spacing)),
+			static_cast<int>(std::rint(p.m_z / m_grid_spacing))
+		};
 
-		cif::point pt{ x, y, z };
-		locations[ix] = pt;
-
-		if (pMin.m_x > pt.m_x)
-			pMin.m_x = pt.m_x;
-		if (pMin.m_y > pt.m_y)
-			pMin.m_y = pt.m_y;
-		if (pMin.m_z > pt.m_z)
-			pMin.m_z = pt.m_z;
-
-		if (pMax.m_x < pt.m_x)
-			pMax.m_x = pt.m_x;
-		if (pMax.m_y < pt.m_y)
-			pMax.m_y = pt.m_y;
-		if (pMax.m_z < pt.m_z)
-			pMax.m_z = pt.m_z;
-	};
-
-	pMin -= mMaxDistance; // extend bounding box
-	pMax += mMaxDistance;
-
-	DistMap dist;
-
-	std::vector<std::tuple<cif::point, float, std::vector<std::tuple<std::size_t, point>>>> residues;
-
-	// loop over poly_seq_scheme
-	for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].rows<std::string, int>("asym_id", "seq_id"))
-	{
-		std::vector<std::tuple<std::size_t, point>> rAtoms;
-		for (std::size_t i = 0; i < dim; ++i)
+		if (m_index.empty())
 		{
-			if (atoms[i]["label_asym_id"] == asymID and atoms[i]["label_seq_id"] == seqID)
-				rAtoms.emplace_back(i, locations[i]);
+			k1.x = k2.x = k.x;
+			k1.y = k2.y = k.y;
+			k1.z = k2.z = k.z;
+		}
+		else
+		{
+			if (k1.x > k.x)
+				k1.x = k.x;
+			else if (k2.x < k.x)
+				k2.x = k.x;
+
+			if (k1.y > k.y)
+				k1.y = k.y;
+			else if (k2.y < k.y)
+				k2.y = k.y;
+
+			if (k1.z > k.z)
+				k1.z = k.z;
+			else if (k2.z < k.z)
+				k2.z = k.z;
 		}
 
-		AddDistancesForAtoms(rAtoms, rAtoms, dist);
-
-		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
-		residues.emplace_back(center, radius, std::move(rAtoms));
+		m_index.emplace(k, entry{ a.id(), cif::sym_op{} });
 	}
 
-	// treat waters special
-	auto water_entity_id = db["entity"].find1<std::optional<std::string>>("type"_key == "water", "id");
-	if (water_entity_id.has_value())
+	int d = static_cast<int>(std::rint(maxDistance / m_grid_spacing));
+	k1.x -= d;
+	k2.x += d;
+	k1.y -= d;
+	k2.y += d;
+	k1.z -= d;
+	k2.z += d;
+
+	auto &sg = m_crystal.get_spacegroup();
+	auto &cell = m_crystal.get_cell();
+
+	for (uint8_t i = 1; std::cmp_less(i, sg.size() + 1); ++i)
 	{
-		for (std::size_t i = 0; i < dim; ++i)
+		for (uint8_t tx = 1; tx <= 9; ++tx)
 		{
-			if (atoms[i]["label_entity_id"] == *water_entity_id)
+			for (uint8_t ty = 1; ty <= 9; ++ty)
 			{
-				auto pt = locations[i];
-				residues.emplace_back(pt, 0.f, std::vector<std::tuple<std::size_t, point>>{ { i, pt } });
+				for (uint8_t tz = 1; tz <= 9; ++tz)
+				{
+					cif::sym_op symop(i, tx, ty, tz);
+
+					if (not symop) // skip the identity symop
+						continue;
+
+					for (auto &[pt, id] : pts)
+					{
+						auto ap = sg(pt, cell, symop);
+
+						key_type k{
+							static_cast<int>(std::rint(ap.m_x / m_grid_spacing)),
+							static_cast<int>(std::rint(ap.m_y / m_grid_spacing)),
+							static_cast<int>(std::rint(ap.m_z / m_grid_spacing))
+						};
+
+						if (k.x >= k1.x and k.x <= k2.x and
+							k.y >= k1.y and k.y <= k2.y and
+							k.y >= k1.z and k.z <= k2.z)
+						{
+							m_index.emplace(k, entry{ id, symop });
+						}
+					}
+				}
 			}
-		}
-	}
-
-	// loop over pdbx_nonpoly_scheme
-	for (const auto &[asymID, entityID] : db["pdbx_nonpoly_scheme"].rows<std::string, std::string>("asym_id", "entity_id"))
-	{
-		if (water_entity_id.has_value() and entityID == *water_entity_id)
-			continue;
-
-		std::vector<std::tuple<std::size_t, point>> rAtoms;
-		for (std::size_t i = 0; i < dim; ++i)
-		{
-			if (atoms[i]["label_asym_id"] == asymID)
-				rAtoms.emplace_back(i, locations[i]);
-		}
-
-		AddDistancesForAtoms(rAtoms, rAtoms, dist);
-
-		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
-		residues.emplace_back(center, radius, std::move(rAtoms));
-	}
-
-	// loop over pdbx_branch_scheme
-	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].rows<std::string, std::string>("asym_id", "num"))
-	{
-		std::vector<std::tuple<std::size_t, point>> rAtoms;
-		for (std::size_t i = 0; i < dim; ++i)
-		{
-			if (atoms[i]["label_asym_id"] == asym_id and atoms[i]["auth_seq_id"] == pdb_seq_num)
-				rAtoms.emplace_back(i, locations[i]);
-		}
-
-		AddDistancesForAtoms(rAtoms, rAtoms, dist);
-
-		auto &&[center, radius] = calculateCenterAndRadius(rAtoms);
-		residues.emplace_back(center, radius, std::move(rAtoms));
-	}
-
-	cif::progress_bar progress_bar((residues.size() * (residues.size() - 1)) / 2, "Creating distance map");
-
-	for (std::size_t i = 0; i + 1 < residues.size(); ++i)
-	{
-		const auto &[centerI, radiusI, atomsI] = residues[i];
-
-		for (std::size_t j = i + 1; j < residues.size(); ++j)
-		{
-			progress_bar.consumed(1);
-
-			const auto &[centerJ, radiusJ, atomsJ] = residues[j];
-
-			// first case, no symmetry operations
-			auto d = distance(centerI, centerJ) - radiusI - radiusJ;
-			if (d < mMaxDistance)
-			{
-				AddDistancesForAtoms(atomsI, atomsJ, dist);
-				continue;
-			}
-
-			const auto &[ds, p, symop] = crystal.closest_symmetry_copy(centerI, centerJ);
-			if (ds - radiusI - radiusJ < mMaxDistance)
-				AddDistancesForAtoms(atomsI, atomsJ, dist, symop);
-		}
-	}
-
-	// Store as a sparse CSR compressed matrix
-
-	std::size_t nnz = dist.size();
-	mA.reserve(nnz);
-	mIA.reserve(dim + 1);
-	mJA.reserve(nnz);
-
-	std::size_t lastR = 0;
-	mIA.push_back(0);
-
-	for (const auto &[key, value] : dist)
-	{
-		std::size_t col, row;
-		std::tie(row, col) = key;
-
-		if (row != lastR) // new row
-		{
-			for (std::size_t ri = lastR; ri < row; ++ri)
-				mIA.push_back(mA.size());
-			lastR = row;
-		}
-
-		mA.push_back(value);
-		mJA.push_back(col);
-	}
-
-	for (std::size_t ri = lastR; ri < dim; ++ri)
-		mIA.push_back(mA.size());
-}
-
-// --------------------------------------------------------------------
-
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t, point>> &a, const std::vector<std::tuple<std::size_t, point>> &b, DistMap &dm)
-{
-	for (const auto &[ixa, loc_a] : a)
-	{
-		for (const auto &[ixb, loc_b] : b)
-		{
-			if (ixa == ixb)
-				continue;
-
-			float d = cif::distance_squared(loc_a, loc_b);
-
-			if (d > mMaxDistanceSQ)
-				continue;
-
-			d = std::sqrt(d);
-
-			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, cif::sym_op{}, false);
-			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, cif::sym_op{}, false);
-		}
-	}
-}
-
-void DistanceMap::AddDistancesForAtoms(const std::vector<std::tuple<std::size_t, point>> &a, const std::vector<std::tuple<std::size_t, point>> &b,
-	DistMap &dm, cif::sym_op symop)
-{
-	for (const auto &[ixa, loc_a] : a)
-	{
-		for (const auto &[ixb, loc_b] : b)
-		{
-			if (ixa == ixb)
-				continue;
-
-			float d = cif::distance_squared(loc_a, crystal.symmetry_copy(loc_b, symop));
-
-			if (d > mMaxDistanceSQ)
-				continue;
-
-			d = std::sqrt(d);
-
-			dm[std::make_tuple(ixa, ixb)] = std::make_tuple(d, symop, false);
-			dm[std::make_tuple(ixb, ixa)] = std::make_tuple(d, symop, true);
 		}
 	}
 }
 
 float DistanceMap::operator()(const std::string &a, const std::string &b) const
 {
-	std::size_t ixa, ixb;
-
-	try
-	{
-		ixa = index.at(a);
-	}
-	catch (const std::out_of_range &ex)
-	{
-		throw std::out_of_range("atom " + a + " not found in distance map");
-	}
-
-	try
-	{
-		ixb = index.at(b);
-	}
-	catch (const std::out_of_range &ex)
-	{
-		throw std::out_of_range("atom " + b + " not found in distance map");
-	}
-
-	//	if (ixb < ixa)
-	//		std::swap(ixa, ixb);
-
-	std::size_t L = mIA[ixa];
-	std::size_t R = mIA[ixa + 1] - 1;
-
-	while (L <= R)
-	{
-		std::size_t i = (L + R) / 2;
-
-		if (mJA[i] == ixb)
-			return std::get<0>(mA[i]);
-
-		if (mJA[i] < ixb)
-			L = i + 1;
-		else
-			R = i - 1;
-	}
-
-	return 100.f;
+	return cif::distance(m_structure.get_atom_by_id(a).get_location(), m_structure.get_atom_by_id(b).get_location());
 }
 
 std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float maxDistance) const
 {
-	using namespace cif::literals;
-
-	assert(maxDistance <= mMaxDistance);
-	if (maxDistance > mMaxDistance)
-		throw std::runtime_error("Invalid max distance in DistanceMap::near");
-
-	std::string a_id = atom.id();
-	std::string alta = atom.get_label_alt_id();
-
-	std::size_t ixa;
-	try
-	{
-		ixa = index.at(a_id);
-	}
-	catch (const std::out_of_range &ex)
-	{
-		throw std::runtime_error("atom " + a_id + " not found in distance map");
-	}
-
 	std::vector<cif::mm::atom> result;
 
-	auto rh = atom.get_row();
-	auto &atom_site = rh.get_category();
+	auto maxDistanceSq = maxDistance * maxDistance;
 
-	for (std::size_t i = mIA[ixa]; i < mIA[ixa + 1]; ++i)
+	auto p = atom.get_location();
+
+	key_type k{
+		static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
+		static_cast<int>(std::rint(p.m_y / m_grid_spacing)),
+		static_cast<int>(std::rint(p.m_z / m_grid_spacing))
+	};
+
+	key_type k1 = k, k2 = k;
+
+	int d = static_cast<int>(maxDistance / m_grid_spacing) + 1;
+	k1.x -= d;
+	k1.y -= d;
+	k1.z -= d;
+
+	k2.x += d;
+	k2.y += d;
+	k2.z += d;
+
+	for (k.x = k1.x; k.x <= k2.x; ++k.x)
 	{
-		const auto &[d, symop, inverse] = mA[i];
-
-		if (d > maxDistance)
-			continue;
-
-		std::size_t ixb = mJA[i];
-
-		std::string b_id = rIndex.at(ixb);
-		auto altb = atom_site.find_first<std::string>("id"_key == b_id, "label_alt_id");
-
-		if (altb != alta and not altb.empty() and not alta.empty())
-			continue;
-
-		auto atom_b = mStructure.get_atom_by_id(b_id);
-
-		if (symop)
+		for (k.y = k1.y; k.y <= k2.y; ++k.y)
 		{
-			cif::point p = atom_b.get_location();
+			for (k.z = k1.z; k.z <= k2.z; ++k.z)
+			{
+				auto r = m_index.equal_range(k);
+				for (auto &[k, e] : std::ranges::subrange(r.first, r.second))
+				{
+					auto [id, symop] = e;
+					if (id == atom.id())
+						continue;
 
-			if (inverse)
-				p = crystal.inverse_symmetry_copy(p, symop);
-			else
-				p = crystal.symmetry_copy(p, symop);
+					auto a = m_structure.get_atom_by_id(id);
+					auto loc = m_crystal.symmetry_copy(a.get_location(), symop);
 
-			result.emplace_back(atom_b, p, symop.string());
+					if (auto d = cif::distance_squared(p, loc); d <= maxDistanceSq)
+					{
+						if (symop)
+							result.emplace_back(a, loc, symop.string());
+						else
+							result.emplace_back(a);
+					}
+				}
+			}
 		}
-		else
-			result.emplace_back(atom_b);
 	}
+
+	std::ranges::sort(result, [](auto &a, auto &b)
+		{ return a.id().compare(b.id()) < 0; });
+	auto r = std::ranges::unique(result);
+
+	if (r.begin() != r.end())
+		result.erase(r.begin(), r.end());
 
 	return result;
 }

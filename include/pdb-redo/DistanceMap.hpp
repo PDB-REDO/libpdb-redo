@@ -40,8 +40,7 @@ namespace pdb_redo
 class DistanceMap
 {
   public:
-
-	DistanceMap(const cif::mm::structure &p, const cif::crystal &crystal, float maxDistance);
+	DistanceMap(const cif::mm::structure &p, cif::crystal crystal, float maxDistance);
 
 	DistanceMap(const cif::mm::structure &p, float maxDistance)
 		: DistanceMap(p, cif::crystal(p.get_datablock()), maxDistance)
@@ -56,27 +55,36 @@ class DistanceMap
 	std::vector<cif::mm::atom> near(const cif::mm::atom &atom, float maxDistance = 3.5f) const;
 
   private:
-	using DistKeyType = std::tuple<std::size_t, std::size_t>;
-	using DistValueType = std::tuple<float, cif::sym_op, bool>;
-	using DistMap = std::map<DistKeyType, DistValueType>;
+	const cif::mm::structure &m_structure;
+	cif::crystal m_crystal;
+	float m_grid_spacing;
 
-	void AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,cif::point>> &a,
-		const std::vector<std::tuple<std::size_t,cif::point>> &b, DistMap &dm);
-	void AddDistancesForAtoms(const std::vector<std::tuple<std::size_t,cif::point>> &a,
-		const std::vector<std::tuple<std::size_t,cif::point>> &b, DistMap &dm, cif::sym_op symop);
+	struct key_type
+	{
+		int x, y, z;
 
-	cif::point offsetToOrigin(const cif::point &p) const;
+		constexpr bool operator<=>(const key_type &) const noexcept = default;
+	};
 
-	const cif::mm::structure &mStructure;
-	cif::crystal crystal;
-	std::size_t dim;
-	std::unordered_map<std::string, std::size_t> index;
-	std::map<std::size_t, std::string> rIndex;
+	struct key_type_hash
+	{
+		std::size_t operator()(const key_type &s) const noexcept
+		{
+			auto h0 = std::hash<int>{}(s.x);
+			auto h1 = std::hash<int>{}(s.y);
+			auto h2 = std::hash<int>{}(s.z);
 
-	float mMaxDistance, mMaxDistanceSQ;
+			return h0 ^ (h1 << 1) ^ (h2 << 2);
+		}
+	};
 
-	std::vector<std::tuple<float, cif::sym_op, bool>> mA;
-	std::vector<std::size_t> mIA, mJA;
+	struct entry
+	{
+		std::string id;
+		cif::sym_op symop;
+	};
+
+	std::unordered_multimap<key_type, entry, key_type_hash> m_index;
 };
 
 } // namespace pdb_redo

@@ -49,12 +49,7 @@ class BondMapException : public std::runtime_error
 class BondMap
 {
   public:
-	BondMap(const cif::mm::structure &structure, std::optional<std::tuple<cif::point,float>> around = {})
-		: BondMap(structure.get_datablock(), around, structure.get_model_nr())
-	{
-	}
-
-	BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point,float>> around = {}, std::size_t model_nr = 1);
+	BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, float>> around = {}, std::size_t model_nr = 1);
 
 	BondMap(const BondMap &) = delete;
 	BondMap &operator=(const BondMap &) = delete;
@@ -93,29 +88,25 @@ class BondMap
 	// This list of atomID's is comming from either CCD or the CCP4 dictionaries loaded
 	static std::vector<std::string> atomIDsForCompound(const std::string &compoundID);
 
-  private:
-	bool isBonded(uint32_t ai, uint32_t bi) const
-	{
-		return bond.count(key(ai, bi)) != 0;
-	}
-
-	uint64_t key(uint32_t a, uint32_t b) const
+//   private:
+	constexpr std::tuple<uint32_t, uint32_t> key(uint32_t a, uint32_t b) const
 	{
 		if (a > b)
 			std::swap(a, b);
-		return static_cast<uint64_t>(a) | (static_cast<uint64_t>(b) << 32);
+		return { a, b };
 	}
 
-	std::tuple<uint32_t, uint32_t> dekey(uint64_t k) const
+	constexpr bool isBonded(uint32_t ai, uint32_t bi) const
 	{
-		return std::make_tuple(
-			static_cast<uint32_t>(k >> 32),
-			static_cast<uint32_t>(k));
+		if (ai > bi)
+			std::swap(ai, bi);
+
+		return bond.count({ ai, bi }) != 0;
 	}
 
 	uint32_t dim;
 	std::unordered_map<std::string, uint32_t> index;
-	std::set<uint64_t> bond, bond_1_4;
+	std::set<std::tuple<uint32_t, uint32_t>> bond, bond_1_4;
 
 	std::map<std::string, std::set<std::string>> link;
 };

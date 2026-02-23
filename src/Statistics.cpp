@@ -32,6 +32,7 @@
 
 #include <algorithm>
 #include <cif++/cif++.hpp>
+#include <optional>
 
 // --------------------------------------------------------------------
 
@@ -1144,7 +1145,8 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 	// Calculate EDIA scores
 
 	DistanceMap dm(mStructure, 3.5f);
-	BondMap bm = createBondMap(atomData);
+	// BondMap bm = createBondMap(atomData);
+	BondMap bm{ mStructure.get_datablock(), std::nullopt, mStructure.get_model_nr()};
 
 	cif::progress_bar progress_bar(atomData.size(), "EDIA calculation");
 
