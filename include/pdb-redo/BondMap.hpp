@@ -88,7 +88,7 @@ class BondMap
 	// This list of atomID's is comming from either CCD or the CCP4 dictionaries loaded
 	static std::vector<std::string> atomIDsForCompound(const std::string &compoundID);
 
-  private:
+//   private:
 	constexpr std::tuple<uint32_t, uint32_t> key(uint32_t a, uint32_t b) const
 	{
 		if (a > b)

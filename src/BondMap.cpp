@@ -28,6 +28,7 @@
 #include <cassert>
 
 #include <algorithm>
+#include <cif++/row.hpp>
 #include <fstream>
 #include <mutex>
 
@@ -286,133 +287,51 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, 
 
 	// then link all atoms in the compounds
 
-	auto bonded = [&compoundBondInfo](const std::string &comp_id, cif::const_row_handle a, cif::const_row_handle b)
-	{
-		auto label_a = a.get<std::string>("label_atom_id");
-		auto label_b = b.get<std::string>("label_atom_id");
-
-		return compoundBondInfo.bonded(comp_id, label_a, label_b);
-	};
-
 	std::vector<cif::const_row_handle> rAtoms;
 	std::string lastEntityID, lastCompID;
+
 	lastAsymID.clear();
+	lastAuthSeqID.clear();
+
+	auto bindCompoundAtoms = [&]
+	{
+		for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
+		{
+			auto id_i = rAtoms[i].get<std::string>("id");
+			auto atom_id_i = rAtoms[i].get<std::string>("label_atom_id");
+
+			for (uint32_t j = i + 1; j < rAtoms.size(); ++j)
+			{
+				auto atom_id_j = rAtoms[j].get<std::string>("label_atom_id");
+
+				if (compoundBondInfo.bonded(lastCompID, atom_id_i, atom_id_j))
+					bindAtoms(id_i, rAtoms[j].get<std::string>("id"));
+			}
+		}
+	};
 
 	for (auto atom : atoms)
 	{
 		const auto [asym_id, seq_id, auth_seq_id, entity_id, comp_id] = atom.get<std::string, int, std::string, std::string, std::string>(
 			"label_asym_id", "label_seq_id", "auth_seq_id", "entity_id", "label_comp_id");
 
-		if (asym_id == lastAsymID and entity_id == lastEntityID and lastCompID == comp_id)
+		if (asym_id == lastAsymID and entity_id == lastEntityID and lastCompID == comp_id and lastSeqID == seq_id and lastAuthSeqID == auth_seq_id)
 		{
 			rAtoms.emplace_back(atom);
 			continue;
 		}
 
-		if (not rAtoms.empty())
-		{
-			for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
-			{
-				auto id_i = rAtoms[i].get<std::string>("id");
-				auto atom_id_i = rAtoms[i].get<std::string>("label_atom_id");
+		bindCompoundAtoms();
 
-				for (uint32_t j = i + 1; j < rAtoms.size(); ++j)
-				{
-					auto atom_id_j = rAtoms[j].get<std::string>("label_atom_id");
-
-					if (compoundBondInfo.bonded(comp_id, atom_id_i, atom_id_j))
-						bindAtoms(id_i, rAtoms[j].get<std::string>("id"));
-				}
-			}
-		}
+		rAtoms = { atom };
+		lastAsymID = asym_id;
+		lastEntityID = entity_id;
+		lastCompID = comp_id;
+		lastSeqID = seq_id;
+		lastAuthSeqID = auth_seq_id;
 	}
 
-	// for (auto c : compounds)
-	// {
-	// 	progress_bar.consumed(1);
-
-	// 	if (c == "HOH" or c == "H2O" or c == "WAT")
-	// 	{
-	// 		if (cif::VERBOSE > 1)
-	// 			std::cerr << "skipping water in bond map calculation\n";
-	// 		continue;
-	// 	}
-
-	// 	auto bonded = [c, &compoundBondInfo](cif::const_row_handle a, cif::const_row_handle b)
-	// 	{
-	// 		auto label_a = a.get<std::string>("label_atom_id");
-	// 		auto label_b = b.get<std::string>("label_atom_id");
-
-	// 		return compoundBondInfo.bonded(c, label_a, label_b);
-	// 	};
-
-	// 	// loop over poly_seq_scheme
-	// 	for (const auto &[asymID, seqID] : db["pdbx_poly_seq_scheme"].find<std::string, int>(cif::key("mon_id") == c, "asym_id", "seq_id"))
-	// 	{
-	// 		std::vector<cif::const_row_handle> rAtoms;
-	// 		std::ranges::copy_if(atoms, back_inserter(rAtoms),
-	// 			[asymID=asymID,seqID=seqID](cif::const_row_handle a)
-	// 			{ return a["label_asym_id"] == asymID and a["label_seq_id"] == seqID; });
-
-	// 		for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
-	// 		{
-	// 			for (uint32_t j = i + 1; j < rAtoms.size(); ++j)
-	// 			{
-	// 				if (bonded(rAtoms[i], rAtoms[j]))
-	// 					bindAtoms(rAtoms[i].get<std::string>("id"), rAtoms[j].get<std::string>("id"));
-	// 			}
-	// 		}
-	// 	}
-
-	// 	// loop over pdbx_nonpoly_scheme
-	// 	for (auto r : db["pdbx_nonpoly_scheme"].find(cif::key("mon_id") == c))
-	// 	{
-	// 		std::string asymID;
-	// 		cif::tie(asymID) = r.get("asym_id");
-
-	// 		std::vector<cif::const_row_handle> rAtoms;
-	// 		std::ranges::copy_if(atoms, back_inserter(rAtoms),
-	// 			[&](cif::const_row_handle a)
-	// 			{ return a["label_asym_id"] == asymID; });
-
-	// 		for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
-	// 		{
-	// 			for (uint32_t j = i + 1; j < rAtoms.size(); ++j)
-	// 			{
-	// 				if (bonded(rAtoms[i], rAtoms[j]))
-	// 				{
-	// 					uint32_t ixa = index[rAtoms[i].get<std::string>("id")];
-	// 					uint32_t ixb = index[rAtoms[j].get<std::string>("id")];
-
-	// 					bond.insert(key(ixa, ixb));
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-
-	// 	// loop over pdbx_branch_scheme
-	// 	for (const auto &[asym_id, pdb_seq_num] : db["pdbx_branch_scheme"].find<std::string, std::string>(cif::key("mon_id") == c, "asym_id", "pdb_seq_num"))
-	// 	{
-	// 		std::vector<cif::const_row_handle> rAtoms;
-	// 		std::ranges::copy_if(atoms, back_inserter(rAtoms),
-	// 			[id = asym_id, nr = pdb_seq_num](cif::const_row_handle a)
-	// 			{ return a["label_asym_id"] == id and a["auth_seq_id"] == nr; });
-
-	// 		for (uint32_t i = 0; i + 1 < rAtoms.size(); ++i)
-	// 		{
-	// 			for (uint32_t j = i + 1; j < rAtoms.size(); ++j)
-	// 			{
-	// 				if (bonded(rAtoms[i], rAtoms[j]))
-	// 				{
-	// 					uint32_t ixa = index[rAtoms[i].get<std::string>("id")];
-	// 					uint32_t ixb = index[rAtoms[j].get<std::string>("id")];
-
-	// 					bond.insert(key(ixa, ixb));
-	// 				}
-	// 			}
-	// 		}
-	// 	}
-	// }
+	bindCompoundAtoms();
 
 	// start by creating an index for single bonds
 
