@@ -15,7 +15,6 @@ list(APPEND PDB_REDO_tests
 	pdb-redo-unit
 	restr2ccd
 	shape-fitter
-	# bond-map
 )
 
 if(BUILD_MINIMIZER)
