@@ -30,6 +30,7 @@
 #include "pdb-redo/MapMaker.hpp"
 
 #include <cif++/datablock.hpp>
+#include <cif++/model.hpp>
 #include <pdb-redo/BondMap.hpp>
 
 namespace pdb_redo
@@ -87,6 +88,11 @@ class StatsCollector
 
 	StatsCollector(const MapMaker<float> &mm, cif::datablock &db, int modelNr, bool electronScattering);
 
+	StatsCollector(const MapMaker<float> &mm, cif::mm::structure &s, bool electronScattering)
+		: StatsCollector(mm, s.get_datablock(), s.get_model_nr(), electronScattering)
+	{
+	}
+
 	[[nodiscard]] virtual std::vector<ResidueStatistics> collect() const;
 
 	[[nodiscard]] virtual std::vector<ResidueStatistics> collect(const std::string &asymID) const;
@@ -101,10 +107,23 @@ class StatsCollector
 	// [[nodiscard]] virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
 
   protected:
-  // asym-seqid-authseqid-compid
-	using residue_list = std::vector<std::tuple<std::string, int, std::string, std::string>>;
+	struct PerResidueInfo
+	{
+		std::string asymID;
+		int seqID;
+		std::string authSeqID;
+		std::string compID;
+		std::set<std::string> altIDs;
 
-	std::vector<ResidueStatistics> collect(const residue_list &residues, BoundingBox &bbox, bool addWaters) const;
+		bool operator==(const PerResidueInfo &rhs) const noexcept
+		{
+			return asymID == rhs.asymID and seqID == rhs.seqID and authSeqID == rhs.authSeqID and compID == rhs.compID;
+		}
+	};
+
+	using RedidueList = std::vector<PerResidueInfo>;
+
+	std::vector<ResidueStatistics> collect(const RedidueList &residues, BoundingBox &bbox, bool addWaters) const;
 
 	void initialize();
 
@@ -216,7 +235,6 @@ class StatsCollector
 
 	std::map<std::string, std::pair<double, double>> mRmsScaled;
 	GridPtDataMap mGridPointDensity;
-	std::map<std::string, std::vector<double>> mZScoresPerAsym;
 	std::vector<AtomData> mAtomData;
 
 	virtual void calculate(std::vector<AtomData> &atomData) const;
@@ -238,6 +256,11 @@ class EDIAStatsCollector : public StatsCollector
 {
   public:
 	EDIAStatsCollector(const MapMaker<float> &mm, cif::datablock &db, int modelNr, bool electronScattering);
+
+	EDIAStatsCollector(const MapMaker<float> &mm, cif::mm::structure &s, bool electronScattering)
+		: EDIAStatsCollector(mm, s.get_datablock(), s.get_model_nr(), electronScattering)
+	{
+	}
 
   protected:
 	void calculate(std::vector<AtomData> &atomData) const override;

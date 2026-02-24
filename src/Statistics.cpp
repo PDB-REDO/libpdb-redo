@@ -33,6 +33,7 @@
 #include <cif++/cif++.hpp>
 #include <cif++/datablock.hpp>
 #include <cif++/symmetry.hpp>
+#include <cif++/utilities.hpp>
 #include <cif++/validate.hpp>
 #include <limits>
 #include <optional>
@@ -337,24 +338,31 @@ void StatsCollector::initialize()
 	//	const double C = std::sqrt(2.0 / kPI);
 
 	using namespace cif::literals;
-	for (auto rh : mDb["atom_site"].find("pdbx_PDB_model_num"_key == mModelNr or "pdbx_PDB_model_num"_key == cif::null))
+
 	{
-		const auto [id, type, occupancy] = rh.get<std::string, std::string, float>("id", "type_symbol", "occupancy");
+		cif::progress_bar progress(mDb["atom_site"].size(), "Initialising stats collector");
 
-		auto t = cif::atom_type_traits(type).type();
-		if (t <= cif::atom_type::He)
-			continue;
+		for (auto rh : mDb["atom_site"].find("pdbx_PDB_model_num"_key == mModelNr or "pdbx_PDB_model_num"_key == cif::null))
+		{
+			const auto [id, type, occupancy] = rh.get<std::string, std::string, float>("id", "type_symbol", "occupancy");
 
-		float w = occupancy * static_cast<int>(t);
+			progress.consumed(1);
 
-		if (w <= 0)
-			continue;
+			auto t = cif::atom_type_traits(type).type();
+			if (t <= cif::atom_type::He)
+				continue;
 
-		mSZ += w;
+			float w = occupancy * static_cast<int>(t);
 
-		cif::mm::atom atom(const_cast<cif::datablock &>(mDb), rh);
-		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
-		mAtomData.emplace_back(std::move(atom), std::move(shape));
+			if (w <= 0)
+				continue;
+
+			mSZ += w;
+
+			cif::mm::atom atom(const_cast<cif::datablock &>(mDb), rh);
+			AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
+			mAtomData.emplace_back(std::move(atom), std::move(shape));
+		}
 	}
 
 	//	auto bo = mSZ;
@@ -363,10 +371,11 @@ void StatsCollector::initialize()
 	//	mMeanBIso = std::pow(mResHigh * errsol(bo / so), 2);
 
 	// Calculate overall rms data
-	sumDensity(mAtomData, mGridPointDensity, mZScoresPerAsym);
+	std::map<std::string, std::vector<double>> zScoresPerAsym;
+	sumDensity(mAtomData, mGridPointDensity, zScoresPerAsym);
 
 	// Now that we have the density data, we can calculate the correction/rescale factors
-	for (auto zsc : mZScoresPerAsym)
+	for (auto zsc : zScoresPerAsym)
 	{
 		// collect array of z-scores
 		std::vector<double> &zdca0 = zsc.second;
@@ -442,7 +451,7 @@ void StatsCollector::initialize()
 
 std::vector<ResidueStatistics> StatsCollector::collect() const
 {
-	residue_list residues;
+	RedidueList residues;
 	BoundingBox bbox;
 
 	for (auto atom : mAtomData | std::views::transform(&AtomData::atom))
@@ -450,10 +459,13 @@ std::vector<ResidueStatistics> StatsCollector::collect() const
 		if (atom.is_water())
 			continue;
 
-		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id(), atom.get_label_comp_id());
+		PerResidueInfo pr{ atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id(), atom.get_label_comp_id() };
 
-		if (residues.empty() or residues.back() != k)
-			residues.emplace_back(std::move(k));
+		if (residues.empty() or residues.back() != pr)
+			residues.emplace_back(std::move(pr));
+
+		if (auto altID = atom.get_label_alt_id(); not altID.empty())
+			residues.back().altIDs.insert(altID);
 
 		bbox.extend(atom.get_location());
 	}
@@ -465,16 +477,21 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 {
 	using namespace std::literals;
 
-	residue_list residues;
+	RedidueList residues;
 	BoundingBox bbox;
 
-	for (auto atom : mAtomData | std::views::transform(&AtomData::atom) | std::views::filter([asymID](auto &a)
-																			  { return a.get_label_asym_id() == asymID; }))
+	for (auto atom : mAtomData                                    //
+						 | std::views::transform(&AtomData::atom) //
+						 | std::views::filter([asymID](auto &a)
+							   { return a.get_label_asym_id() == asymID; }))
 	{
-		auto k = std::make_tuple(atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id(), atom.get_label_comp_id());
+		PerResidueInfo pr{ atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id(), atom.get_label_comp_id() };
 
-		if (residues.empty() or residues.back() != k)
-			residues.emplace_back(std::move(k));
+		if (residues.empty() or residues.back() != pr)
+			residues.emplace_back(std::move(pr));
+
+		if (auto altID = atom.get_label_alt_id(); not altID.empty())
+			residues.back().altIDs.insert(altID);
 
 		bbox.extend(atom.get_location());
 	}
@@ -550,7 +567,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 // 	return collect(residues, bbox, false);
 // }
 
-std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &residues, BoundingBox &bbox, bool addWaters) const
+std::vector<ResidueStatistics> StatsCollector::collect(const RedidueList &residues, BoundingBox &bbox, bool addWaters) const
 {
 	std::vector<AtomData> atomData;
 
@@ -573,8 +590,10 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 	std::set<std::string> missing;
 	std::vector<ResidueStatistics> result;
 
+	cif::progress_bar progress(residues.size(), "Collecting per residue");
+
 	// And now collect the per residue information
-	for (const auto &[asymID, seqID, authSeqID, compID] : residues)
+	for (const auto &[asymID, seqID, authSeqID, compID, altIDs] : residues)
 	{
 		// TODO: Need to do something with hetero residues (alternate compound types)
 		// auto &res = mStructure.get_residue(asymID, seqID, authSeqID);
@@ -632,13 +651,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 			sums += d->sums;
 
 		// EDIA
-
-		std::set<std::string> alts;
-
-#warning "FIXME!" // TODO: FIXME
-		// if (not missing.count(compID))
-		// 	alts = res.get_alternate_ids();
-
+		std::set<std::string> alts = altIDs;
 		if (alts.empty())
 			alts.insert("");
 
@@ -725,6 +738,8 @@ std::vector<ResidueStatistics> StatsCollector::collect(const residue_list &resid
 			EDIAm,                                        // ediam
 			OPIA,                                         // opia
 			static_cast<int>(round(mVF * sums.ngrid)) }); // ngrid
+
+		progress.consumed(1);
 	}
 
 	if (addWaters)
@@ -829,14 +844,16 @@ void StatsCollector::sumDensity(std::vector<AtomData> &atomData,
 	// First step, iterate over atoms, then over grid points covered by this atom
 	// collecting per gridpoint statistics
 
+	cif::progress_bar progress(atomData.size(), "Summarising density");
+
 	for (auto &data : atomData)
 	{
 		auto &atom = data.atom;
 
+		progress.consumed(1);
+
 		if (atom.get_occupancy() == 0)
 			continue;
-
-		// AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
 
 		std::string asymID = data.asymID;
 		if (atom.is_water())
@@ -942,10 +959,6 @@ void StatsCollector::collectSums(std::vector<AtomData> &atomData, const GridPtDa
 
 void StatsCollector::calculate(std::vector<AtomData> &atomData) const
 {
-	// GridPtDataMap gridPointDensity;
-	// std::map<std::string, std::vector<double>> zScoresPerAsym;
-
-	// sumDensity(atomData, gridPointDensity, zScoresPerAsym);
 	collectSums(atomData, mGridPointDensity);
 }
 
@@ -1093,12 +1106,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 					o = 1;
 				else
 				{
-					float sumpb = accumulate(I.begin(), I.end(), 0.f,
-						[p](float s, const cif::mm::atom& b) -> float
-						{
-							return s + distance(p, b.get_location());
-						});
-
+					auto sumpb = std::ranges::fold_left(I, 0.f, [p](float s, auto &a) {return s + cif::distance(p, a.get_location()); });
 					o = 1 - distance(atom.get_location(), p) / sumpb;
 				}
 			}
@@ -1108,12 +1116,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 					o = 1;
 				else
 				{
-					float sumpb = accumulate(D.begin(), D.end(), 0.f,
-						[p](float s, const cif::mm::atom& b) -> float
-						{
-							return s + distance(p, b.get_location());
-						});
-
+					auto sumpb = std::ranges::fold_left(D, 0.f, [p](float s, auto &a) {return s + cif::distance(p, a.get_location()); });
 					o = 1 - distance(atom.get_location(), p) / sumpb;
 				}
 			}

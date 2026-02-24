@@ -59,7 +59,6 @@ std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<s
 DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal, float maxDistance)
 	: mAtoms(std::move(atoms))
 	, mCrystal(std::move(crystal))
-	, mGridSpacing(1)
 {
 	std::ranges::sort(mAtoms, [](auto &a, auto &b) { return a.id().compare(b.id()) < 0; });
 
@@ -75,9 +74,9 @@ DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal,
 
 		auto p = a.get_location();
 		KeyType k{
-			static_cast<int>(std::rint(p.m_x / mGridSpacing)),
-			static_cast<int>(std::rint(p.m_y / mGridSpacing)),
-			static_cast<int>(std::rint(p.m_z / mGridSpacing))
+			static_cast<int16_t>(std::rint(p.m_x)),
+			static_cast<int16_t>(std::rint(p.m_y)),
+			static_cast<int16_t>(std::rint(p.m_z))
 		};
 
 		if (mIndex.empty())
@@ -107,7 +106,7 @@ DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal,
 		mIndex.emplace(k, Entry{ a.id(), cif::sym_op{} });
 	}
 
-	int d = static_cast<int>(std::rint(maxDistance / mGridSpacing));
+	int d = static_cast<int>(std::rint(maxDistance));
 	k1.x -= d;
 	k2.x += d;
 	k1.y -= d;
@@ -117,6 +116,8 @@ DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal,
 
 	auto &sg = mCrystal.get_spacegroup();
 	auto &cell = mCrystal.get_cell();
+
+	cif::progress_bar progress(sg.size() * 9 * 9 * 9 - 1, "Creating distancemap");
 
 	for (uint8_t i = 1; std::cmp_less(i, sg.size() + 1); ++i)
 	{
@@ -136,9 +137,9 @@ DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal,
 						auto ap = sg(pt, cell, symop);
 
 						KeyType k{
-							static_cast<int>(std::rint(ap.m_x / mGridSpacing)),
-							static_cast<int>(std::rint(ap.m_y / mGridSpacing)),
-							static_cast<int>(std::rint(ap.m_z / mGridSpacing))
+							static_cast<int16_t>(std::rint(ap.m_x)),
+							static_cast<int16_t>(std::rint(ap.m_y)),
+							static_cast<int16_t>(std::rint(ap.m_z))
 						};
 
 						if (k.x >= k1.x and k.x <= k2.x and
@@ -148,6 +149,8 @@ DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal,
 							mIndex.emplace(k, Entry{ id, symop });
 						}
 					}
+
+					progress.consumed(1);
 				}
 			}
 		}
@@ -187,14 +190,14 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 	auto p = atom.get_location();
 
 	KeyType k{
-		static_cast<int>(std::rint(p.m_x / mGridSpacing)),
-		static_cast<int>(std::rint(p.m_y / mGridSpacing)),
-		static_cast<int>(std::rint(p.m_z / mGridSpacing))
+		static_cast<int16_t>(std::rint(p.m_x)),
+		static_cast<int16_t>(std::rint(p.m_y)),
+		static_cast<int16_t>(std::rint(p.m_z))
 	};
 
 	KeyType k1 = k, k2 = k;
 
-	int d = static_cast<int>(maxDistance / mGridSpacing) + 1;
+	int d = static_cast<int>(std::ceil(maxDistance));
 	k1.x -= d;
 	k1.y -= d;
 	k1.z -= d;

@@ -28,6 +28,7 @@
 
 #include <cif++/cif++.hpp>
 #include <cif++/symmetry.hpp>
+#include <cstdint>
 #include <unordered_map>
 
 #ifdef near
@@ -62,7 +63,7 @@ class DistanceMap
   private:
 	struct KeyType
 	{
-		int x, y, z;
+		int16_t x, y, z;
 
 		constexpr bool operator<=>(const KeyType &) const noexcept = default;
 	};
@@ -71,11 +72,11 @@ class DistanceMap
 	{
 		std::size_t operator()(const KeyType &s) const noexcept
 		{
-			auto h0 = std::hash<int>{}(s.x);
-			auto h1 = std::hash<int>{}(s.y);
-			auto h2 = std::hash<int>{}(s.z);
+			auto h0 = std::hash<uint16_t>{}(s.x);
+			auto h1 = std::hash<uint16_t>{}(s.y);
+			auto h2 = std::hash<uint16_t>{}(s.z);
 
-			return h0 ^ (h1 << 1) ^ (h2 << 2);
+			return h0 ^ std::rotl(h1, 4) ^ std::rotr(h2, 4);
 		}
 	};
 
@@ -90,7 +91,6 @@ class DistanceMap
 	std::vector<cif::mm::atom> mAtoms;
 	cif::crystal mCrystal;
 	std::unordered_multimap<KeyType, Entry, KeyTypeHash> mIndex;
-	float mGridSpacing;
 };
 
 } // namespace pdb_redo
