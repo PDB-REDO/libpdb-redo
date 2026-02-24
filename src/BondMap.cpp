@@ -166,7 +166,7 @@ BondMap &BondMap::operator=(BondMap &&bm)
 	return *this;
 }
 
-BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, float>> around, std::size_t model_nr)
+BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, float>> around, int model_nr)
 {
 	using namespace cif::literals;
 

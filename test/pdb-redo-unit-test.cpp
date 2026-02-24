@@ -48,8 +48,6 @@ using namespace pdb_redo;
 
 // --------------------------------------------------------------------
 
-// --------------------------------------------------------------------
-
 std::filesystem::path gTestDir;
 
 int main(int argc, char *argv[])
@@ -325,13 +323,14 @@ TEST_CASE("stats_1")
 
 	const fs::path example(gTestDir / ".." / "examples" / "1cbs.cif.gz");
 	cif::file file(example.string());
-	cif::mm::structure structure(file);
+	file.front().load_dictionary();
+	// cif::mm::structure structure(file);
 
 	MapMaker<float> mm;
 	float samplingRate = 1.5;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	pdb_redo::EDIAStatsCollector collector(mm, structure, false);
+	pdb_redo::EDIAStatsCollector collector(mm, file.front(), 1, false);
 	auto r = collector.collect();
 
 	auto ti = test.begin();
@@ -400,13 +399,14 @@ TEST_CASE("stats_2")
 
 	// and load this into a structure (note, structure caches data from the file, so order is important)
 
-	cif::mm::structure structure(file);
+	// cif::mm::structure structure(file);
+	file.front().load_dictionary();
 
 	MapMaker<float> mm;
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-	pdb_redo::EDIAStatsCollector collector(mm, structure, false);
+	pdb_redo::EDIAStatsCollector collector(mm, file.front(), 1, false);
 	auto r = collector.collect();
 
 	for (auto& ri: r)

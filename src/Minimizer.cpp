@@ -986,29 +986,29 @@ class GSLDFCollector : public DFCollector
 	gsl_vector *mDF;
 };
 
-GSLDFCollector::~GSLDFCollector()
-{
-	// if (cif::VERBOSE > 2)
-	// {
-	// 	std::cerr << std::string(19, '-') << '\n'
-	// 			  << "Collected gradient:\n";
+GSLDFCollector::~GSLDFCollector() = default;
+// {
+// 	if (cif::VERBOSE > 2)
+// 	{
+// 		std::cerr << std::string(19, '-') << '\n'
+// 				  << "Collected gradient:\n";
 
-	// 	for (std::size_t i = 0; i < mAtoms.size(); ++i)
-	// 	{
-	// 		std::size_t ix = mIndex[i];
-	// 		if (ix == kRefSentinel)
-	// 			continue;
+// 		for (std::size_t i = 0; i < mAtoms.size(); ++i)
+// 		{
+// 			std::size_t ix = mIndex[i];
+// 			if (ix == kRefSentinel)
+// 				continue;
 
-	// 		double dx = gsl_vector_get(mDF, ix * 3 + 0);
-	// 		double dy = gsl_vector_get(mDF, ix * 3 + 1);
-	// 		double dz = gsl_vector_get(mDF, ix * 3 + 2);
+// 			double dx = gsl_vector_get(mDF, ix * 3 + 0);
+// 			double dy = gsl_vector_get(mDF, ix * 3 + 1);
+// 			double dz = gsl_vector_get(mDF, ix * 3 + 2);
 
-	// 		std::cerr << "atom: " << label(i) << " d: " << std::setprecision(10) << dx << " " << dy << " " << dz << '\n';
-	// 	}
+// 			std::cerr << "atom: " << label(i) << " d: " << std::setprecision(10) << dx << " " << dy << " " << dz << '\n';
+// 		}
 
-	// 	std::cerr << std::string(19, '-') << '\n';
-	// }
-}
+// 		std::cerr << std::string(19, '-') << '\n';
+// 	}
+// }
 
 void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 {

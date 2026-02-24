@@ -26,6 +26,7 @@
 
 #define CATCH_CONFIG_RUNNER
 
+#include <algorithm>
 #include <catch2/catch_all.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -229,7 +230,7 @@ TEST_CASE("refine_2")
 	{
 		for (auto b : dm.near(a, kNearBy))
 		{
-			if (find(atoms.begin(), atoms.end(), b) != atoms.end())
+			if (std::ranges::contains(atoms, b))
 				continue;
 
 			atoms.push_back(b);

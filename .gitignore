@@ -8,4 +8,4 @@ Testing/
 docs/api/
 include/pdb-redo/exports.hpp
 .cache/
-
+perf.data*
