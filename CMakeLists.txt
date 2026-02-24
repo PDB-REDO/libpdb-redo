@@ -39,10 +39,6 @@ include(CPM)
 include(GenerateExportHeader)
 include(CTest)
 
-set(CXX_EXTENSIONS OFF)
-set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra -Wno-unused-parameter -Wno-missing-field-initializers")
 elseif(MSVC)
@@ -172,6 +168,7 @@ endif()
 add_library(pdb-redo ${project_sources} ${project_headers})
 add_library(pdb-redo::pdb-redo ALIAS pdb-redo)
 set_target_properties(pdb-redo PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_compile_features(pdb-redo PUBLIC cxx_std_23)
 generate_export_header(pdb-redo EXPORT_FILE_NAME ${PROJECT_SOURCE_DIR}/include/pdb-redo/exports.hpp)
 
 target_include_directories(pdb-redo

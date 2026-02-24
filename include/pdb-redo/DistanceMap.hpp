@@ -27,11 +27,11 @@
 #pragma once
 
 #include <cif++/cif++.hpp>
-
+#include <cif++/symmetry.hpp>
 #include <unordered_map>
 
 #ifdef near
-#undef near
+# undef near
 #endif
 
 namespace pdb_redo
@@ -40,7 +40,12 @@ namespace pdb_redo
 class DistanceMap
 {
   public:
-	DistanceMap(const cif::mm::structure &p, cif::crystal crystal, float maxDistance);
+	DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal, float maxDistance);
+
+	DistanceMap(const cif::mm::structure &p, cif::crystal crystal, float maxDistance)
+		: DistanceMap(p.atoms(), std::move(crystal), maxDistance)
+	{
+	}
 
 	DistanceMap(const cif::mm::structure &p, float maxDistance)
 		: DistanceMap(p, cif::crystal(p.get_datablock()), maxDistance)
@@ -55,20 +60,16 @@ class DistanceMap
 	std::vector<cif::mm::atom> near(const cif::mm::atom &atom, float maxDistance = 3.5f) const;
 
   private:
-	const cif::mm::structure &m_structure;
-	cif::crystal m_crystal;
-	float m_grid_spacing;
-
-	struct key_type
+	struct KeyType
 	{
 		int x, y, z;
 
-		constexpr bool operator<=>(const key_type &) const noexcept = default;
+		constexpr bool operator<=>(const KeyType &) const noexcept = default;
 	};
 
-	struct key_type_hash
+	struct KeyTypeHash
 	{
-		std::size_t operator()(const key_type &s) const noexcept
+		std::size_t operator()(const KeyType &s) const noexcept
 		{
 			auto h0 = std::hash<int>{}(s.x);
 			auto h1 = std::hash<int>{}(s.y);
@@ -78,13 +79,18 @@ class DistanceMap
 		}
 	};
 
-	struct entry
+	struct Entry
 	{
 		std::string id;
 		cif::sym_op symop;
 	};
 
-	std::unordered_multimap<key_type, entry, key_type_hash> m_index;
+	cif::mm::atom getAtomByID(const std::string &id) const;
+
+	std::vector<cif::mm::atom> mAtoms;
+	cif::crystal mCrystal;
+	std::unordered_multimap<KeyType, Entry, KeyTypeHash> mIndex;
+	float mGridSpacing;
 };
 
 } // namespace pdb_redo

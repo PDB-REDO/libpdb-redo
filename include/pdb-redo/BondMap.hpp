@@ -49,7 +49,7 @@ class BondMapException : public std::runtime_error
 class BondMap
 {
   public:
-	BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, float>> around = {}, std::size_t model_nr = 1);
+	BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, float>> around = {}, int model_nr = 1);
 
 	BondMap(const BondMap &) = delete;
 	BondMap &operator=(const BondMap &) = delete;

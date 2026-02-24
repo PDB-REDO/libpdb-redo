@@ -47,17 +47,32 @@ class AtomShape
 	{
 	}
 
+	AtomShape(const AtomShape &) = default;
+	AtomShape(AtomShape &&rhs)
+	{
+		swap(*this, rhs);
+	}
+
+	AtomShape &operator=(AtomShape rhs)
+	{
+		swap(*this, rhs);
+		return *this;
+	}
+
 	~AtomShape();
 
-	AtomShape(const AtomShape &) = delete;
-	AtomShape &operator=(const AtomShape &) = delete;
+	friend void swap(AtomShape &a, AtomShape &b) noexcept
+	{
+		std::swap(a.mImpl, b.mImpl);
+	}
+
 
 	[[nodiscard]] float radius() const;
 	[[nodiscard]] float calculatedDensity(float r) const;
 	[[nodiscard]] float calculatedDensity(cif::point p) const;
 
   private:
-	struct AtomShapeImpl *mImpl;
+	std::shared_ptr<struct AtomShapeImpl> mImpl;
 };
 
 } // namespace pdb_redo

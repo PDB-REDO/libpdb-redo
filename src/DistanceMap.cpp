@@ -56,29 +56,31 @@ std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<s
 
 // --------------------------------------------------------------------
 
-DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal crystal, float maxDistance)
-	: m_structure(structure)
-	, m_crystal(std::move(crystal))
-	, m_grid_spacing(1)
+DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal, float maxDistance)
+	: mAtoms(std::move(atoms))
+	, mCrystal(std::move(crystal))
+	, mGridSpacing(1)
 {
+	std::ranges::sort(mAtoms, [](auto &a, auto &b) { return a.id().compare(b.id()) < 0; });
+
 	std::vector<std::tuple<cif::point, std::string>> pts;
 
-	pts.reserve(structure.atoms().size());
+	pts.reserve(mAtoms.size());
 
-	key_type k1{}, k2{};
+	KeyType k1{}, k2{};
 
-	for (auto a : structure.atoms())
+	for (auto a : mAtoms)
 	{
 		pts.emplace_back(a.get_location(), a.id());
 
 		auto p = a.get_location();
-		key_type k{
-			static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
-			static_cast<int>(std::rint(p.m_y / m_grid_spacing)),
-			static_cast<int>(std::rint(p.m_z / m_grid_spacing))
+		KeyType k{
+			static_cast<int>(std::rint(p.m_x / mGridSpacing)),
+			static_cast<int>(std::rint(p.m_y / mGridSpacing)),
+			static_cast<int>(std::rint(p.m_z / mGridSpacing))
 		};
 
-		if (m_index.empty())
+		if (mIndex.empty())
 		{
 			k1.x = k2.x = k.x;
 			k1.y = k2.y = k.y;
@@ -102,10 +104,10 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal cryst
 				k2.z = k.z;
 		}
 
-		m_index.emplace(k, entry{ a.id(), cif::sym_op{} });
+		mIndex.emplace(k, Entry{ a.id(), cif::sym_op{} });
 	}
 
-	int d = static_cast<int>(std::rint(maxDistance / m_grid_spacing));
+	int d = static_cast<int>(std::rint(maxDistance / mGridSpacing));
 	k1.x -= d;
 	k2.x += d;
 	k1.y -= d;
@@ -113,8 +115,8 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal cryst
 	k1.z -= d;
 	k2.z += d;
 
-	auto &sg = m_crystal.get_spacegroup();
-	auto &cell = m_crystal.get_cell();
+	auto &sg = mCrystal.get_spacegroup();
+	auto &cell = mCrystal.get_cell();
 
 	for (uint8_t i = 1; std::cmp_less(i, sg.size() + 1); ++i)
 	{
@@ -133,17 +135,17 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal cryst
 					{
 						auto ap = sg(pt, cell, symop);
 
-						key_type k{
-							static_cast<int>(std::rint(ap.m_x / m_grid_spacing)),
-							static_cast<int>(std::rint(ap.m_y / m_grid_spacing)),
-							static_cast<int>(std::rint(ap.m_z / m_grid_spacing))
+						KeyType k{
+							static_cast<int>(std::rint(ap.m_x / mGridSpacing)),
+							static_cast<int>(std::rint(ap.m_y / mGridSpacing)),
+							static_cast<int>(std::rint(ap.m_z / mGridSpacing))
 						};
 
 						if (k.x >= k1.x and k.x <= k2.x and
 							k.y >= k1.y and k.y <= k2.y and
 							k.y >= k1.z and k.z <= k2.z)
 						{
-							m_index.emplace(k, entry{ id, symop });
+							mIndex.emplace(k, Entry{ id, symop });
 						}
 					}
 				}
@@ -152,9 +154,28 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal cryst
 	}
 }
 
-float DistanceMap::operator()(const std::string &a, const std::string &b) const
+cif::mm::atom DistanceMap::getAtomByID(const std::string &id) const
 {
-	return cif::distance(m_structure.get_atom_by_id(a).get_location(), m_structure.get_atom_by_id(b).get_location());
+	cif::mm::atom result;
+
+	ssize_t L = 0z, R = mAtoms.size();
+	while (L <= R)
+	{
+		auto i = (L + R) / 2;
+
+		auto d = mAtoms[i].id().compare(id);
+		if (d == 0)
+		{
+			result = mAtoms[i];
+			break;
+		}
+		else if (d < 0)
+			L = i + 1;
+		else
+			R = i - 1;
+	}
+
+	return result;
 }
 
 std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float maxDistance) const
@@ -165,15 +186,15 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 
 	auto p = atom.get_location();
 
-	key_type k{
-		static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
-		static_cast<int>(std::rint(p.m_y / m_grid_spacing)),
-		static_cast<int>(std::rint(p.m_z / m_grid_spacing))
+	KeyType k{
+		static_cast<int>(std::rint(p.m_x / mGridSpacing)),
+		static_cast<int>(std::rint(p.m_y / mGridSpacing)),
+		static_cast<int>(std::rint(p.m_z / mGridSpacing))
 	};
 
-	key_type k1 = k, k2 = k;
+	KeyType k1 = k, k2 = k;
 
-	int d = static_cast<int>(maxDistance / m_grid_spacing) + 1;
+	int d = static_cast<int>(maxDistance / mGridSpacing) + 1;
 	k1.x -= d;
 	k1.y -= d;
 	k1.z -= d;
@@ -188,15 +209,15 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 		{
 			for (k.z = k1.z; k.z <= k2.z; ++k.z)
 			{
-				auto r = m_index.equal_range(k);
+				auto r = mIndex.equal_range(k);
 				for (auto &[k, e] : std::ranges::subrange(r.first, r.second))
 				{
 					auto [id, symop] = e;
 					if (id == atom.id())
 						continue;
 
-					auto a = m_structure.get_atom_by_id(id);
-					auto loc = m_crystal.symmetry_copy(a.get_location(), symop);
+					auto a = getAtomByID(id);
+					auto loc = mCrystal.symmetry_copy(a.get_location(), symop);
 
 					if (auto d = cif::distance_squared(p, loc); d <= maxDistanceSq)
 					{

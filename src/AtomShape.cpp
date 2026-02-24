@@ -623,7 +623,7 @@ AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_anis
 	}
 
 	if (bFactor.has_value() and *bFactor != 0)
-		mImpl = new AtomShapeImpl({ x, y, z }, type, formal_charge, static_cast<float>(clipper::Util::b2u(*bFactor)), 1.0, resHigh, resLow, electronScattering);
+		mImpl.reset(new AtomShapeImpl({ x, y, z }, type, formal_charge, static_cast<float>(clipper::Util::b2u(*bFactor)), 1.0, resHigh, resLow, electronScattering));
 	else if (not atom_aniso.empty())
 	{
 		const auto &[u11, u12, u13, u22, u23, u33] =
@@ -634,7 +634,7 @@ AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_anis
 		while (u.det() < 1.0e-20)
 			u = u + clipper::U_aniso_orth(0.01, 0.01, 0.01, 0, 0, 0);
 
-		mImpl = new AtomShapeAnisoImpl({ x, y, z }, type, formal_charge, u, occupancy, resHigh, resLow, electronScattering);
+		mImpl.reset(new AtomShapeAnisoImpl({ x, y, z }, type, formal_charge, u, occupancy, resHigh, resLow, electronScattering));
 	}
 	else
 	{
@@ -651,20 +651,11 @@ AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_anis
 			iso = 2.0f / static_cast<float>(8 * kPI * kPI);
 		;
 
-		mImpl = new AtomShapeImpl({ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering);
+		mImpl.reset(new AtomShapeImpl({ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering));
 	}
 }
 
-// AtomShape::AtomShape(const cif::mm::atom &atom, float resHigh, float resLow, bool electronScattering, float bFactor)
-// 	: mImpl(new AtomShapeImpl(atom.get_location(), atom.type(), atom.charge(), static_cast<float>(clipper::Util::b2u(bFactor)),
-// 		  1.0, resHigh, resLow, electronScattering))
-// {
-// }
-
-AtomShape::~AtomShape()
-{
-	delete mImpl;
-}
+AtomShape::~AtomShape() = default;
 
 float AtomShape::radius() const
 {

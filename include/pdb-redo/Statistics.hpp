@@ -26,15 +26,17 @@
 
 #pragma once
 
-#include <pdb-redo/BondMap.hpp>
+#include "pdb-redo/AtomShape.hpp"
 #include "pdb-redo/MapMaker.hpp"
+
+#include <cif++/datablock.hpp>
+#include <pdb-redo/BondMap.hpp>
 
 namespace pdb_redo
 {
 
 // --------------------------------------------------------------------
 
-struct AtomData;
 class BoundingBox;
 
 struct ResidueStatistics
@@ -83,31 +85,28 @@ class StatsCollector
 	StatsCollector(const StatsCollector &) = delete;
 	StatsCollector &operator=(const StatsCollector &) = delete;
 
-	StatsCollector(const MapMaker<float> &mm,
-		cif::mm::structure &structure, bool electronScattering);
+	StatsCollector(const MapMaker<float> &mm, cif::datablock &db, int modelNr, bool electronScattering);
 
 	[[nodiscard]] virtual std::vector<ResidueStatistics> collect() const;
 
 	[[nodiscard]] virtual std::vector<ResidueStatistics> collect(const std::string &asymID) const;
 
-	[[nodiscard]] virtual std::vector<ResidueStatistics> collect(const std::string &asymID,
-		int resFirst, int resLast, bool authNameSpace = false) const;
+	// [[nodiscard]] virtual std::vector<ResidueStatistics> collect(const std::string &asymID,
+	// 	int resFirst, int resLast, bool authNameSpace = false) const;
 
-	[[nodiscard]] virtual ResidueStatistics collect(std::initializer_list<const cif::mm::residue *> residues) const;
+	// [[nodiscard]] virtual ResidueStatistics collect(std::initializer_list<const cif::mm::residue *> residues) const;
 
-	[[nodiscard]] virtual ResidueStatistics collect(std::initializer_list<cif::mm::atom> atoms) const;
+	// [[nodiscard]] virtual ResidueStatistics collect(std::initializer_list<cif::mm::atom> atoms) const;
 
-	[[nodiscard]] virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
+	// [[nodiscard]] virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
 
   protected:
-	using residue_list = std::vector<std::tuple<std::string, int, std::string>>;
+  // asym-seqid-authseqid-compid
+	using residue_list = std::vector<std::tuple<std::string, int, std::string, std::string>>;
 
-	// asym-seqid-compid
 	std::vector<ResidueStatistics> collect(const residue_list &residues, BoundingBox &bbox, bool addWaters) const;
 
 	void initialize();
-
-	virtual void calculate(std::vector<AtomData> &atomData) const;
 
 	struct cmpGPt
 	{
@@ -124,7 +123,89 @@ class StatsCollector
 
 	using GridPtDataMap = std::map<clipper::Coord_grid, double, cmpGPt>;
 
-	cif::mm::structure &mStructure;
+	struct AtomGridData
+	{
+		AtomGridData(const clipper::Coord_grid &gp, double density)
+			: p(gp)
+			, density(density)
+		{
+		}
+
+		clipper::Coord_grid p;
+		double density;
+	};
+
+	struct AtomDataSums
+	{
+		std::size_t ngrid = 0;
+		double rfSums[2] = {}; // sums for R-Factor
+		double edSums[2] = {}; // Sums for ED1 and ED3
+		double ccSums[3] = {}; // Sums for CC calculation
+		double rgSums[2] = {};
+		double swSums[3] = {}; // Sums used for sample CC calculation
+
+		AtomDataSums &operator+=(const AtomDataSums &rhs)
+		{
+			ngrid += rhs.ngrid;
+			rfSums[0] += rhs.rfSums[0];
+			rfSums[1] += rhs.rfSums[1];
+			edSums[0] += rhs.edSums[0];
+			edSums[1] += rhs.edSums[1];
+			ccSums[0] += rhs.ccSums[0];
+			ccSums[1] += rhs.ccSums[1];
+			ccSums[2] += rhs.ccSums[2];
+			rgSums[0] += rhs.rgSums[0];
+			rgSums[1] += rhs.rgSums[1];
+			swSums[0] += rhs.swSums[0];
+			swSums[1] += rhs.swSums[1];
+			swSums[2] += rhs.swSums[2];
+			return *this;
+		}
+
+		[[nodiscard]] double cc() const
+		{
+			double s = (ccSums[1] - (edSums[0] * edSums[0]) / ngrid) * (ccSums[2] - (edSums[1] * edSums[1]) / ngrid);
+			return (ccSums[0] - edSums[0] * edSums[1] / ngrid) / std::sqrt(s);
+		}
+
+		[[nodiscard]] double srg() const
+		{
+			double rgsq = rgSums[0] / rgSums[1];
+			double rg = std::sqrt(rgsq);
+
+			return std::sqrt(swSums[0] - rgsq * swSums[1] + 0.5 * rgsq * rgsq * swSums[2]) / (rg * rgSums[1]);
+		}
+	};
+
+	struct AtomData
+	{
+		AtomData(cif::mm::atom atom, AtomShape shape)
+			: atom(atom)
+			, asymID(atom.get_label_asym_id())
+			, seqID(atom.get_label_seq_id())
+			, authSeqID(atom.get_auth_seq_id())
+			, shape(std::move(shape))
+			, radius(this->shape.radius())
+			, occupancy(atom.get_occupancy())
+		{
+		}
+
+		cif::mm::atom atom;
+		std::string asymID;
+		int seqID;
+		std::string authSeqID; // required for waters
+		AtomShape shape;
+		float radius;
+		float occupancy;
+		std::vector<AtomGridData> points;
+		double averageDensity = 0;
+		double edia = 0;
+		AtomDataSums sums;
+	};
+
+	// cif::mm::structure &mStructure;
+	cif::datablock &mDb;
+	int mModelNr;
 	const MapMaker<float> &mMapMaker;
 
 	clipper::Spacegroup mSpacegroup;
@@ -134,8 +215,12 @@ class StatsCollector
 	bool mElectronScattering;
 
 	std::map<std::string, std::pair<double, double>> mRmsScaled;
+	GridPtDataMap mGridPointDensity;
+	std::map<std::string, std::vector<double>> mZScoresPerAsym;
+	std::vector<AtomData> mAtomData;
 
-	void collectSums(std::vector<AtomData> &atomData, GridPtDataMap &gridPointDensity) const;
+	virtual void calculate(std::vector<AtomData> &atomData) const;
+	void collectSums(std::vector<AtomData> &atomData, const GridPtDataMap &gridPointDensity) const;
 	void sumDensity(std::vector<AtomData> &atomData,
 		GridPtDataMap &gridPointDensity, std::map<std::string, std::vector<double>> &zScoresPerAsym) const;
 
@@ -152,8 +237,7 @@ class StatsCollector
 class EDIAStatsCollector : public StatsCollector
 {
   public:
-	EDIAStatsCollector(const MapMaker<float> &mm,
-		cif::mm::structure &structure, bool electronScattering);
+	EDIAStatsCollector(const MapMaker<float> &mm, cif::datablock &db, int modelNr, bool electronScattering);
 
   protected:
 	void calculate(std::vector<AtomData> &atomData) const override;
