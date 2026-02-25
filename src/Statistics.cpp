@@ -1028,8 +1028,15 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 	// Calculate EDIA scores
 
+#if __cpp_lib_ranges_to_container >= 202202L
 	DistanceMap dm(mAtomData | std::views::transform(&AtomData::atom) | std::ranges::to<std::vector>(),
 		cif::crystal(mDb), 3.5f);
+#else
+	std::vector<cif::mm::atom> dAtoms;
+	for (auto &da : mAtomData)
+		dAtoms.emplace_back(da.atom);
+	DistanceMap dm(std::move(dAtoms), cif::crystal(mDb), 3.5f);
+#endif
 	BondMap bm{ mDb, std::nullopt, mModelNr };
 
 	cif::progress_bar progress_bar(atomData.size(), "EDIA calculation");
