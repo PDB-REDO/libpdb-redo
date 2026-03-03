@@ -240,7 +240,7 @@ TEST_CASE("refine_2")
 	// // translate by { 0.1, 0.1, 0.1 } and then
 	// // rotate around 1, 0, 0 for 5 degrees
 
-	// const float angle = 5 * (cif::kPI / 180);
+	// const float angle = 5 * (std::numbers::pi / 180);
 	// cif::quaternion q(
 	// 	std::cos(angle / 2), std::sin(angle / 2), 0, 0
 	// );

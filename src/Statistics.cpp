@@ -154,13 +154,13 @@ double phinvs(double p)
 
 double errsol(double a)
 {
-	auto c = std::sqrt(2.0 / kPI);
+	auto c = std::sqrt(2.0 / std::numbers::pi);
 	auto b = std::abs(a);
 
 	double result = 0;
 	if (b > 3 / c)
 	{
-		auto x = std::abs(std::pow(b, 1 / 3.0) - 2 * std::pow(kPI / b, 2));
+		auto x = std::abs(std::pow(b, 1 / 3.0) - 2 * std::pow(std::numbers::pi / b, 2));
 		if (a < 0)
 			x = -x;
 
@@ -335,7 +335,7 @@ void StatsCollector::initialize()
 
 	mSZ = 0;
 	//	double so = 0;
-	//	const double C = std::sqrt(2.0 / kPI);
+	//	const double C = std::sqrt(2.0 / std::numbers::pi);
 
 	using namespace cif::literals;
 

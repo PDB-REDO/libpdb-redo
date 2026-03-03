@@ -45,7 +45,7 @@ namespace pdb_redo
 {
 
 using cif::atom_type_traits;
-using cif::kPI;
+using std::numbers::pi;
 
 // --------------------------------------------------------------------
 // Compound helper classes
@@ -506,7 +506,7 @@ float Compound::bondAngle(const std::string &atomId_1, const std::string &atomId
 
 // static float calcC(float a, float b, float alpha)
 //{
-//	float f = b * std::sin(alpha * kPI / 180);
+//	float f = b * std::sin(alpha * std::numbers::pi_v<float> / 180);
 //	float d = std::sqrt(b * b - f * f);
 //	float e = a - d;
 //	float c = std::sqrt(f * f + e * e);
@@ -537,9 +537,9 @@ float Compound::chiralVolume(const std::string &centreID) const
 		float beta = bondAngle(cv.atomID[1], cv.atomIDCentre, cv.atomID[2]);
 		float gamma = bondAngle(cv.atomID[2], cv.atomIDCentre, cv.atomID[0]);
 
-		auto cosa = static_cast<float>(std::cos(alpha * kPI / 180));
-		auto cosb = static_cast<float>(std::cos(beta * kPI / 180));
-		auto cosc = static_cast<float>(std::cos(gamma * kPI / 180));
+		auto cosa = static_cast<float>(std::cos(alpha * std::numbers::pi_v<float> / 180));
+		auto cosb = static_cast<float>(std::cos(beta * std::numbers::pi_v<float> / 180));
+		auto cosc = static_cast<float>(std::cos(gamma * std::numbers::pi_v<float> / 180));
 
 		// When the atoms are in a plane and the result should be nearly zero
 		// the result of 1 + 2 * cosa * cosb * cosc - cosa^2 - cosb^2 - cosc^2 can become negative
@@ -774,9 +774,9 @@ float Link::chiralVolume(const std::string &centreID, const std::string &compoun
 		float beta = angle(cv.atom[1], cv.atomCentre, cv.atom[2]);
 		float gamma = angle(cv.atom[2], cv.atomCentre, cv.atom[0]);
 
-		auto cosa = static_cast<float>(std::cos(alpha * kPI / 180));
-		auto cosb = static_cast<float>(std::cos(beta * kPI / 180));
-		auto cosc = static_cast<float>(std::cos(gamma * kPI / 180));
+		auto cosa = static_cast<float>(std::cos(alpha * std::numbers::pi_v<float> / 180));
+		auto cosb = static_cast<float>(std::cos(beta * std::numbers::pi_v<float> / 180));
+		auto cosc = static_cast<float>(std::cos(gamma * std::numbers::pi_v<float> / 180));
 
 		// When the atoms are in a plane and the result should be nearly zero
 		// the result of 1 + 2 * cosa * cosb * cosc - cosa^2 - cosb^2 - cosc^2 can become negative

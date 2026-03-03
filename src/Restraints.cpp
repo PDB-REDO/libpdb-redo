@@ -86,7 +86,7 @@ double AngleRestraint::f(const AtomLocationProvider &atoms) const
 	DPoint p[3] = { atoms[mA], atoms[mB], atoms[mC] };
 
 	double c = cosinus_angle(p[1], p[0], p[1], p[2]);
-	double angle = std::atan2(std::sqrt(1 - c * c), c) * 180 / cif::kPI;
+	double angle = std::atan2(std::sqrt(1 - c * c), c) * 180 / std::numbers::pi;
 
 	double d = mAngle - angle;
 	double result = (d * d) / (mESD * mESD);
@@ -99,7 +99,7 @@ double AngleRestraint::f(const AtomLocationProvider &atoms) const
 
 void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 {
-	const double kRadToDegree = 180.0 / cif::kPI, kDegreeToRad = 1 / kRadToDegree;
+	const double kRadToDegree = 180.0 / std::numbers::pi, kDegreeToRad = 1 / kRadToDegree;
 
 	if (cif::VERBOSE > 2)
 		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ":\n";
@@ -266,8 +266,8 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 		if (not std::isnan(diff))
 		{
-			auto tt = std::tan(cif::kPI * theta / 180);
-			double scale = 180.0 / ((1 + tt * tt) * cif::kPI);
+			auto tt = std::tan(std::numbers::pi * theta / 180);
+			double scale = 180.0 / ((1 + tt * tt) * std::numbers::pi);
 			auto w = 1 / (mESD * mESD);
 
 			DPoint p[4] = { atoms[mA], atoms[mB], atoms[mC], atoms[mD] };

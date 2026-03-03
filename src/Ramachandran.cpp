@@ -42,7 +42,7 @@
 namespace pdb_redo
 {
 
-const double kPI = std::numbers::pi;
+const float kPI = std::numbers::pi_v<float>;
 
 // --------------------------------------------------------------------
 
@@ -100,8 +100,8 @@ RamachandranScore calculateRamachandranScore(const std::string &aa, bool prePro,
 {
 	auto &table = RamachandranTables::instance().table(aa, prePro);
 
-	phi *= static_cast<float>(kPI / 180);
-	psi *= static_cast<float>(kPI / 180);
+	phi *= kPI / 180;
+	psi *= kPI / 180;
 
 	RamachandranScore result;
 
