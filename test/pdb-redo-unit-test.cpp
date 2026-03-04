@@ -258,9 +258,9 @@ TEST_CASE("map_maker_2")
 	auto aniso = MapMaker<float>::as_None;
 	// 	if (vm.count("aniso-scaling"))
 	// 	{
-	// 		if (vm["aniso-scaling"].as<std::string>() == "observed")
+	// 		if (vm["aniso-scaling"].get<std::string>() == "observed")
 	// 			aniso = MapMaker<float>::as_Observed;
-	// 		else if (vm["aniso-scaling"].as<std::string>() == "calculated")
+	// 		else if (vm["aniso-scaling"].get<std::string>() == "calculated")
 	// 			aniso = MapMaker<float>::as_Calculated;
 	// 	}
 		

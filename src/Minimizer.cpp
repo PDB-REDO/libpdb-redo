@@ -453,22 +453,22 @@ void Minimizer::Finish(const cif::crystal &crystal)
 					if (not(r1.empty() or r2.empty()))
 					{
 						if (cif::atom_type_traits(a1.get_type()).is_metal())
-							minDist = r1.front()["ion_radius"].as<float>();
+							minDist = r1.front()["ion_radius"].get<float>();
 						else
-							minDist = r1.front()["vdw_radius"].as<float>();
+							minDist = r1.front()["vdw_radius"].get<float>();
 
 						if (cif::atom_type_traits(a2.get_type()).is_metal())
-							minDist += r2.front()["ion_radius"].as<float>();
+							minDist += r2.front()["ion_radius"].get<float>();
 						else
-							minDist += r2.front()["vdw_radius"].as<float>();
+							minDist += r2.front()["vdw_radius"].get<float>();
 
 						// OK, now that we're here, see if the atoms are in the same residue...
 
 						if (a1.get_label_asym_id() == a2.get_label_asym_id() and a1.get_label_seq_id() == a2.get_label_seq_id())
 							minDist *= 0.84;
 
-						std::string hbType1 = r1.front()["hb_type"].as<std::string>(),
-									hbType2 = r2.front()["hb_type"].as<std::string>();
+						std::string hbType1 = r1.front()["hb_type"].get<std::string>(),
+									hbType2 = r2.front()["hb_type"].get<std::string>();
 
 						static const std::regex donorRx("B|D|H"), acceptorRx("B|A|H");
 

@@ -196,7 +196,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, 
 	dim = static_cast<uint32_t>(atoms.size());
 
 	for (auto &atom : atoms)
-		index[atom["id"].as<std::string>()] = static_cast<uint32_t>(index.size());
+		index[atom["id"].get<std::string>()] = static_cast<uint32_t>(index.size());
 
 	auto bindAtoms = [this](const std::string &a, const std::string &b)
 	{

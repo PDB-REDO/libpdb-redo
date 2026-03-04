@@ -43,12 +43,12 @@ clipper::Atom toClipper(cif::const_row_handle atom, cif::const_row_handle aniso_
 	if (atom["occupancy"].empty())
 		result.set_occupancy(1.0);
 	else
-		result.set_occupancy(atom["occupancy"].as<float>());
+		result.set_occupancy(atom["occupancy"].get<float>());
 
-	std::string element = atom["type_symbol"].as<std::string>();
+	std::string element = atom["type_symbol"].get<std::string>();
 	if (not atom["pdbx_formal_charge"].empty())
 	{
-		int charge = atom["pdbx_formal_charge"].as<int>();
+		int charge = atom["pdbx_formal_charge"].get<int>();
 
 		if (cif::atom_type_traits(element).has_sf(charge) and charge != 0)
 		{
@@ -64,9 +64,9 @@ clipper::Atom toClipper(cif::const_row_handle atom, cif::const_row_handle aniso_
 	result.set_element(element);
 
 	if (not atom["U_iso_or_equiv"].empty())
-		result.set_u_iso(atom["U_iso_or_equiv"].as<float>());
+		result.set_u_iso(atom["U_iso_or_equiv"].get<float>());
 	else if (not atom["B_iso_or_equiv"].empty())
-		result.set_u_iso(atom["B_iso_or_equiv"].as<float>() / (8 * kPI * kPI));
+		result.set_u_iso(atom["B_iso_or_equiv"].get<float>() / (8 * kPI * kPI));
 	else
 		throw std::runtime_error("Missing B_iso or U_iso");
 

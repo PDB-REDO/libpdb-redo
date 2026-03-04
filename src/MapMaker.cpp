@@ -697,8 +697,8 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 	cif::file reflnsFile(hklin);
 	auto &reflns = reflnsFile.front();
 
-	//	m_xname = reflns["exptl_crystal"].front()["id"].as<std::string>();
-	//	m_pname = reflns["entry"].front()["id"].as<std::string>();
+	//	m_xname = reflns["exptl_crystal"].front()["id"].get<std::string>();
+	//	m_pname = reflns["entry"].front()["id"].get<std::string>();
 
 	float a, b, c, alpha, beta, gamma;
 	cif::tie(a, b, c, alpha, beta, gamma) = reflns["cell"].front().get(
@@ -728,7 +728,7 @@ void MapMaker<FTYPE>::loadFoFreeFromReflectionsFile(const fs::path &hklin)
 			hires = res;
 	}
 
-	std::string spacegroupDescr = reflns["symmetry"].front()["space_group_name_H-M"].as<std::string>();
+	std::string spacegroupDescr = reflns["symmetry"].front()["space_group_name_H-M"].get<std::string>();
 	auto spacegroup = clipper::Spacegroup(clipper::Spgr_descr{ spacegroupDescr });
 	mHKLInfo = clipper::HKL_info(spacegroup, cell, clipper::Resolution{ hires }, true);
 
