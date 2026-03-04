@@ -1023,12 +1023,12 @@ void MapMaker<FTYPE>::fixMTZ()
 		auto W = mPhiFomData[ih].fom();
 
 		auto FM = mFbData[ih].f();
-		auto PM = mFbData[ih].phi() * 180 / kPI;
+		auto PM = mFbData[ih].phi() * 180 / std::numbers::pi_v<float>;
 		auto FD = mFdData[ih].f();
-		auto PD = mFdData[ih].phi() * 180 / kPI;
+		auto PD = mFdData[ih].phi() * 180 / std::numbers::pi_v<float>;
 		auto FO = mFoData[ih].f();
 		auto FC = mFcData[ih].f();
-		auto PC = mFcData[ih].phi() * 180 / kPI;
+		auto PC = mFcData[ih].phi() * 180 / std::numbers::pi_v<float>;
 
 		auto WFO = W * FO;
 
@@ -1134,9 +1134,9 @@ void MapMaker<FTYPE>::fixMTZ()
 		if (mFbData[ih].missing() or mFdData[ih].missing())
 			continue;
 
-		auto PM = mFbData[ih].phi() * 180 / kPI;
-		auto PD = mFdData[ih].phi() * 180 / kPI;
-		auto PC = mFcData[ih].phi() * 180 / kPI;
+		auto PM = mFbData[ih].phi() * 180 / std::numbers::pi_v<float>;
+		auto PD = mFdData[ih].phi() * 180 / std::numbers::pi_v<float>;
+		auto PC = mFcData[ih].phi() * 180 / std::numbers::pi_v<float>;
 
 		if (std::abs(std::fmod(std::abs(PM - PC) + 180, 360) - 180) > 90)
 		{

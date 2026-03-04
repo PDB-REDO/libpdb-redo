@@ -33,7 +33,7 @@ namespace pdb_redo
 
 clipper::Atom toClipper(cif::const_row_handle atom, cif::const_row_handle aniso_row)
 {
-	const double kPI = cif::kPI;
+	const double kPI = std::numbers::pi;
 
 	clipper::Atom result;
 

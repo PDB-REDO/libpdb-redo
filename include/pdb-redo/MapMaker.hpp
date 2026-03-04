@@ -38,8 +38,6 @@
 namespace pdb_redo
 {
 
-using cif::kPI;
-
 template <typename FTYPE = float>
 class Map
 {

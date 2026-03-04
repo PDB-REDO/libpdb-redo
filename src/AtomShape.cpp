@@ -40,8 +40,6 @@ using cif::atom_type;
 using cif::atom_type_traits;
 using cif::point;
 
-using cif::kPI;
-
 // --------------------------------------------------------------------
 
 // sine integration function based on the description in
@@ -199,7 +197,7 @@ double sineIntegration(double x)
 
 		double gx = (sn / sd) / (x * x);
 
-		result = cif::kPI / 2 - fx * std::cos(x) - gx * std::sin(x);
+		result = std::numbers::pi / 2 - fx * std::cos(x) - gx * std::sin(x);
 	}
 
 	return result;
@@ -305,7 +303,7 @@ DensityIntegration::DensityIntegration(float resolutionLow, float resolutionHigh
 	{
 		double z, zo, dp;
 
-		z = std::cos(cif::kPI * (i - 0.25) / (N + 0.5));
+		z = std::cos(std::numbers::pi * (i - 0.25) / (N + 0.5));
 
 		do
 		{
@@ -348,7 +346,7 @@ double DensityIntegration::integrateDensity(double r, int ks, const std::vector<
 
 	if (rt > 1e-10)
 	{
-		double t = 4 * cif::kPI * rt;
+		double t = 4 * std::numbers::pi * rt;
 		y = 0;
 
 		for (std::size_t i = 0; i < mST.size(); ++i)
@@ -412,7 +410,7 @@ double DensityIntegration::findMinGlobal(DensityIntegration::CallbackParams &par
 
 double DensityIntegration::integrateRadius(float perc, float occupancy, double yi, const std::vector<double> &fst) const
 {
-	double yt = perc * 0.25 * cif::kPI * occupancy * yi;
+	double yt = perc * 0.25 * std::numbers::pi * occupancy * yi;
 
 	CallbackParams params{ this, fst };
 
@@ -514,8 +512,8 @@ struct AtomShapeImpl
 
 		for (std::size_t i = 0; i < 6; ++i)
 		{
-			mBW[i] = static_cast<float>(-4 * kPI * kPI / (D.b[i] + bIso));
-			mAW[i] = static_cast<float>(D.a[i] * std::pow(-mBW[i] / kPI, 1.5));
+			mBW[i] = static_cast<float>(-4 * std::numbers::pi_v<float> * std::numbers::pi_v<float> / (D.b[i] + bIso));
+			mAW[i] = static_cast<float>(D.a[i] * std::pow(-mBW[i] / std::numbers::pi_v<float>, 1.5f));
 		}
 	}
 
@@ -564,8 +562,8 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 		auto D =
 			mElectronScattering ? atom_type_traits(symbol).elsf() : atom_type_traits(symbol).wksf(charge);
 
-		const auto fourpi2 = static_cast<float>(4 * kPI * kPI);
-		const auto pi3 = static_cast<float>(kPI * kPI * kPI);
+		const auto fourpi2 = static_cast<float>(4 * std::numbers::pi_v<float> * std::numbers::pi_v<float>);
+		const auto pi3 = static_cast<float>(std::numbers::pi_v<float> * std::numbers::pi_v<float> * std::numbers::pi_v<float>);
 
 		for (int i = 0; i < 6; ++i)
 		{
@@ -645,10 +643,10 @@ AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_anis
 		if (u_iso.has_value())
 			iso = *u_iso;
 		else if (b_iso.has_value())
-			iso = *b_iso / static_cast<float>(8 * kPI * kPI);
+			iso = *b_iso / static_cast<float>(8 * std::numbers::pi_v<float> * std::numbers::pi_v<float>);
 
 		if (iso == 0)
-			iso = 2.0f / static_cast<float>(8 * kPI * kPI);
+			iso = 2.0f / static_cast<float>(8 * std::numbers::pi_v<float> * std::numbers::pi_v<float>);
 		;
 
 		mImpl.reset(new AtomShapeImpl({ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering));
