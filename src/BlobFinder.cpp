@@ -34,78 +34,77 @@
 namespace pdb_redo
 {
 
-BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, float growingPercentile)
-	: mXmap(xmm)
-{
-	// Create vector with density heights for all values >0
-	for (auto i = clipper::Xmap_base::Map_reference_coord(xmm); not i.last(); i.next())
-	{
-		double dens_height = xmm[i];
-		if (dens_height > 0)
-			mPotentialGridPoints.emplace_back(i);
-	}
+// BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, float growingPercentile)
+// 	: mXmap(xmm)
+//     , mCrystal(structure.get_datablock())
+// {
+// 	// Create vector with density heights for all values >0
+// 	for (auto i = clipper::Xmap_base::Map_reference_coord(xmm); not i.last(); i.next())
+// 	{
+// 		double dens_height = xmm[i];
+// 		if (dens_height > 0)
+// 			mPotentialGridPoints.emplace_back(i);
+// 	}
 
-	// Check if vector not empty
-	if (mPotentialGridPoints.empty())
-		throw std::runtime_error("No gridpoints with density height above 0");
+// 	// Check if vector not empty
+// 	if (mPotentialGridPoints.empty())
+// 		throw std::runtime_error("No gridpoints with density height above 0");
 
-	// Sort vector on density height (from high to low numbers)
-	std::ranges::sort(mPotentialGridPoints, [this](GridPoint a, GridPoint b)
-		{ return mXmap[a] < mXmap[b]; });
+// 	// Sort vector on density height (from high to low numbers)
+// 	std::ranges::sort(mPotentialGridPoints, [this](GridPoint a, GridPoint b)
+// 		{ return mXmap[a] < mXmap[b]; });
 
-	auto ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
-	mGrowingThreshold = mXmap[mPotentialGridPoints.at(ix)];
-	if (mGrowingThreshold == 0)
-		mGrowingThreshold = 1e-6;
+// 	auto ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
+// 	mGrowingThreshold = mXmap[mPotentialGridPoints.at(ix)];
+// 	if (mGrowingThreshold == 0)
+// 		mGrowingThreshold = 1e-6;
 
-	mPotentialGridPoints.erase(mPotentialGridPoints.begin(), mPotentialGridPoints.begin() + ix);
-}
+// 	mPotentialGridPoints.erase(mPotentialGridPoints.begin(), mPotentialGridPoints.begin() + ix);
+// }
 
 BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure, float growingPercentile)
 	: mXmap(xmm)
 	, mProteinAtoms(structure.atoms())
+    , mCrystal(structure.get_datablock())
 {
 	// To make sure we iterate through density around the protein
 	// we intend to make a cuboid around the protein by taking the min and max coordinate in x,y and z
 	// and extend with 6 angstrom in each direction
 
-	cif::point min, max, center;
-	for (bool first = true; auto &a : mProteinAtoms)
+	cif::point min, max;
+    std::vector<cif::point> pts;
+    pts.reserve(mProteinAtoms.size());
+
+    for (bool first = true; auto &a : mProteinAtoms)
 	{
+        auto loc = a.get_location();
+
+        pts.emplace_back(loc);
+
 		if (std::exchange(first, false))
-			min = max = center = a.get_location();
+			min = max = loc;
 		else
 		{
-			auto l = a.get_location();
+			if (min.m_x > loc.m_x)
+				min.m_x = loc.m_x;
+			if (min.m_y > loc.m_y)
+				min.m_y = loc.m_y;
+			if (min.m_z > loc.m_z)
+				min.m_z = loc.m_z;
 
-			center += l;
-
-			if (min.m_x > l.m_x)
-				min.m_x = l.m_x;
-			if (min.m_y > l.m_y)
-				min.m_y = l.m_y;
-			if (min.m_z > l.m_z)
-				min.m_z = l.m_z;
-
-			if (max.m_x < l.m_x)
-				max.m_x = l.m_x;
-			if (max.m_y < l.m_y)
-				max.m_y = l.m_y;
-			if (max.m_z < l.m_z)
-				max.m_z = l.m_z;
+			if (max.m_x < loc.m_x)
+				max.m_x = loc.m_x;
+			if (max.m_y < loc.m_y)
+				max.m_y = loc.m_y;
+			if (max.m_z < loc.m_z)
+				max.m_z = loc.m_z;
 		}
 	}
 
-	center /= mProteinAtoms.size();
+    std::tie(mProteinCenter, mProteinRadius) = cif::smallest_sphere_around_points(pts);
 
 	// use radius
-	float max_r_sq = 0;
-	for (auto &a : mProteinAtoms)
-	{
-		auto r_sq = cif::distance_squared(a.get_location(), center);
-		if (max_r_sq < r_sq)
-			max_r_sq = r_sq;
-	}
+	float max_r_sq = mProteinRadius * mProteinRadius;
 
 	using namespace clipper;
 
@@ -126,7 +125,7 @@ BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
 			for (auto iw = iv; iw.coord().w() <= gMax[2]; iw.next_w())
 			{
 				double dens_height = xmm[iw];
-				if (dens_height > 0 and cif::distance_squared(cif::point{ iw.coord_orth() }, center) < max_r_sq + extend * extend)
+				if (dens_height > 0 and cif::distance_squared(cif::point{ iw.coord_orth() }, mProteinCenter) < max_r_sq + extend * extend)
 					mPotentialGridPoints.emplace_back(iw);
 			}
 
@@ -175,16 +174,29 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 		if (result.size() < 30 or gridPointVolume * result.size() < minimalVolume)
 			continue;
 
-		// Check if found blob is in proximity of protein atoms
-		if (not mProteinAtoms.empty())
-		{
-			auto [center, radius] = cif::smallest_sphere_around_points(result);
-			auto max_d = (10 + radius) * (10 + radius);
+        auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(result);
 
-			if (std::ranges::find_if(mProteinAtoms, [=](const cif::mm::atom &a)
-					{ return cif::distance_squared(a.get_location(), center) < max_d; }) == mProteinAtoms.end())
-				continue;
-		}
+        if (cif::distance(mProteinCenter, blobCenter) > blobRadius + mProteinRadius)
+        {
+            auto [d, p, so] = mCrystal.closest_symmetry_copy(mProteinCenter, blobCenter);
+
+            if (so)
+            {
+                for (auto &bp : result)
+                    bp = mCrystal.symmetry_copy(bp, so);
+            }
+        }
+
+		// // Check if found blob is in proximity of protein atoms
+		// if (not mProteinAtoms.empty())
+		// {
+		// 	auto [center, radius] = cif::smallest_sphere_around_points(result);
+		// 	auto max_d = (10 + radius) * (10 + radius);
+
+		// 	if (std::ranges::find_if(mProteinAtoms, [=](const cif::mm::atom &a)
+		// 			{ return cif::distance_squared(a.get_location(), center) < max_d; }) == mProteinAtoms.end())
+		// 		continue;
+		// }
 
 		return result;
 	}

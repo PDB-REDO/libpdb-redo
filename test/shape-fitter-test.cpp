@@ -98,57 +98,57 @@ int main(int argc, char *argv[])
 
 // --------------------------------------------------------------------
 
-TEST_CASE("sf-1")
-{
-	pdb_redo::Map<float> map;
-	map.read(gTestDir / "1cbs-REA-blob.map");
-	clipper::Xmap<float> &xmap = map.get();
+// TEST_CASE("sf-1")
+// {
+// 	pdb_redo::Map<float> map;
+// 	map.read(gTestDir / "1cbs-REA-blob.map");
+// 	clipper::Xmap<float> &xmap = map.get();
 
-	auto cf = R"(
-data_1CBS
-# 
-_entry.id   1CBS
-# 
-_cell.entry_id           1CBS
-_cell.length_a           45.650
-_cell.length_b           47.560
-_cell.length_c           77.610
-_cell.angle_alpha        90.00
-_cell.angle_beta         90.00
-_cell.angle_gamma        90.00
-_cell.Z_PDB              4
-_cell.pdbx_unique_axis   ?
-# 
-_symmetry.entry_id                         1CBS
-_symmetry.space_group_name_H-M             'P 21 21 21'
-_symmetry.pdbx_full_space_group_name_H-M   ?
-_symmetry.cell_setting                     ?
-_symmetry.Int_Tables_number                19
-# 
-	)"_cf;
+// 	auto cf = R"(
+// data_1CBS
+// # 
+// _entry.id   1CBS
+// # 
+// _cell.entry_id           1CBS
+// _cell.length_a           45.650
+// _cell.length_b           47.560
+// _cell.length_c           77.610
+// _cell.angle_alpha        90.00
+// _cell.angle_beta         90.00
+// _cell.angle_gamma        90.00
+// _cell.Z_PDB              4
+// _cell.pdbx_unique_axis   ?
+// # 
+// _symmetry.entry_id                         1CBS
+// _symmetry.space_group_name_H-M             'P 21 21 21'
+// _symmetry.pdbx_full_space_group_name_H-M   ?
+// _symmetry.cell_setting                     ?
+// _symmetry.Int_Tables_number                19
+// # 
+// 	)"_cf;
 
-	// Create a ligand
-	cif::datablock &db = cf.front(); // almost empty
-	db.set_validator(cif::validator_factory::instance().get("mmcif_pdbx.dic"));
-	cif::mm::structure s(db);
+// 	// Create a ligand
+// 	cif::datablock &db = cf.front(); // almost empty
+// 	db.set_validator(cif::validator_factory::instance().get("mmcif_pdbx.dic"));
+// 	cif::mm::structure s(db);
 
-	pdb_redo::BlobFinder bf(xmap, 0);
+// 	pdb_redo::BlobFinder bf(xmap, 0);
 
-	auto blob = bf.next();
+// 	auto blob = bf.next();
 
-	CHECK(blob.size() == 831);
+// 	CHECK(blob.size() == 831);
 
-	auto ligand_asym_id = s.create_non_poly("REA", true);
+// 	auto ligand_asym_id = s.create_non_poly("REA", true);
 
-	std::cout << "ligand: " << ligand_asym_id << " created\n";
+// 	std::cout << "ligand: " << ligand_asym_id << " created\n";
 
-	auto score = pdb_redo::fitShape(s, ligand_asym_id, xmap, blob);
+// 	auto score = pdb_redo::fitShape(s, ligand_asym_id, xmap, blob);
 
-	CHECK(score < 0);
+// 	CHECK(score < 0);
 
-	// std::ofstream file(std::filesystem::temp_directory_path() / "test.cif");
-	// cf.save(file);
-}
+// 	// std::ofstream file(std::filesystem::temp_directory_path() / "test.cif");
+// 	// cf.save(file);
+// }
 
 // --------------------------------------------------------------------
 
