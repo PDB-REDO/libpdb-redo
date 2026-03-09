@@ -62,8 +62,7 @@ class CompoundBondMap
   public:
 	static CompoundBondMap &instance()
 	{
-		static std::unique_ptr<CompoundBondMap> s_instance(new CompoundBondMap);
-		return *s_instance;
+		return sInstance;
 	}
 
 	bool bonded(const std::string &compoundID, const std::string &atomID1, const std::string &atomID2);
@@ -92,7 +91,10 @@ class CompoundBondMap
 	std::map<std::string, uint32_t> mAtomIDIndex;
 	std::vector<CompoundBondInfo> mCompounds;
 	std::mutex mMutex;
+    static CompoundBondMap sInstance;
 };
+
+CompoundBondMap CompoundBondMap::sInstance;
 
 bool CompoundBondMap::bonded(const std::string &compoundID, const std::string &atomID1, const std::string &atomID2)
 {
