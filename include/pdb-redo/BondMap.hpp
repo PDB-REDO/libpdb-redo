@@ -26,13 +26,15 @@
 
 #pragma once
 
+#include <cif++/cif++.hpp>
+#include <cstdint>
 #include <filesystem>
+#include <iterator>
 #include <map>
 #include <set>
 #include <stdexcept>
+#include <string>
 #include <unordered_map>
-
-#include <cif++/cif++.hpp>
 
 namespace pdb_redo
 {
@@ -88,7 +90,116 @@ class BondMap
 	// This list of atomID's is comming from either CCD or the CCP4 dictionaries loaded
 	static std::vector<std::string> atomIDsForCompound(const std::string &compoundID);
 
-//   private:
+	// iterator
+
+	class iterator
+	{
+	  public:
+		using iterator_category = std::bidirectional_iterator_tag;
+		using value_type = std::tuple<std::string, std::string>;
+		using difference_type = std::ptrdiff_t;
+		using pointer = value_type *;
+		using reference = value_type &;
+
+		iterator() = default;
+		iterator(const iterator &) = default;
+		iterator &operator=(const iterator &) = default;
+
+		auto operator*()
+		{
+			updateValue();
+			return mValue;
+		}
+
+		auto operator*() const
+		{
+			updateValue();
+			return mValue;
+		}
+
+		auto operator->()
+		{
+			updateValue();
+			return &mValue;
+		}
+
+		auto operator->() const
+		{
+			updateValue();
+			return &mValue;
+		}
+
+		auto &operator++()
+		{
+			++mCurrent;
+			return *this;
+		}
+
+		auto operator++(int)
+		{
+			iterator result(*this);
+			this->operator++();
+			return result;
+		}
+
+		auto &operator--()
+		{
+			--mCurrent;
+			return *this;
+		}
+
+		auto operator--(int)
+		{
+			iterator result(*this);
+			this->operator--();
+			return result;
+		}
+
+		constexpr auto operator==(const iterator &i) const noexcept
+		{
+			return mCurrent == i.mCurrent;
+		}
+
+		constexpr auto operator!=(const iterator &i) const noexcept
+		{
+			return mCurrent != i.mCurrent;
+		}
+
+	  private:
+		friend class BondMap;
+		using base_iterator = std::set<std::tuple<uint32_t, uint32_t>>::iterator;
+
+		iterator(const BondMap *bm, base_iterator i)
+			: mBondmap(bm)
+			, mCurrent(i)
+		{
+		}
+
+		void updateValue() const
+		{
+			auto [one, two] = *mCurrent;
+			mValue = { mBondmap->rIndex[one], mBondmap->rIndex[two] };
+		}
+
+		const BondMap *mBondmap;
+		base_iterator mCurrent;
+		mutable value_type mValue;
+	};
+
+	auto begin() const { return iterator(this, bond.begin()); }
+	auto end() const { return iterator(this, bond.end()); }
+
+	auto cbegin() const { return std::make_const_iterator(iterator(this, bond.begin())); }
+	auto cend() const { return std::make_const_iterator(iterator(this, bond.end())); }
+
+	auto rbegin() const { return std::make_reverse_iterator(iterator(this, bond.end())); }
+	auto rend() const { return std::make_reverse_iterator(iterator(this, bond.begin())); }
+
+	size_t size() const { return bond.size(); }
+
+  private:
+	friend class iterator;
+
 	constexpr std::tuple<uint32_t, uint32_t> key(uint32_t a, uint32_t b) const
 	{
 		if (a > b)
@@ -106,9 +217,9 @@ class BondMap
 
 	uint32_t dim;
 	std::unordered_map<std::string, uint32_t> index;
+	std::vector<std::string> rIndex;
 	std::set<std::tuple<uint32_t, uint32_t>> bond, bond_1_4;
-
 	std::map<std::string, std::set<std::string>> link;
 };
 
-} // namespace pdbx
+} // namespace pdb_redo

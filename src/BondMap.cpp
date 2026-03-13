@@ -36,6 +36,7 @@
 
 #include <pdb-redo/BondMap.hpp>
 #include <pdb-redo/Compound.hpp>
+#include <ranges>
 
 namespace pdb_redo
 {
@@ -197,8 +198,12 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, 
 
 	dim = static_cast<uint32_t>(atoms.size());
 
-	for (auto &atom : atoms)
-		index[atom["id"].get<std::string>()] = static_cast<uint32_t>(index.size());
+	for (auto atom : atoms)
+	{
+		auto id = atom["id"].template get<std::string>();
+		index[id] = static_cast<uint32_t>(index.size());
+		rIndex.emplace_back(id);
+	}
 
 	auto bindAtoms = [this](const std::string &a, const std::string &b)
 	{
