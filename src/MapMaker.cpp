@@ -498,36 +498,18 @@ class LocaleSaver
   public:
 	LocaleSaver()
 	{
-		for (size_t i = 0; i < kCategoryCount; ++i)
-			mValues[i] = setlocale(kCategory[i], "");
+		locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+		mSavedLocale = uselocale(loc);
+		freelocale(loc);
 	}
 
 	~LocaleSaver()
 	{
-		for (size_t i = 0; i < kCategoryCount; ++i)
-			(void)setlocale(kCategory[i], mValues[i].c_str());
+		uselocale(mSavedLocale);
 	}
 
   private:
-	static constexpr const int kCategory[] = {
-		LC_ALL,            //   All of the locale
-		LC_ADDRESS,        //   Formatting of addresses and geography-related items (*)
-		LC_COLLATE,        //   String collation
-		LC_CTYPE,          //   Character classification
-		LC_IDENTIFICATION, //   Metadata describing the locale (*)
-		LC_MEASUREMENT,    //   Settings related to measurements (metric versus US customary) (*)
-		LC_MESSAGES,       //   Localizable natural-language messages
-		LC_MONETARY,       //   Formatting of monetary values
-		LC_NAME,           //   Formatting of salutations for persons (*)
-		LC_NUMERIC,        //   Formatting of nonmonetary numeric values
-		LC_PAPER,          //   Settings related to the standard paper size (*)
-		LC_TELEPHONE,      //   Formats to be used with telephone services (*)
-		LC_TIME            //   Formatting of date and time values
-	};
-
-	static const constexpr int kCategoryCount = sizeof(kCategory) / sizeof(int);
-
-	std::array<std::string, kCategoryCount> mValues;
+	locale_t mSavedLocale;
 };
 
 template <typename FTYPE>
@@ -623,10 +605,6 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	// #if 0
 
 	LocaleSaver saveLocale;
-
-	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
-	uselocale(loc);
-	freelocale(loc);
 
 	fs::path hklin(f);
 
