@@ -26,21 +26,19 @@
 
 #include "pdb-redo/MapMaker.hpp"
 
-#include <clipper/clipper-ccp4.h>
-#include <clipper/clipper-contrib.h>
-
-#include <cif++/cif++.hpp>
-#include <system_error>
 #include "cif++/gzio.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
 
 #include <cerrno>
 #include <cif++/cif++.hpp>
+#include <cif++/text.hpp>
 #include <clipper/clipper-ccp4.h>
 #include <clipper/clipper-contrib.h>
 #include <filesystem>
 #include <fstream>
+#include <locale.h>
+#include <stdexcept>
 #include <system_error>
 
 #ifdef _MSC_VER
@@ -492,12 +490,144 @@ MapMaker<FTYPE>::MapMaker() = default;
 template <typename FTYPE>
 MapMaker<FTYPE>::~MapMaker() = default;
 
+// The current implementation of libccp4 uses strod to parse numbers
+// in symmetry strings. That doesn't work well with a non C locale...
+
+class LocaleSaver
+{
+  public:
+	LocaleSaver()
+	{
+		for (size_t i = 0; i < kCategoryCount; ++i)
+			mValues[i] = setlocale(kCategory[i], "");
+	}
+
+	~LocaleSaver()
+	{
+		for (size_t i = 0; i < kCategoryCount; ++i)
+			(void)setlocale(kCategory[i], mValues[i].c_str());
+	}
+
+  private:
+	static constexpr const int kCategory[] = {
+		LC_ALL,            //   All of the locale
+		LC_ADDRESS,        //   Formatting of addresses and geography-related items (*)
+		LC_COLLATE,        //   String collation
+		LC_CTYPE,          //   Character classification
+		LC_IDENTIFICATION, //   Metadata describing the locale (*)
+		LC_MEASUREMENT,    //   Settings related to measurements (metric versus US customary) (*)
+		LC_MESSAGES,       //   Localizable natural-language messages
+		LC_MONETARY,       //   Formatting of monetary values
+		LC_NAME,           //   Formatting of salutations for persons (*)
+		LC_NUMERIC,        //   Formatting of nonmonetary numeric values
+		LC_PAPER,          //   Settings related to the standard paper size (*)
+		LC_TELEPHONE,      //   Formats to be used with telephone services (*)
+		LC_TIME            //   Formatting of date and time values
+	};
+
+	static const constexpr int kCategoryCount = sizeof(kCategory) / sizeof(int);
+
+	std::array<std::string, kCategoryCount> mValues;
+};
+
 template <typename FTYPE>
 void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	std::initializer_list<std::string> fbLabels, std::initializer_list<std::string> fdLabels,
 	std::initializer_list<std::string> foLabels, std::initializer_list<std::string> fcLabels,
 	std::initializer_list<std::string> faLabels)
 {
+	// 	cif::gzio::ifstream file(f);
+
+	// 	if (not file.is_open())
+	// 		throw std::system_error(std::error_code(errno, std::system_category()), "Could not open file " + f.string());
+
+	// 	std::vector<char> buffer;
+	// 	buffer.reserve(std::filesystem::file_size(f));
+
+	// 	while (file.rdbuf()->in_avail())
+	// 	{
+	// 		char b[1024 * 1024];
+	// 		auto n = file.rdbuf()->sgetn(b, sizeof(b));
+	// 		if (n <= 0)
+	// 			break;
+	// 		buffer.insert(buffer.end(), b, b + n);
+	// 	}
+
+	// 	std::println(std::cout, "Read {} bytes", buffer.size());
+
+	// 	if (std::string_view(buffer.data(), 4) != "MTZ ")
+	// 		throw std::runtime_error("Not an MTZ file");
+
+	// 	if (buffer[8] != 0x44 or buffer[9] != 0x41)
+	// 		throw std::runtime_error("Unsupported MTZ file format, please report");
+
+	// 	int64_t headerStart;
+	// 	if (auto ip = reinterpret_cast<int32_t *>(buffer.data()); ip[1] == -1)
+	// 		memcpy(&headerStart, buffer.data() + 12, 8);
+	// 	else
+	// 		headerStart = ip[1];
+
+	// 	auto offset = (headerStart - 1) * 4;
+	// 	if (offset < 0 or offset > buffer.size())
+	// 		throw std::runtime_error("Invalid MTZ header");
+
+	// 	auto vers = cif::trim_right_copy(std::string_view(buffer.data() + offset, 80));
+	// 	if (vers != "VERS MTZ:V1.1")
+	// 		throw std::runtime_error("Unsupported MTZ file format");
+
+	// 	int iiset = 0;
+	// 	int nxtal = 1;
+	// 	std::vector<std::string> projects{ "HKL_base" }, crystals{ "HKL_base" };
+	// 	std::string project("dummy"), crystal("dummy");
+	// 	std::vector<int> nset{ 1 };
+
+	// 	int ntotcol{}, nref{}, nbat{}, ndif{};
+
+	// 	for (auto ptr = buffer.data() + offset + 80; ptr < buffer.data() + buffer.size(); ptr += 80)
+	// 	{
+	// 		auto block = cif::trim_right_copy(std::string_view(ptr, 80));
+	// 		std::cout << block << "\n";
+
+	// 		std::string key;
+
+	// 		if (block.starts_with("NCOL"))
+	// 		{
+	// 			std::istringstream is(block);
+	// 			is >> key >> ntotcol >> nref >> nbat;
+	// 			continue;
+	// 		}
+
+	// 		if (block.starts_with("NDIF"))
+	// 		{
+	// 			std::istringstream is(block);
+	// 			is >> key >> ndif;
+	// 			continue;
+	// 		}
+
+	// 		// if (block.starts_with("PROJ"))
+	// 		// {
+	// 		// 	++iiset;
+	// 		// }
+
+	// 		if (block.starts_with("CRYS"))
+	// 		{
+
+	// 		}
+
+	// 		if (block.starts_with("END "))
+	// 			break;
+	// 	}
+
+	// 	exit(0);
+
+	// #if 0
+
+	LocaleSaver saveLocale;
+
+	locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+	uselocale(loc);
+	freelocale(loc);
+
 	fs::path hklin(f);
 
 	if (cif::VERBOSE > 0)
@@ -559,23 +689,23 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 	}
 
 	mtzin.import_hkl_data(mFbData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(fbLabels, ",")));
+		std::format("/*/*/[{}]", cif::join(fbLabels, ",")));
 	mtzin.import_hkl_data(mFdData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(fdLabels, ",")));
+		std::format("/*/*/[{}]", cif::join(fdLabels, ",")));
 	if (hasFAN)
 		mtzin.import_hkl_data(mFaData,
-			std::format("/{}/{}/[{}]", "*", "*", cif::join(faLabels, ",")));
+			std::format("/*/*/[{}]", cif::join(faLabels, ",")));
 	mtzin.import_hkl_data(mFoData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
+		std::format("/*/*/[{}]", cif::join(foLabels, ",")));
 	mtzin.import_hkl_data(mFcData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(fcLabels, ",")));
+		std::format("/*/*/[{}]", cif::join(fcLabels, ",")));
 
 	if (hasFREE)
 		mtzin.import_hkl_data(mFreeData,
-			std::format("/{}/{}/[{}]", "*", "*", "FREE"));
+			std::format("/*/*/[{}]", "FREE"));
 
 	mtzin.import_hkl_data(mPhiFomData,
-		std::format("/{}/{}/[{}]", "*", "*", "PHWT,FOM"));
+		std::format("/*/*/[{}]", "PHWT,FOM"));
 
 	mtzin.close_read();
 
@@ -638,6 +768,7 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 
 	mFb.calculateStats();
 	mFd.calculateStats();
+	// #endif
 }
 
 // --------------------------------------------------------------------
@@ -827,8 +958,7 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 
 		char tmpFileName[] = "/tmp/map-tmp-XXXXXX";
 		if (mkstemp(tmpFileName) < 0)
-			throw std::system_error(std::error_code(errno, std::system_category())
-		, "Could not create temp file for map: ");
+			throw std::system_error(std::error_code(errno, std::system_category()), "Could not create temp file for map: ");
 
 		dataFile = fs::path(tmpFileName);
 		std::ofstream out(dataFile);
@@ -851,9 +981,9 @@ void MapMaker<FTYPE>::loadFoFreeFromMTZFile(const fs::path &hklin,
 
 	mtzin.import_hkl_info(mHKLInfo);
 	mtzin.import_hkl_data(mFoData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(foLabels, ",")));
+		std::format("/*/*/[{}]", cif::join(foLabels, ",")));
 	mtzin.import_hkl_data(mFreeData,
-		std::format("/{}/{}/[{}]", "*", "*", cif::join(freeLabels, ",")));
+		std::format("/*/*/[{}]", cif::join(freeLabels, ",")));
 
 	mtzin.close_read();
 
