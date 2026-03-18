@@ -765,8 +765,8 @@ TEST_CASE("test-iter")
 	using namespace cif::literals;
 
 	std::cout << "reading file..." << std::flush;
-	cif::file f(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	// cif::file f(gTestDir / "2b8h.cif.gz");
+	// cif::file f(gTestDir / ".." / "examples" / "1cbs.cif.gz");
+	cif::file f(gTestDir / "2b8h.cif.gz");
 	std::cout << " loading dictionary..." << std::flush;
 	f.front().load_dictionary("mmcif_pdbx.dic");
 	// std::cout << " building structure..." << std::flush;

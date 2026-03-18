@@ -205,12 +205,16 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, 
 		rIndex.emplace_back(id);
 	}
 
-	auto bindAtoms = [this](const std::string &a, const std::string &b)
+	auto bindAtoms = [this, &atoms](const std::string &a, const std::string &b)
 	{
 		uint32_t ixa = index[a];
 		uint32_t ixb = index[b];
 
-		bond.insert(key(ixa, ixb));
+		auto altA = atoms[ixa].get<std::optional<std::string>>("label_alt_id");
+		auto altB = atoms[ixb].get<std::optional<std::string>>("label_alt_id");
+
+		if (not altA.has_value() or not altB.has_value() or *altA == *altB)
+			bond.insert(key(ixa, ixb));
 	};
 
 	auto linkAtoms = [this, &bindAtoms](const std::string &a, const std::string &b)
