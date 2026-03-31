@@ -316,7 +316,7 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, 
 	dim = static_cast<uint32_t>(atoms.size());
 
 	for (auto &atom : atoms)
-		index[atom["id"].as<std::string>()] = static_cast<uint32_t>(index.size());
+		index[atom["id"].get<std::string>()] = static_cast<uint32_t>(index.size());
 
 	auto bindAtoms = [this](const std::string &a, const std::string &b)
 	{
@@ -759,14 +759,13 @@ TEST_CASE("test_0")
 // 	}
 // }
 
-
 TEST_CASE("test-iter")
 {
 	using namespace cif::literals;
 
 	std::cout << "reading file..." << std::flush;
-	// cif::file f(gTestDir / ".." / "examples" / "1cbs.cif.gz");
-	cif::file f(gTestDir / "2b8h.cif.gz");
+	cif::file f(gTestDir / ".." / "examples" / "1cbs.cif.gz");
+	// cif::file f(gTestDir / "2b8h.cif.gz");
 	std::cout << " loading dictionary..." << std::flush;
 	f.front().load_dictionary("mmcif_pdbx.dic");
 	// std::cout << " building structure..." << std::flush;

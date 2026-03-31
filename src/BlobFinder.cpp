@@ -28,39 +28,14 @@
 
 #include <algorithm>
 #include <cif++/point.hpp>
+#include <cif++/symmetry.hpp>
+#include <limits>
 #include <pdb-redo/Restraints.hpp>
+#include <ranges>
 #include <stdexcept>
 
 namespace pdb_redo
 {
-
-// BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, float growingPercentile)
-// 	: mXmap(xmm)
-//     , mCrystal(structure.get_datablock())
-// {
-// 	// Create vector with density heights for all values >0
-// 	for (auto i = clipper::Xmap_base::Map_reference_coord(xmm); not i.last(); i.next())
-// 	{
-// 		double dens_height = xmm[i];
-// 		if (dens_height > 0)
-// 			mPotentialGridPoints.emplace_back(i);
-// 	}
-
-// 	// Check if vector not empty
-// 	if (mPotentialGridPoints.empty())
-// 		throw std::runtime_error("No gridpoints with density height above 0");
-
-// 	// Sort vector on density height (from high to low numbers)
-// 	std::ranges::sort(mPotentialGridPoints, [this](GridPoint a, GridPoint b)
-// 		{ return mXmap[a] < mXmap[b]; });
-
-// 	auto ix = static_cast<size_t>(std::ceil(growingPercentile * mPotentialGridPoints.size()));
-// 	mGrowingThreshold = mXmap[mPotentialGridPoints.at(ix)];
-// 	if (mGrowingThreshold == 0)
-// 		mGrowingThreshold = 1e-6;
-
-// 	mPotentialGridPoints.erase(mPotentialGridPoints.begin(), mPotentialGridPoints.begin() + ix);
-// }
 
 BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure, float growingPercentile)
 	: mXmap(xmm)
@@ -102,6 +77,13 @@ BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
 	}
 
     std::tie(mProteinCenter, mProteinRadius) = cif::smallest_sphere_around_points(pts);
+
+	// Store all residue spheres as well
+	for (auto &poly : structure.polymers())
+	{
+		for (auto &res : poly)
+			mResidueSpheres.emplace_back(res.center_and_radius());
+	}
 
 	// use radius
 	float max_r_sq = mProteinRadius * mProteinRadius;
@@ -176,27 +158,46 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 
         auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(result);
 
-        if (cif::distance(mProteinCenter, blobCenter) > blobRadius + mProteinRadius)
-        {
-            auto [d, p, so] = mCrystal.closest_symmetry_copy(mProteinCenter, blobCenter);
+		float bestD = std::numeric_limits<float>::max();
+		cif::sym_op bestSO{};
 
-            if (so)
-            {
+		for (auto &[c, r] : mResidueSpheres)
+		{
+			if (auto d = distance(c, blobCenter); bestD > d)
+				bestD = d;
+		}
+
+		if (bestD > 3.0f)
+		{
+			for (auto &[c, r] : mResidueSpheres)
+			{
+				auto [d, p, so] = mCrystal.closest_symmetry_copy(c, blobCenter);
+
+				if (bestD > d)
+				{
+					bestD = d;
+					bestSO = so;
+				}
+			}
+
+			if (bestSO)
+			{
                 for (auto &bp : result)
-                    bp = mCrystal.symmetry_copy(bp, so);
-            }
-        }
+                    bp = mCrystal.symmetry_copy(bp, bestSO);
 
-		// // Check if found blob is in proximity of protein atoms
-		// if (not mProteinAtoms.empty())
-		// {
-		// 	auto [center, radius] = cif::smallest_sphere_around_points(result);
-		// 	auto max_d = (10 + radius) * (10 + radius);
+				std::tie(blobCenter, blobRadius) = cif::smallest_sphere_around_points(result);
+			}
+		}
 
-		// 	if (std::ranges::find_if(mProteinAtoms, [=](const cif::mm::atom &a)
-		// 			{ return cif::distance_squared(a.get_location(), center) < max_d; }) == mProteinAtoms.end())
-		// 		continue;
-		// }
+		// Check if found blob is in proximity of protein atoms
+		if (not mProteinAtoms.empty())
+		{
+			auto max_d = (10 + blobRadius) * (10 + blobRadius);
+
+			if (std::ranges::find_if(mProteinAtoms, [=](const cif::mm::atom &a)
+					{ return cif::distance_squared(a.get_location(), blobCenter) < max_d; }) == mProteinAtoms.end())
+				continue;
+		}
 
 		return result;
 	}
@@ -218,29 +219,38 @@ std::vector<BlobFinder::GridPoint> BlobFinder::pop()
 
 		blob.emplace_back(gridpoint);
 
-		// Define coordinates of the starting gridpoint
-		auto u0 = gridpoint.coord().u();
-		auto v0 = gridpoint.coord().v();
-		auto w0 = gridpoint.coord().w();
-
 		// Find neighbouring gridpoints to get a 3*3*3 cube (excluding the center gridpoint)
-		for (auto u = u0 - 1; u <= u0 + 1; u++)
-			for (auto v = v0 - 1; v <= v0 + 1; v++)
-				for (auto w = w0 - 1; w <= w0 + 1; w++)
+		for (auto u = -1; u <= 1; u++)
+			for (auto v = -1; v <= 1; v++)
+				for (auto w = -1; w <= 1; w++)
 				{
-					if (u == u0 and v == v0 and w == w0)
+					if (u == 0 and v == 0 and w == 0)
 						continue;
 
-					auto n_gp = clipper::Xmap_base::Map_reference_coord(mXmap, { u, v, w });
+					auto gp = gridpoint;
+					if (u < 0)
+						gp = gp.prev_u();
+					else if (u > 0)
+						gp = gp.next_u();
 
-					if (std::ranges::find_if(blob, [ix = n_gp.index()](const GridPoint &p)
+					if (v < 0)
+						gp = gp.prev_v();
+					else if (v > 0)
+						gp = gp.next_v();
+
+					if (w < 0)
+						gp = gp.prev_w();
+					else if (w > 0)
+						gp = gp.next_w();
+
+					if (std::ranges::find_if(blob, [ix = gp.index()](const GridPoint &p)
 							{ return p.index() == ix; }) != blob.end())
 						continue;
 
-					if (mXmap[n_gp] < mGrowingThreshold)
+					if (mXmap[gp] < mGrowingThreshold)
 						continue;
 
-					stack.push(n_gp);
+					stack.push(gp);
 				};
 	}
 

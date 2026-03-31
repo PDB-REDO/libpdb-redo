@@ -57,6 +57,7 @@ class BlobFinder
 	const clipper::Xmap<float> &mXmap;
 	std::vector<GridPoint> mPotentialGridPoints;
 	std::vector<cif::mm::atom> mProteinAtoms;
+	std::vector<std::tuple<cif::point,float>> mResidueSpheres;
     cif::point mProteinCenter;
     cif::crystal mCrystal;
     float mProteinRadius;
