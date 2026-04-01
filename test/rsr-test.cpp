@@ -1,17 +1,17 @@
 /*-
  * SPDX-License-Identifier: BSD-2-Clause
- * 
+ *
  * Copyright (c) 2024 NKI/AVL, Netherlands Cancer Institute
- * 
+ *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * 1. Redistributions of source code must retain the above copyright notice, this
  *    list of conditions and the following disclaimer
  * 2. Redistributions in binary form must reproduce the above copyright notice,
  *    this list of conditions and the following disclaimer in the documentation
  *    and/or other materials provided with the distribution.
- * 
+ *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
  * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
@@ -24,24 +24,43 @@
  * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#include <cif++/point.hpp>
+#include <glm/ext/quaternion_geometric.hpp>
+#include <sstream>
 #define CATCH_CONFIG_RUNNER
+
+#include "pdb-redo/AtomShape.hpp"
+#include "pdb-redo/DistanceMap.hpp"
+#include "pdb-redo/MapMaker.hpp"
+#include "pdb-redo/Minimizer.hpp"
+#include "pdb-redo/Statistics.hpp"
 
 #include <algorithm>
 #include <catch2/catch_all.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
-
-#include <stdexcept>
-#include <filesystem>
-
 #include <cif++/cif++.hpp>
-
-#include "pdb-redo/AtomShape.hpp"
-#include "pdb-redo/MapMaker.hpp"
-#include "pdb-redo/Statistics.hpp"
-#include "pdb-redo/DistanceMap.hpp"
-#include "pdb-redo/Minimizer.hpp"
+#include <filesystem>
+#include <random>
+#include <stdexcept>
 
 namespace fs = std::filesystem;
+
+
+template <>
+struct std::formatter<cif::mm::atom> : std::formatter<std::string_view> // NOLINT
+{
+	template <class FmtContext>
+	auto format(const cif::mm::atom &a, FmtContext &ctx) const
+	{
+		std::ostringstream os;
+		os << a;
+
+		return std::formatter<std::string_view>::format(os.str(), ctx);
+	}
+};
+
+
+
 
 // --------------------------------------------------------------------
 
@@ -126,7 +145,7 @@ TEST_CASE("refine_0")
 		auto d = distance(a1, a2);
 		d_sum += d * d;
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << '\n';
+		std::println(std::cout, "{}: {} => {} distance: {}", a1, a1.get_location(), a2.get_location(), d);
 	}
 
 	auto rmsd = std::sqrt(d_sum / atoms3.size());
@@ -134,6 +153,30 @@ TEST_CASE("refine_0")
 	CHECK_THAT(rmsd, Catch::Matchers::WithinAbs(0.125, 0.125));
 
 	std::cout << std::string(cif::get_terminal_width(), '=') << '\n';
+}
+
+cif::point nudge(cif::point p, float offset)
+{
+	static std::random_device rd;
+	static std::mt19937_64 rng(rd());
+
+	std::uniform_real_distribution<float> randomAxis(0, 1.0f);
+	std::uniform_real_distribution<float> randomAngle(0, 360.f);
+	std::normal_distribution<float> randomOffset(0, offset);
+
+	glm::vec3 axis
+	{
+		randomAxis(rng), randomAxis(rng), randomAxis(rng)
+	};
+	axis = glm::normalize(axis);
+
+	auto q = cif::construct_from_angle_axis(randomAngle(rng), axis);
+
+	cif::point r{ 0, 0, 1 };
+	r = q * r;
+	r *= randomOffset(rng);
+
+	return p + r;
 }
 
 TEST_CASE("refine_1")
@@ -159,7 +202,7 @@ TEST_CASE("refine_1")
 
 	auto &res3 = chain.at(2);
 	for (auto a : res3.atoms())
-		structure.move_atom(a, cif::nudge(a.get_location(), 0.5f));
+		structure.move_atom(a, nudge(a.get_location(), 0.5f));
 
 	cif::file refFile(example.string());
 	cif::mm::structure reference(refFile);
@@ -175,7 +218,7 @@ TEST_CASE("refine_1")
 		auto a1 = atoms3.at(i);
 		auto a2 = refAtoms3.at(i);
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << '\n';
+		std::println(std::cout, "{}: {} => {} distance: {}", a1, a1.get_location(), a2.get_location(), distance(a1, a2));
 	}
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
@@ -200,7 +243,7 @@ TEST_CASE("refine_1")
 		auto d = distance(a1, a2);
 		d_sum += d * d;
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << '\n';
+		std::println(std::cout, "{}: {} => {} distance: {}", a1, a1.get_location(), a2.get_location(), d);
 	}
 
 	auto rmsd = std::sqrt(d_sum / atoms3.size());
@@ -268,7 +311,7 @@ TEST_CASE("refine_2")
 		auto a1 = atomsRea.at(i);
 		auto a2 = refAtomsRea.at(i);
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << distance(a1, a2) << '\n';
+		std::println(std::cout, "{}: {} => {} distance: {}", a1, a1.get_location(), a2.get_location(), distance(a1, a2));
 	}
 
 	std::cout << std::string(cif::get_terminal_width(), '-') << '\n';
@@ -300,7 +343,7 @@ TEST_CASE("refine_2")
 		auto d = distance(a1, a2);
 		d_sum += d * d;
 
-		std::cout << a1 << ": " << a1.get_location() << " => " << a2.get_location() << "  distance: " << d << '\n';
+		std::println(std::cout, "{}: {} => {} distance: {}", a1, a1.get_location(), a2.get_location(), d);
 	}
 
 	file.save("/tmp/rsr-test-3.cif");

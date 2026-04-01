@@ -153,9 +153,9 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal cryst
 
 		auto p = a.get_location();
 		key_type k{
-			static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
-			static_cast<int>(std::rint(p.m_y / m_grid_spacing)),
-			static_cast<int>(std::rint(p.m_z / m_grid_spacing))
+			static_cast<int>(std::rint(p.x / m_grid_spacing)),
+			static_cast<int>(std::rint(p.y / m_grid_spacing)),
+			static_cast<int>(std::rint(p.z / m_grid_spacing))
 		};
 
 		if (m_index.empty())
@@ -214,9 +214,9 @@ DistanceMap::DistanceMap(const cif::mm::structure &structure, cif::crystal cryst
 						auto ap = sg(pt, cell, symop);
 
 						key_type k{
-							static_cast<int>(std::rint(ap.m_x / m_grid_spacing)),
-							static_cast<int>(std::rint(ap.m_y / m_grid_spacing)),
-							static_cast<int>(std::rint(ap.m_z / m_grid_spacing))
+							static_cast<int>(std::rint(ap.x / m_grid_spacing)),
+							static_cast<int>(std::rint(ap.y / m_grid_spacing)),
+							static_cast<int>(std::rint(ap.z / m_grid_spacing))
 						};
 
 						if (k.x >= k1.x and k.x <= k2.x and
@@ -246,9 +246,9 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 	auto p = atom.get_location();
 
 	key_type k{
-		static_cast<int>(std::rint(p.m_x / m_grid_spacing)),
-		static_cast<int>(std::rint(p.m_y / m_grid_spacing)),
-		static_cast<int>(std::rint(p.m_z / m_grid_spacing))
+		static_cast<int>(std::rint(p.x / m_grid_spacing)),
+		static_cast<int>(std::rint(p.y / m_grid_spacing)),
+		static_cast<int>(std::rint(p.z / m_grid_spacing))
 	};
 
 	key_type k1 = k, k2 = k;

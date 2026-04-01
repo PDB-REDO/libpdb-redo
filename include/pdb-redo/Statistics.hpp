@@ -31,6 +31,7 @@
 
 #include <cif++/datablock.hpp>
 #include <cif++/model.hpp>
+#include <clipper/core/coords.h>
 #include <pdb-redo/BondMap.hpp>
 
 namespace pdb_redo
@@ -76,6 +77,12 @@ void iterateGrid(const clipper::Coord_orth &p, float r, const clipper::Xmap<FTYP
 		for (auto iv = iu; iv.coord().v() <= gMax[1]; iv.next_v())
 			for (auto iw = iv; iw.coord().w() <= gMax[2]; iw.next_w())
 				func(iw);
+}
+
+template <typename F, typename FTYPE = float>
+void iterateGrid(cif::point p, float r, const clipper::Xmap<FTYPE> &m, F &&func)
+{
+	iterateGrid(clipper::Coord_orth{ p.x, p.y, p.z}, r, m, std::forward<F>(func));
 }
 
 // --------------------------------------------------------------------

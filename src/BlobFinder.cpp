@@ -40,43 +40,43 @@ namespace pdb_redo
 BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure, float growingPercentile)
 	: mXmap(xmm)
 	, mProteinAtoms(structure.atoms())
-    , mCrystal(structure.get_datablock())
+	, mCrystal(structure.get_datablock())
 {
 	// To make sure we iterate through density around the protein
 	// we intend to make a cuboid around the protein by taking the min and max coordinate in x,y and z
 	// and extend with 6 angstrom in each direction
 
 	cif::point min, max;
-    std::vector<cif::point> pts;
-    pts.reserve(mProteinAtoms.size());
+	std::vector<cif::point> pts;
+	pts.reserve(mProteinAtoms.size());
 
-    for (bool first = true; auto &a : mProteinAtoms)
+	for (bool first = true; auto &a : mProteinAtoms)
 	{
-        auto loc = a.get_location();
+		auto loc = a.get_location();
 
-        pts.emplace_back(loc);
+		pts.emplace_back(loc);
 
 		if (std::exchange(first, false))
 			min = max = loc;
 		else
 		{
-			if (min.m_x > loc.m_x)
-				min.m_x = loc.m_x;
-			if (min.m_y > loc.m_y)
-				min.m_y = loc.m_y;
-			if (min.m_z > loc.m_z)
-				min.m_z = loc.m_z;
+			if (min.x > loc.x)
+				min.x = loc.x;
+			if (min.y > loc.y)
+				min.y = loc.y;
+			if (min.z > loc.z)
+				min.z = loc.z;
 
-			if (max.m_x < loc.m_x)
-				max.m_x = loc.m_x;
-			if (max.m_y < loc.m_y)
-				max.m_y = loc.m_y;
-			if (max.m_z < loc.m_z)
-				max.m_z = loc.m_z;
+			if (max.x < loc.x)
+				max.x = loc.x;
+			if (max.y < loc.y)
+				max.y = loc.y;
+			if (max.z < loc.z)
+				max.z = loc.z;
 		}
 	}
 
-    std::tie(mProteinCenter, mProteinRadius) = cif::smallest_sphere_around_points(pts);
+	std::tie(mProteinCenter, mProteinRadius) = cif::smallest_sphere_around_points(pts);
 
 	// Store all residue spheres as well
 	for (auto &poly : structure.polymers())
@@ -93,7 +93,7 @@ BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
 	float extend = 6;
 	cif::point extending{ extend, extend, extend };
 	cif::point pMin = min - extending, pMax = max + extending;
-	Coord_orth oMin = pMin, oMax = pMax;
+	Coord_orth oMin{ pMin.x, pMin.y, pMin.z }, oMax{ pMax.x, pMax.y, pMax.z };
 	Coord_frac fMin = oMin.coord_frac(mXmap.cell()), fMax = oMax.coord_frac(mXmap.cell());
 	Coord_map mMin = fMin.coord_map(mXmap.grid_sampling()), mMax = fMax.coord_map(mXmap.grid_sampling());
 	Coord_grid gMin = mMin.floor(), gMax = mMax.ceil();
@@ -107,7 +107,8 @@ BlobFinder::BlobFinder(clipper::Xmap<float> &xmm, cif::mm::structure &structure,
 			for (auto iw = iv; iw.coord().w() <= gMax[2]; iw.next_w())
 			{
 				double dens_height = xmm[iw];
-				if (dens_height > 0 and cif::distance_squared(cif::point{ iw.coord_orth() }, mProteinCenter) < max_r_sq + extend * extend)
+				auto iw_op = iw.coord_orth();
+				if (dens_height > 0 and cif::distance_squared(cif::point{ iw_op.x(), iw_op.y(), iw_op.z() }, mProteinCenter) < max_r_sq + extend * extend)
 					mPotentialGridPoints.emplace_back(iw);
 			}
 
@@ -139,24 +140,27 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 
 		// Erase all gridpoints from the potential list, including symmetry copies
 		std::erase_if(mPotentialGridPoints,
-				[&newblob](const GridPoint &gp)
-				{
-					return std::ranges::find_if(newblob, [gp](const GridPoint &p)
-							   { return gp.index() == p.index(); }) != newblob.end();
-				});
+			[&newblob](const GridPoint &gp)
+			{
+				return std::ranges::find_if(newblob, [gp](const GridPoint &p)
+						   { return gp.index() == p.index(); }) != newblob.end();
+			});
 
 		std::vector<cif::point> result;
 
 		for (auto &gp : newblob)
-			result.emplace_back(gp.coord_orth());
+		{
+			auto op = gp.coord_orth();
+			result.emplace_back(op.x(), op.y(), op.z());
+		}
 
-		std::ranges::sort(result);
-		result.erase(std::ranges::unique(result).begin(), result.end());
+		// std::ranges::sort(result);
+		// result.erase(std::ranges::unique(result).begin(), result.end());
 
 		if (result.size() < 30 or gridPointVolume * result.size() < minimalVolume)
 			continue;
 
-        auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(result);
+		auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(result);
 
 		float bestD = std::numeric_limits<float>::max();
 		cif::sym_op bestSO{};
@@ -182,8 +186,8 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 
 			if (bestSO)
 			{
-                for (auto &bp : result)
-                    bp = mCrystal.symmetry_copy(bp, bestSO);
+				for (auto &bp : result)
+					bp = mCrystal.symmetry_copy(bp, bestSO);
 
 				std::tie(blobCenter, blobRadius) = cif::smallest_sphere_around_points(result);
 			}

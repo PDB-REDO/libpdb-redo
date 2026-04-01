@@ -48,6 +48,82 @@
 namespace pdb_redo
 {
 
+
+
+// --------------------------------------------------------------------
+/**
+ * @brief Helper class to generate evenly divided points on a sphere
+ *
+ * We use a fibonacci sphere to calculate even distribution of the dots
+ *
+ * @tparam N The number of points on the sphere is 2 * N + 1
+ */
+template <int N>
+class spherical_dots
+{
+  public:
+	/// \brief the number of points
+	constexpr static int P = 2 * N * 1;
+
+	/// \brief the *weight* of the fibonacci sphere
+	constexpr static double W = (4 * std::numbers::pi) / P;
+
+	/// \brief the internal storage type
+	using array_type = typename std::array<cif::point, P>;
+
+	/// \brief iterator type
+	using iterator = typename array_type::const_iterator;
+
+	/// \brief singleton instance
+	static spherical_dots &instance()
+	{
+		static spherical_dots sInstance;
+		return sInstance;
+	}
+
+	/// \brief The number of points
+	[[nodiscard]] std::size_t size() const { return P; }
+
+	/// \brief Access a point by index
+	const cif::point operator[](uint32_t inIx) const { return m_points[inIx]; }
+
+	/// \brief iterator pointing to the first point
+	[[nodiscard]] iterator begin() const { return m_points.begin(); }
+
+	/// \brief iterator pointing past the last point
+	[[nodiscard]] iterator end() const { return m_points.end(); }
+
+	/// \brief return the *weight*,
+	[[nodiscard]] double weight() const { return W; }
+
+	spherical_dots()
+	{
+		const double
+			kGoldenRatio = std::numbers::phi;
+
+		auto p = m_points.begin();
+
+		for (int32_t i = -N; i <= N; ++i)
+		{
+			double lat = std::asin((2.0 * i) / P);
+			double lon = std::fmod(i, kGoldenRatio) * 2 * std::numbers::pi / kGoldenRatio;
+
+			p->x = std::sin(lon) * std::cos(lat);
+			p->y = std::cos(lon) * std::cos(lat);
+			p->z = std::sin(lat);
+
+			++p;
+		}
+	}
+
+  private:
+	array_type m_points;
+};
+
+
+// --------------------------------------------------------------------
+
+
 // Locate the single blob in the xmap
 std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool removeColinear)
 {
@@ -310,7 +386,7 @@ void JiggleFitter::transform()
 	for (size_t i = 0; i < mLocations.size(); ++i)
 	{
 		auto a = mLocations[i];
-		a.rotate(q, mCenter); // rotate a using quaternion q01, move it to the alpha_loc - rotate - move back
+		a = cif::rotate(a, q, mCenter); // rotate a using quaternion q01, move it to the alpha_loc - rotate - move back
 		mAtoms[i].set_location(a + translation);
 	}
 }
@@ -378,7 +454,7 @@ double JiggleFitter::refine()
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
 	const std::vector<cif::point> &blob)
 {
-	const auto dots = cif::spherical_dots<30>::instance();
+	const auto dots = spherical_dots<30>::instance();
 
 	// Locate the center of the blob
 	auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(blob);
@@ -409,7 +485,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 
 	for (size_t i = 0; i < dots.size(); ++i)
 	{
-		auto axis = cif::cross_product(dots[0], dots[i]);
+		auto axis = glm::cross(dots[0], dots[i]);
 		auto angle = cif::angle(dots[0], {}, dots[i]);
 
 		auto q = cif::construct_from_angle_axis(angle, axis); // NOLINT(bugprone-narrowing-conversions)
@@ -417,7 +493,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		for (auto li = atomLocations.begin(); auto a : ligand.atoms())
 		{
 			auto loc = *li++;
-			loc.rotate(q, blobCenter);
+			loc = cif::rotate(loc, q, blobCenter);
 			a.set_location(loc);
 		}
 

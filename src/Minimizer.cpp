@@ -281,7 +281,7 @@ void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last
 			{
 				cif::mm::atom c = prev->get_atom_by_atom_id("C"), n = r.get_atom_by_atom_id("N");
 
-				if (c and n and distance_squared(c, n) < kMaxPeptideBondLengthSq)
+				if (c and n and cif::distance_squared(c.get_location(), n.get_location()) < kMaxPeptideBondLengthSq)
 				{
 					bool trans = not cif::mm::monomer::is_cis(*prev, r);
 
@@ -537,7 +537,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 			if (a1 == a2)
 				continue;
 
-			if (distance_squared(a1, a2) < kMaxNonBondedContactDistance * kMaxNonBondedContactDistance)
+			if (cif::distance_squared(a1.get_location(), a2.get_location()) < kMaxNonBondedContactDistance * kMaxNonBondedContactDistance)
 			{
 				if (not bm(a1, a2))
 					add_nbc(a1, a2);
@@ -884,24 +884,6 @@ class GSLAtomLocation : public AtomLocationProvider
 		, mV(v)
 	{
 		assert(mIndex.size() == mFixedLocations.size());
-
-		if (cif::VERBOSE > 2)
-		{
-			for (std::size_t i = 0; i < mIndex.size(); ++i)
-			{
-				std::size_t ri = mIndex[i];
-				if (ri == kRefSentinel)
-					continue;
-
-				DPoint p = {
-					gsl_vector_get(mV, ri * 3),
-					gsl_vector_get(mV, ri * 3 + 1),
-					gsl_vector_get(mV, ri * 3 + 2)
-				};
-
-				std::cout << mAtoms[i] << p << '\n';
-			}
-		}
 	}
 
 	DPoint operator[](AtomRef atom) const override;
@@ -1086,9 +1068,9 @@ double GSLMinimizer::refine(bool storeAtoms)
 	for (auto &a : mAtoms)
 	{
 		auto l = a.get_location();
-		gsl_vector_set(x, ix++, l.m_x);
-		gsl_vector_set(x, ix++, l.m_y);
-		gsl_vector_set(x, ix++, l.m_z);
+		gsl_vector_set(x, ix++, l.x);
+		gsl_vector_set(x, ix++, l.y);
+		gsl_vector_set(x, ix++, l.z);
 	}
 
 	m_s = gsl_multimin_fdfminimizer_alloc(T, 3 * mAtoms.size());
@@ -1110,25 +1092,6 @@ double GSLMinimizer::refine(bool storeAtoms)
 	for (std::size_t i = 0; i < iterations; ++i)
 	{
 		int status = gsl_multimin_fdfminimizer_iterate(m_s);
-
-		if (cif::VERBOSE > 2)
-		{
-			ix = 0;
-			for (auto &a : mAtoms)
-			{
-				auto l = a.get_location();
-
-				cif::point p{
-					static_cast<float>(gsl_vector_get(m_s->x, ix + 0)),
-					static_cast<float>(gsl_vector_get(m_s->x, ix + 1)),
-					static_cast<float>(gsl_vector_get(m_s->x, ix + 2))
-				};
-
-				ix += 3;
-
-				std::cerr << a << " l: " << l << " => p: " << p << " d = " << (p - l) << '\n';
-			}
-		}
 
 		if (status != 0)
 		{

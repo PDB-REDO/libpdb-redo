@@ -37,8 +37,8 @@ clipper::Atom toClipper(cif::const_row_handle atom, cif::const_row_handle aniso_
 
 	clipper::Atom result;
 
-	cif::point location = atom.get<float, float, float>("Cartn_x", "Cartn_y", "Cartn_z");
-	result.set_coord_orth({ location.m_x, location.m_y, location.m_z });
+	const auto [x, y, z] = atom.get<float, float, float>("Cartn_x", "Cartn_y", "Cartn_z");
+	result.set_coord_orth({ x, y, z });
 
 	if (atom["occupancy"].empty())
 		result.set_occupancy(1.0);
@@ -136,12 +136,15 @@ cif::symop_data GetSymOpDataForRTop_frac(const clipper::RTop_frac &rt)
 	auto &trn = rt.trn();
 
 	auto rte = [&rot](int i, int j)
-	{ return static_cast<int8_t>(lrint(rot(i, j))); };
+	{
+		return static_cast<int8_t>(lrint(rot(i, j)));
+	};
 
 	std::array<int, 15> krt{
 		rte(0, 0), rte(0, 1), rte(0, 2),
 		rte(1, 0), rte(1, 1), rte(1, 2),
-		rte(2, 0), rte(2, 1), rte(2, 2)};
+		rte(2, 0), rte(2, 1), rte(2, 2)
+	};
 
 	for (int i = 0; i < 3; ++i)
 	{
@@ -194,7 +197,7 @@ cif::symop_data GetSymOpDataForRTop_frac(const clipper::RTop_frac &rt)
 // 			os << ", ";
 // 		os << i;
 // 	}
-	
+
 // 	os << ']';
 
 // 	return os;
@@ -208,16 +211,16 @@ int getSpacegroupNumber(const clipper::Spacegroup &sg)
 	{
 		const auto &symop = sg.symop(i);
 
-		for (int u : {-1, 0, 1})
-			for (int v : {-1, 0, 1})
-				for (int w : {-1, 0, 1})
+		for (int u : { -1, 0, 1 })
+			for (int v : { -1, 0, 1 })
+				for (int w : { -1, 0, 1 })
 				{
 					if (i == 0 and u == 0 and v == 0 and w == 0)
 						continue;
 
 					auto rtop = clipper::RTop_frac(
 						symop.rot(), symop.trn() + clipper::Vec3<>(u, v, w));
-					
+
 					sg_ops.insert(GetSymOpDataForRTop_frac(rtop));
 				}
 	}
@@ -230,7 +233,7 @@ int getSpacegroupNumber(const clipper::Spacegroup &sg)
 		auto t = s + 1;
 		while (t->spacegroup() == s->spacegroup())
 			++t;
-		
+
 		if (static_cast<std::size_t>(t - s) != sg_ops.size())
 		{
 			s = t;
@@ -241,7 +244,8 @@ int getSpacegroupNumber(const clipper::Spacegroup &sg)
 
 		for (auto &k : sg_ops)
 		{
-			if (std::find_if(s, t, [&k](const cif::symop_datablock &b) { return b.symop() == k; }) != t)
+			if (std::find_if(s, t, [&k](const cif::symop_datablock &b)
+					{ return b.symop() == k; }) != t)
 				++seen;
 		}
 

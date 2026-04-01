@@ -269,23 +269,23 @@ class BoundingBox
 
 	void extend(cif::point pt)
 	{
-		if (mMin.m_x > pt.m_x - mMargin)
-			mMin.m_x = pt.m_x - mMargin;
-		if (mMin.m_y > pt.m_y - mMargin)
-			mMin.m_y = pt.m_y - mMargin;
-		if (mMin.m_z > pt.m_z - mMargin)
-			mMin.m_z = pt.m_z - mMargin;
-		if (mMax.m_x < pt.m_x + mMargin)
-			mMax.m_x = pt.m_x + mMargin;
-		if (mMax.m_y < pt.m_y + mMargin)
-			mMax.m_y = pt.m_y + mMargin;
-		if (mMax.m_z < pt.m_z + mMargin)
-			mMax.m_z = pt.m_z + mMargin;
+		if (mMin.x > pt.x - mMargin)
+			mMin.x = pt.x - mMargin;
+		if (mMin.y > pt.y - mMargin)
+			mMin.y = pt.y - mMargin;
+		if (mMin.z > pt.z - mMargin)
+			mMin.z = pt.z - mMargin;
+		if (mMax.x < pt.x + mMargin)
+			mMax.x = pt.x + mMargin;
+		if (mMax.y < pt.y + mMargin)
+			mMax.y = pt.y + mMargin;
+		if (mMax.z < pt.z + mMargin)
+			mMax.z = pt.z + mMargin;
 	}
 
 	[[nodiscard]] bool contains(const cif::point &p) const
 	{
-		return p.m_x >= mMin.m_x and p.m_x <= mMax.m_x and p.m_y >= mMin.m_y and p.m_y <= mMax.m_y and p.m_z >= mMin.m_z and p.m_z <= mMax.m_z;
+		return p.x >= mMin.x and p.x <= mMax.x and p.y >= mMin.y and p.y <= mMax.y and p.z >= mMin.z and p.z <= mMax.z;
 	}
 
   private:
@@ -864,9 +864,10 @@ void StatsCollector::sumDensity(std::vector<AtomData> &atomData,
 
 		iterateGrid(atom.get_location(), radius, Fb, [&, radius_sq = radius * radius](Xmap_base::Map_reference_coord &iw)
 			{
-			cif::point p = iw.coord_orth();
+			auto op = iw.coord_orth();
+			cif::point p{ op.x(), op.y(), op.z() };
 			
-			double d = distance_squared(p, atom.get_location());
+			double d = cif::distance_squared(p, atom.get_location());
 
 			if (d <= radius_sq)
 			{
@@ -1058,7 +1059,8 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 		iterateGrid(atom.get_location(), radius, Fb, [&](auto iw)
 			{
-			cif::point p = iw.coord_orth();
+			auto op = iw.coord_orth();
+			cif::point p{ op.x(), op.y(), op.z() };
 			
 			// EDIA calculations
 			auto fb = Fb[iw];
@@ -1113,7 +1115,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 					o = 1;
 				else
 				{
-					auto sumpb = std::ranges::fold_left(I, 0.f, [p](float s, auto &a) {return s + cif::distance(p, a.get_location()); });
+					auto sumpb = std::ranges::fold_left(I, 0.f, [p](float s, auto &a) {return s + glm::length(p - a.get_location()); });
 					o = 1 - distance(atom.get_location(), p) / sumpb;
 				}
 			}
@@ -1123,7 +1125,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 					o = 1;
 				else
 				{
-					auto sumpb = std::ranges::fold_left(D, 0.f, [p](float s, auto &a) {return s + cif::distance(p, a.get_location()); });
+					auto sumpb = std::ranges::fold_left(D, 0.f, [p](float s, auto &a) {return s + glm::length(p - a.get_location()); });
 					o = 1 - distance(atom.get_location(), p) / sumpb;
 				}
 			}

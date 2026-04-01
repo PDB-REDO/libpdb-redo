@@ -75,7 +75,7 @@ class DFCollector
 	virtual void add(AtomRef atom, double dx, double dy, double dz) = 0;
 	void add(AtomRef atom, DPoint &&d)
 	{
-		add(atom, d.m_x, d.m_y, d.m_z);
+		add(atom, d.x, d.y, d.z);
 	}
 };
 

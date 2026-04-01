@@ -586,7 +586,7 @@ struct AtomShapeAnisoImpl : public AtomShapeImpl
 	[[nodiscard]] float calculatedDensity(point p) const override
 	{
 		const point l = p - mLocation;
-		const clipper::Coord_orth dxyz(l.m_x, l.m_y, l.m_z);
+		const clipper::Coord_orth dxyz(l.x, l.y, l.z);
 		return mOccupancy *
 		       static_cast<float>(
 				   mAW[0] * std::exp(mAnisoInv[0].quad_form(dxyz)) +

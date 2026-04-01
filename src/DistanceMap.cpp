@@ -41,7 +41,7 @@ std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<s
 	for (const auto &[ix, pt] : atoms)
 		pts.emplace_back(pt);
 
-	auto center = centroid(pts);
+	auto center = cif::centroid(pts);
 	float radius = 0;
 
 	for (auto &pt : pts)
@@ -74,9 +74,9 @@ DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal,
 
 		auto p = a.get_location();
 		KeyType k{
-			static_cast<int16_t>(std::rint(p.m_x)),
-			static_cast<int16_t>(std::rint(p.m_y)),
-			static_cast<int16_t>(std::rint(p.m_z))
+			static_cast<int16_t>(std::rint(p.x)),
+			static_cast<int16_t>(std::rint(p.y)),
+			static_cast<int16_t>(std::rint(p.z))
 		};
 
 		if (mIndex.empty())
@@ -137,9 +137,9 @@ DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal,
 						auto ap = sg(pt, cell, symop);
 
 						KeyType k{
-							static_cast<int16_t>(std::rint(ap.m_x)),
-							static_cast<int16_t>(std::rint(ap.m_y)),
-							static_cast<int16_t>(std::rint(ap.m_z))
+							static_cast<int16_t>(std::rint(ap.x)),
+							static_cast<int16_t>(std::rint(ap.y)),
+							static_cast<int16_t>(std::rint(ap.z))
 						};
 
 						if (k.x >= k1.x and k.x <= k2.x and
@@ -190,9 +190,9 @@ std::vector<cif::mm::atom> DistanceMap::near(const cif::mm::atom &atom, float ma
 	auto p = atom.get_location();
 
 	KeyType k{
-		static_cast<int16_t>(std::rint(p.m_x)),
-		static_cast<int16_t>(std::rint(p.m_y)),
-		static_cast<int16_t>(std::rint(p.m_z))
+		static_cast<int16_t>(std::rint(p.x)),
+		static_cast<int16_t>(std::rint(p.y)),
+		static_cast<int16_t>(std::rint(p.z))
 	};
 
 	KeyType k1 = k, k2 = k;
