@@ -485,16 +485,19 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 
 	for (size_t i = 0; i < dots.size(); ++i)
 	{
-		auto axis = glm::cross(dots[0], dots[i]);
-		auto angle = cif::angle(dots[0], {}, dots[i]);
-
-		auto q = cif::construct_from_angle_axis(angle, axis); // NOLINT(bugprone-narrowing-conversions)
-
-		for (auto li = atomLocations.begin(); auto a : ligand.atoms())
+		if (i > 0)
 		{
-			auto loc = *li++;
-			loc = cif::rotate(loc, q, blobCenter);
-			a.set_location(loc);
+			auto axis = glm::cross(dots[0], dots[i]);
+			auto angle = cif::angle(dots[0], {}, dots[i]);
+	
+			auto q = cif::construct_from_angle_axis(angle, axis); // NOLINT(bugprone-narrowing-conversions)
+	
+			for (auto li = atomLocations.begin(); auto a : ligand.atoms())
+			{
+				auto loc = *li++;
+				loc = cif::rotate(loc, q, blobCenter);
+				a.set_location(loc);
+			}
 		}
 
 		JiggleFitter f(ligand, xmap);

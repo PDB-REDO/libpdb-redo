@@ -138,13 +138,11 @@ std::vector<cif::point> BlobFinder::next(float minimalVolume)
 	{
 		auto newblob = pop();
 
-		// Erase all gridpoints from the potential list, including symmetry copies
-		std::erase_if(mPotentialGridPoints,
-			[&newblob](const GridPoint &gp)
-			{
-				return std::ranges::find_if(newblob, [gp](const GridPoint &p)
-						   { return gp.index() == p.index(); }) != newblob.end();
-			});
+		std::ranges::sort(newblob, [](auto &a, auto &b)
+			{ return a.index() < b.index(); });
+
+		newblob.erase(std::ranges::unique(newblob, [](auto &a, auto &b)
+			{ return a.index() == b.index(); }).begin(), newblob.end());
 
 		std::vector<cif::point> result;
 
