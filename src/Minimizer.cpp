@@ -34,6 +34,7 @@
 #include "pdb-redo/Restraints.hpp"
 
 #include <algorithm>
+#include <cif++/point.hpp>
 #include <cmath>
 #include <filesystem>
 #include <format>
@@ -1423,15 +1424,7 @@ BondMap Minimizer::createBondMap()
 	for (auto a : mReferencedAtoms)
 		pts.emplace_back(a.get_location());
 
-	cif::point center = cif::centroid(pts);
-	float radius = 0;
-
-	for (auto pt : pts)
-	{
-		auto d = distance(pt, center);
-		if (radius < d)
-			radius = d;
-	}
+	const auto [center, radius] = cif::smallest_sphere_around_points(pts);
 
 	return { mStructure.get_datablock(), std::make_tuple(center, radius + kMaxNonBondedContactDistance) };
 }

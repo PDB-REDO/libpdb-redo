@@ -35,27 +35,6 @@ using cif::point;
 
 // --------------------------------------------------------------------
 
-std::tuple<point, float> calculateCenterAndRadius(const std::vector<std::tuple<std::size_t, point>> &atoms)
-{
-	std::vector<point> pts;
-	for (const auto &[ix, pt] : atoms)
-		pts.emplace_back(pt);
-
-	auto center = centroid(pts);
-	float radius = 0;
-
-	for (auto &pt : pts)
-	{
-		auto d = static_cast<float>(distance(pt, center));
-		if (radius < d)
-			radius = d;
-	}
-
-	return std::make_tuple(center, radius);
-}
-
-// --------------------------------------------------------------------
-
 DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal, float maxDistance)
 	: mAtoms(std::move(atoms))
 	, mCrystal(std::move(crystal))
