@@ -647,7 +647,6 @@ AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_anis
 
 		if (iso == 0)
 			iso = 2.0f / static_cast<float>(8 * std::numbers::pi_v<float> * std::numbers::pi_v<float>);
-		;
 
 		mImpl.reset(new AtomShapeImpl({ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering));
 	}

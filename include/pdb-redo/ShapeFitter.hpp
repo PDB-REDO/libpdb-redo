@@ -38,8 +38,8 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
     const std::vector<cif::point> &blob);
 
 // might be useful outside
-cif::symmetric_matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap);
-cif::symmetric_matrix3x3<float> createInertiaTensorForLigand(const cif::mm::residue &res);
-cif::point principalAxis(const cif::symmetric_matrix3x3<float> &m);
+cif::matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap);
+cif::matrix3x3<float> createInertiaTensorForLigand(const cif::mm::residue &res);
+cif::point principalAxis(const cif::matrix3x3<float> &m);
 
 }

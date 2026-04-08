@@ -48,9 +48,9 @@
 namespace pdb_redo
 {
 
-cif::symmetric_matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap)
+cif::matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap)
 {
-	cif::symmetric_matrix3x3<float> result;
+	std::array<float, 6> If{};
 
 	auto [c, r] = cif::smallest_sphere_around_points(pts);
 
@@ -62,20 +62,30 @@ cif::symmetric_matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif
 
 		pt -= c;
 
-		result(0, 0) += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
-		result(1, 1) += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
-		result(2, 2) += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
-		result(0, 1) -= dp * pt.m_x * pt.m_y;                     // 12
-		result(0, 2) -= dp * pt.m_x * pt.m_z;                     // 13
-		result(1, 2) -= dp * pt.m_y * pt.m_z;                     // 23
+		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		If[3] -= dp * pt.m_x * pt.m_y;                     // 12
+		If[4] -= dp * pt.m_x * pt.m_z;                     // 13
+		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
 	}
+
+	cif::point p1{ If[0], If[3], If[4] }; p1.normalize();
+	cif::point p2{ If[3], If[1], If[5] }; p2.normalize();
+	cif::point p3{ If[4], If[5], If[2] }; p3.normalize();
+
+	cif::matrix3x3<float> result({
+		p1.m_x, p1.m_y, p1.m_z,
+		p2.m_x, p2.m_y, p2.m_z,
+		p3.m_x, p3.m_y, p3.m_z
+	});	
 
 	return result;
 }
 
-cif::symmetric_matrix3x3<float> createInertiaTensorForLigand(const cif::mm::residue &res)
+cif::matrix3x3<float> createInertiaTensorForLigand(const cif::mm::residue &res)
 {
-	cif::symmetric_matrix3x3<float> result;
+	std::array<float, 6> If{};
 
 #if __cpp_lib_ranges_to_container >= 202202L
 	auto [c, r] = cif::smallest_sphere_around_points(
@@ -96,23 +106,33 @@ cif::symmetric_matrix3x3<float> createInertiaTensorForLigand(const cif::mm::resi
 
 		auto dp = t.weight();
 
-		result(0, 0) += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
-		result(1, 1) += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
-		result(2, 2) += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
-		result(0, 1) -= dp * pt.m_x * pt.m_y;                     // 12
-		result(0, 2) -= dp * pt.m_x * pt.m_z;                     // 13
-		result(1, 2) -= dp * pt.m_y * pt.m_z;                     // 23
+		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		If[3] -= dp * pt.m_x * pt.m_y;                     // 12
+		If[4] -= dp * pt.m_x * pt.m_z;                     // 13
+		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
 	}
+
+	cif::point p1{ If[0], If[3], If[4] }; p1.normalize();
+	cif::point p2{ If[3], If[1], If[5] }; p2.normalize();
+	cif::point p3{ If[4], If[5], If[2] }; p3.normalize();
+
+	cif::matrix3x3<float> result({
+		p1.m_x, p1.m_y, p1.m_z,
+		p2.m_x, p2.m_y, p2.m_z,
+		p3.m_x, p3.m_y, p3.m_z
+	});	
 
 	return result;
 }
 
-cif::point principalAxis(const cif::symmetric_matrix3x3<float> &m)
+cif::point principalAxis(const cif::matrix3x3<float> &m)
 {
 	double data[9] = {
 		m(0, 0), m(0, 1), m(0, 2),
-		m(0, 1), m(1, 1), m(1, 2),
-		m(0, 2), m(1, 2), m(2, 2)
+		m(1, 0), m(1, 1), m(1, 2),
+		m(2, 0), m(2, 1), m(2, 2)
 	};
 
 	gsl_matrix_view g = gsl_matrix_view_array(data, 3, 3);
