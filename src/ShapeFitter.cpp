@@ -77,8 +77,15 @@ cif::symmetric_matrix3x3<float> createInertiaTensorForLigand(const cif::mm::resi
 {
 	cif::symmetric_matrix3x3<float> result;
 
+#if __cpp_lib_ranges_to_container >= 202202L
 	auto [c, r] = cif::smallest_sphere_around_points(
 		res.atoms() | std::views::transform(&cif::mm::atom::get_location) | std::ranges::to<std::vector>());
+#else
+	std::vector<cif::point> pts;
+	for (auto &a : res.atoms())
+		pts.emplace_back(a.get_location());
+	auto [c, r] = cif::smallest_sphere_around_points(pts);
+#endif
 
 	for (auto atom : res.atoms())
 	{
