@@ -25,23 +25,26 @@
  */
 
 #include "cif++/compound.hpp"
-#include "cif++/datablock.hpp"
 #include "cif++/model.hpp"
-#include "cif++/validate.hpp"
 #include "pdb-redo/BlobFinder.hpp"
-
-#include <catch2/catch_test_macros.hpp>
-#include <cif++/pdb.hpp>
-#include <clipper/core/xmap.h>
-#define CATCH_CONFIG_RUNNER
-
 #include "pdb-redo/MapMaker.hpp"
 #include "pdb-redo/ShapeFitter.hpp"
+#include <catch2/matchers/catch_matchers.hpp>
+
+#define CATCH_CONFIG_RUNNER
 
 #include <catch2/catch_all.hpp>
+#include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <cif++/cif++.hpp>
+#include <cif++/pdb.hpp>
+#include <clipper/core/xmap.h>
 #include <filesystem>
+#include <glm/glm.hpp>
+#include <gsl/gsl_blas.h> // for debugging norm of gradient
+#include <gsl/gsl_eigen.h>
+#include <gsl/gsl_multimin.h>
+#include <gsl/gsl_vector_double.h>
 
 namespace fs = std::filesystem;
 
@@ -106,9 +109,9 @@ int main(int argc, char *argv[])
 
 // 	auto cf = R"(
 // data_1CBS
-// # 
+// #
 // _entry.id   1CBS
-// # 
+// #
 // _cell.entry_id           1CBS
 // _cell.length_a           45.650
 // _cell.length_b           47.560
@@ -118,13 +121,13 @@ int main(int argc, char *argv[])
 // _cell.angle_gamma        90.00
 // _cell.Z_PDB              4
 // _cell.pdbx_unique_axis   ?
-// # 
+// #
 // _symmetry.entry_id                         1CBS
 // _symmetry.space_group_name_H-M             'P 21 21 21'
 // _symmetry.pdbx_full_space_group_name_H-M   ?
 // _symmetry.cell_setting                     ?
 // _symmetry.Int_Tables_number                19
-// # 
+// #
 // 	)"_cf;
 
 // 	// Create a ligand
@@ -163,8 +166,8 @@ TEST_CASE("sf-2")
 	float samplingRate = 0.75;
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
-    auto &mm_fb = mm.fb();
-    auto maskedmap = mm_fb.masked(s, s.atoms());
+	auto &mm_fb = mm.fb();
+	auto maskedmap = mm_fb.masked(s, s.atoms());
 
 	pdb_redo::BlobFinder blobFinder(maskedmap, s);
 
@@ -175,15 +178,14 @@ TEST_CASE("sf-2")
 		auto blob = blobFinder.next();
 
 		auto score = pdb_redo::fitShape(s, ligand_asym_id, mm_fb, blob);
-	
+
 		CHECK(score < 0);
-	
+
 		// std::ofstream of(std::filesystem::temp_directory_path() / "test-2.cif");
 		// file.save(of);
 
 		break;
 	}
-
 }
 
 // // --------------------------------------------------------------------
@@ -201,26 +203,26 @@ TEST_CASE("sf-2")
 // 	for (std::string asymID : { "H", "I", "J", "K", "L"})
 // 	{
 // 		s.remove_residue(s.get_residue(asymID));
-	
+
 // 		pdb_redo::MapMaker<float> mm;
 // 		float samplingRate = 0.75;
 // 		mm.loadMTZ(gTestDir / "3aba_loopwhole.mtz", samplingRate);
-	
+
 // 		auto &mm_fb = mm.fb();
 // 		auto maskedmap = mm_fb.masked(s, s.atoms());
-	
+
 // 		pdb_redo::BlobFinder blobFinder(maskedmap, s);
-	
+
 // 		auto ligand_asym_id = s.create_non_poly("GOL", true);
-	
+
 // 		for (int i = 0;; ++i)
 // 		{
 // 			auto blob = blobFinder.next();
 // 			if (blob.empty())
 // 				break;
-	
+
 // 			auto score = pdb_redo::fitShape(s, ligand_asym_id, mm_fb, blob);
-		
+
 // 			if (score < 0)
 // 			{
 // 				std::ofstream of(std::filesystem::temp_directory_path() / std::format("{}-{}-{}.cif", "3aba", asymID, i));
@@ -229,3 +231,176 @@ TEST_CASE("sf-2")
 // 		}
 // 	}
 // }
+
+auto createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap)
+{
+	std::array<float, 6> If{};
+
+	auto [c, r] = cif::smallest_sphere_around_points(pts);
+
+	for (auto pt : pts)
+	{
+		clipper::Coord_orth cp{ pt.m_x, pt.m_y, pt.m_z };
+		clipper::Coord_frac pf = cp.coord_frac(xmap.cell());
+		auto dp = xmap.interp<clipper::Interp_cubic>(pf);
+
+		pt -= c;
+
+		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		If[3] -= dp * pt.m_x * pt.m_y;                     // 12
+		If[4] -= dp * pt.m_x * pt.m_z;                     // 13
+		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
+	}
+
+	return glm::mat3{
+		glm::normalize(glm::vec3{ If[0], If[3], If[4] }),
+		glm::normalize(glm::vec3{ If[3], If[1], If[5] }),
+		glm::normalize(glm::vec3{ If[4], If[5], If[2] })
+	};
+}
+
+auto createInertiaTensorForLigand(const cif::mm::residue &res)
+{
+	std::array<float, 6> If{};
+
+	auto [c, r] = cif::smallest_sphere_around_points(
+		res.atoms() | std::views::transform(&cif::mm::atom::get_location) | std::ranges::to<std::vector>());
+
+	for (auto atom : res.atoms())
+	{
+		auto pt = atom.get_location();
+		pt -= c;
+
+		cif::atom_type_traits t(atom.get_type());
+
+		auto dp = t.weight();
+
+		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		If[3] -= dp * pt.m_x * pt.m_y;                     // 12
+		If[4] -= dp * pt.m_x * pt.m_z;                     // 13
+		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
+	}
+
+	return glm::mat3{
+		glm::normalize(glm::vec3{ If[0], If[3], If[4] }),
+		glm::normalize(glm::vec3{ If[3], If[1], If[5] }),
+		glm::normalize(glm::vec3{ If[4], If[5], If[2] })
+	};
+}
+
+auto principalAxis(const glm::mat3 &m)
+{
+	// Eigen::Matrix3f M;
+
+	// M(0, 0) = m[0][0];
+	// M(1, 1) = m[1][1];
+	// M(2, 2) = m[2][2];
+	// M(0, 1) = M(1, 0) = m[0][1];
+	// M(0, 2) = M(2, 0) = m[0][2];
+	// M(1, 2) = M(2, 1) = m[1][2];
+
+	// Eigen::EigenSolver<Eigen::Matrix3f> es(M);
+
+	// auto v = es.eigenvectors()[0];
+
+	// return glm::vec3 { v[0], v[1], v[2] };
+
+	double data[9] = {
+		m[0][0], m[0][1], m[0][2],
+		m[0][1], m[1][1], m[1][2],
+		m[0][2], m[1][2], m[2][2]
+	};
+
+	gsl_matrix_view g = gsl_matrix_view_array(data, 3, 3);
+
+	gsl_vector *eval = gsl_vector_alloc(3);
+	gsl_matrix *evec = gsl_matrix_alloc(3, 3);
+
+	gsl_eigen_symmv_workspace *w = gsl_eigen_symmv_alloc(3);
+	gsl_eigen_symmv(&g.matrix, eval, evec, w);
+	gsl_eigen_symmv_free(w);
+
+	gsl_eigen_symmv_sort(eval, evec, GSL_EIGEN_SORT_ABS_ASC);
+
+	gsl_vector_view evec_i = gsl_matrix_column(evec, 0);
+
+	cif::point result;
+
+	result.m_x = gsl_vector_get(&evec_i.vector, 0);
+	result.m_y = gsl_vector_get(&evec_i.vector, 1);
+	result.m_z = gsl_vector_get(&evec_i.vector, 2);
+
+	gsl_vector_free(eval);
+	gsl_matrix_free(evec);
+
+	result.normalize();
+
+	return result;
+}
+
+// --------------------------------------------------------------------
+
+TEST_CASE("i-1")
+{
+	std::array<float, 6> If{};
+
+
+	// std::vector<cif::point> pts{
+	// 	{ 0, 0, 0 },
+	// 	{ 0.5, 0.5, 0.5 },
+	// 	{ 1, 1, 1 }
+	// };
+
+	// std::vector<cif::point> pts{
+	// 	{ 0, 0, 0 },
+	// 	{ 0.5, 0.5, 0 },
+	// 	{ 1, 1, 0 }
+	// };
+
+	std::vector<cif::point> pts{
+		{ 0, 0.5, 0 },
+		{ 0.5, 0.5, 0 },
+		{ 1, 0.5, 0 }
+	};
+
+
+
+	auto [c, r] = cif::smallest_sphere_around_points(pts);
+
+	for (auto pt : pts)
+	{
+		pt -= c;
+
+		float dp = 1;
+
+		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		If[3] -= dp * pt.m_x * pt.m_y;                     // 12 21
+		If[4] -= dp * pt.m_x * pt.m_z;                     // 13 31
+		If[5] -= dp * pt.m_y * pt.m_z;                     // 23 32
+	}
+
+	// glm::mat3 im{
+	// 	glm::normalize(glm::vec3{ If[0], If[3], If[4] }),
+	// 	glm::normalize(glm::vec3{ If[3], If[1], If[5] }),
+	// 	glm::normalize(glm::vec3{ If[4], If[5], If[2] })
+	// };
+
+	glm::mat3 im{
+		glm::vec3{ If[0], If[3], If[4] },
+		glm::vec3{ If[3], If[1], If[5] },
+		glm::vec3{ If[4], If[5], If[2] }
+	};
+
+
+	auto v = principalAxis(im);
+	CHECK_THAT(v.m_x, Catch::Matchers::WithinAbs(1.0f, 0.1f));
+	CHECK_THAT(v.m_y, Catch::Matchers::WithinAbs(1.0f, 0.1f));
+	CHECK_THAT(v.m_z, Catch::Matchers::WithinAbs(1.0f, 0.1f));
+
+}

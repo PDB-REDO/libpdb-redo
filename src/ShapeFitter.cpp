@@ -39,6 +39,7 @@
 #include <clipper/core/clipper_types.h>
 #include <clipper/core/coords.h>
 #include <cmath>
+#include <glm/glm.hpp>
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_multimin.h>
@@ -47,6 +48,104 @@
 
 namespace pdb_redo
 {
+
+auto createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap)
+{
+	std::array<float, 6> If{};
+
+	auto [c, r] = cif::smallest_sphere_around_points(pts);
+
+	for (auto pt : pts)
+	{
+		clipper::Coord_orth cp{ pt.m_x, pt.m_y, pt.m_z };
+		clipper::Coord_frac pf = cp.coord_frac(xmap.cell());
+		auto dp = xmap.interp<clipper::Interp_cubic>(pf);
+
+		pt -= c;
+
+		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		If[3] -= dp * pt.m_x * pt.m_y;                     // 12
+		If[4] -= dp * pt.m_x * pt.m_z;                     // 13
+		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
+	}
+
+	return glm::mat3{
+		glm::normalize(glm::vec3{ If[0], If[3], If[4] }),
+		glm::normalize(glm::vec3{ If[3], If[1], If[5] }),
+		glm::normalize(glm::vec3{ If[4], If[5], If[2] })
+	};
+}
+
+auto createInertiaTensorForLigand(const cif::mm::residue &res)
+{
+	std::array<float, 6> If{};
+
+	auto [c, r] = cif::smallest_sphere_around_points(
+		res.atoms() | std::views::transform(&cif::mm::atom::get_location) | std::ranges::to<std::vector>());
+
+	for (auto atom : res.atoms())
+	{
+		auto pt = atom.get_location();
+		pt -= c;
+
+		cif::atom_type_traits t(atom.get_type());
+
+		auto dp = t.weight();
+
+		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		If[3] -= dp * pt.m_x * pt.m_y;                     // 12
+		If[4] -= dp * pt.m_x * pt.m_z;                     // 13
+		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
+	}
+
+	return glm::mat3{
+		glm::normalize(glm::vec3{ If[0], If[3], If[4] }),
+		glm::normalize(glm::vec3{ If[3], If[1], If[5] }),
+		glm::normalize(glm::vec3{ If[4], If[5], If[2] })
+	};
+}
+
+auto principalAxis(const glm::mat3 &m)
+{
+	double data[9] = {
+		m[0][0], m[0][1], m[0][2],
+		m[0][1], m[1][1], m[1][2],
+		m[0][2], m[1][2], m[2][2]
+	};
+
+	gsl_matrix_view g = gsl_matrix_view_array(data, 3, 3);
+
+	gsl_vector *eval = gsl_vector_alloc(3);
+	gsl_matrix *evec = gsl_matrix_alloc(3, 3);
+
+	gsl_eigen_symmv_workspace *w = gsl_eigen_symmv_alloc(3);
+	gsl_eigen_symmv(&g.matrix, eval, evec, w);
+	gsl_eigen_symmv_free(w);
+
+	gsl_eigen_symmv_sort(eval, evec, GSL_EIGEN_SORT_ABS_ASC);
+
+	gsl_vector_view evec_i = gsl_matrix_column(evec, 0);
+
+	cif::point result
+	{
+		static_cast<float>(gsl_vector_get(&evec_i.vector, 0)),
+		static_cast<float>(gsl_vector_get(&evec_i.vector, 1)),
+		static_cast<float>(gsl_vector_get(&evec_i.vector, 2))
+	};
+
+	gsl_vector_free(eval);
+	gsl_matrix_free(evec);
+
+	result.normalize();
+
+	return result;
+}
+
+// --------------------------------------------------------------------
 
 // Locate the single blob in the xmap
 std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool removeColinear)
@@ -157,7 +256,7 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 				}
 
 				std::erase_if(result, [x, y, min_z, max_z](const clipper::Coord_grid &p)
-						{ return p[0] == x and p[1] == y and p[2] > min_z and p[2] < max_z; });
+					{ return p[0] == x and p[1] == y and p[2] > min_z and p[2] < max_z; });
 			}
 		}
 
@@ -183,7 +282,7 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 				}
 
 				std::erase_if(result, [x, z, min_y, max_y](const clipper::Coord_grid &p)
-						{ return p[0] == x and p[2] == z and p[1] > min_y and p[1] < max_y; });
+					{ return p[0] == x and p[2] == z and p[1] > min_y and p[1] < max_y; });
 			}
 		}
 
@@ -209,7 +308,7 @@ std::vector<clipper::Coord_grid> findSingleBlob(clipper::Xmap<float> &xmap, bool
 				}
 
 				std::erase_if(result, [y, z, min_x, max_x](const clipper::Coord_grid &p)
-						{ return p[1] == y and p[2] == z and p[0] > min_x and p[0] < max_x; });
+					{ return p[1] == y and p[2] == z and p[0] > min_x and p[0] < max_x; });
 			}
 		}
 	}
@@ -375,31 +474,90 @@ double JiggleFitter::refine()
 
 // --------------------------------------------------------------------
 
+cif::point centerOfMassBlob(clipper::Xmap<float> &xmap, const std::vector<cif::point> &blob)
+{
+	double sumMass = 0;
+	std::array<double, 3> c{ 0, 0, 0  };
+	for (auto pt : blob)
+	{
+		clipper::Coord_orth cp{ pt.m_x, pt.m_y, pt.m_z };
+		clipper::Coord_frac pf = cp.coord_frac(xmap.cell());
+		auto dp = xmap.interp<clipper::Interp_cubic>(pf);
+
+		sumMass += dp;
+		c[0] += dp * pt.m_x;
+		c[1] += dp * pt.m_y;
+		c[2] += dp * pt.m_z;
+	}
+
+	return { static_cast<float>(c[0] / sumMass), static_cast<float>(c[1] / sumMass), static_cast<float>(c[2] / sumMass) };
+}
+
+cif::point centerOfMassLigand(const cif::mm::residue &lig)
+{
+	double sumMass = 0;
+	std::array<double, 3> c{ 0, 0, 0  };
+	for (auto a : lig.atoms())
+	{
+		auto pt = a.get_location();
+		auto dp = cif::atom_type_traits(a.get_type()).weight();
+
+		sumMass += dp;
+		c[0] += dp * pt.m_x;
+		c[1] += dp * pt.m_y;
+		c[2] += dp * pt.m_z;
+	}
+
+	return { static_cast<float>(c[0] / sumMass), static_cast<float>(c[1] / sumMass), static_cast<float>(c[2] / sumMass) };
+}
+
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
 	const std::vector<cif::point> &blob)
 {
 	const auto dots = cif::spherical_dots<30>::instance();
 
-	// Locate the center of the blob
-	auto [blobCenter, blobRadius] = cif::smallest_sphere_around_points(blob);
-
-	// Same for the ligand
 	auto &ligand = structure.get_residue(asym_id);
 
 	std::vector<cif::point> atomLocations;
 	for (auto a : ligand.atoms())
 		atomLocations.emplace_back(a.get_location());
-	auto [ligandCenter, ligandRadius] = cif::smallest_sphere_around_points(atomLocations);
+
+	// Locate the center of the blob
+	auto blobCenterOfMass = centerOfMassBlob(xmap, blob);
+
+	// Same for the ligand
+	auto ligandCenterOfMass = centerOfMassLigand(ligand);
 
 	// Move ligand to the correct center and store new positions
-	auto d = blobCenter - ligandCenter;
-	atomLocations.clear();
+	auto d = blobCenterOfMass - ligandCenterOfMass;
+	for (auto li = atomLocations.begin(); auto a : ligand.atoms())
+		a.set_location(*li++ += d);
 
-	for (auto a : ligand.atoms())
+	// Calculate inertia tensors for both ligand and blob
+
+	auto itb = createInertiaTensorForBlob(blob, xmap);
+	auto itl = createInertiaTensorForLigand(ligand);
+
+	// Take principal vector, using eigen values
+
+	auto ivb = principalAxis(itb);
+	auto ivl = principalAxis(itl);
+
+	// rotate ligand to match blob
+	auto q = cif::construct_from_angle_axis(cif::angle(ivb, { 0, 0, 0 }, ivl), cif::cross_product(ivl, ivb));
+
+	for (auto &loc : atomLocations)
+		loc.rotate(q, blobCenterOfMass);
+
+	// Test to see of a 180° rotation is needed
+	auto [blobCenterOfSphere, blobRadius] = cif::smallest_sphere_around_points(blob);
+	auto [ligandCenterOfSphere, ligandRadius] = cif::smallest_sphere_around_points(atomLocations);
+	if (auto a = cif::angle(ligandCenterOfSphere, blobCenterOfMass, blobCenterOfSphere); a > 90)
 	{
-		auto loc = a.get_location() + d;
-		a.set_location(loc);
-		atomLocations.emplace_back(loc);
+		q = cif::construct_from_angle_axis(180, cif::cross_product(ligandCenterOfSphere - blobCenterOfMass, blobCenterOfSphere - blobCenterOfMass));
+
+		for (auto &loc : atomLocations)
+			loc.rotate(q, blobCenterOfMass);
 	}
 
 	cif::crystal crystal(structure.get_datablock());
@@ -417,7 +575,7 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		for (auto li = atomLocations.begin(); auto a : ligand.atoms())
 		{
 			auto loc = *li++;
-			loc.rotate(q, blobCenter);
+			loc.rotate(q, blobCenterOfMass);
 			a.set_location(loc);
 		}
 
@@ -436,8 +594,8 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		bestScore = jScore;
 	}
 
-	for (size_t ix = 0; auto l : bestLoc)
-		ligand.atoms()[ix++].set_location(l);
+	for (auto li = bestLoc.begin(); auto a : ligand.atoms())
+		a.set_location(*li++);
 
 	return bestScore;
 }
