@@ -65,9 +65,9 @@ cif::symmetric_matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif
 		result(0, 0) += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
 		result(1, 1) += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
 		result(2, 2) += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
-		result(1, 2) -= dp * pt.m_x * pt.m_y;                     // 12
-		result(1, 3) -= dp * pt.m_x * pt.m_z;                     // 13
-		result(2, 3) -= dp * pt.m_y * pt.m_z;                     // 23
+		result(0, 1) -= dp * pt.m_x * pt.m_y;                     // 12
+		result(0, 2) -= dp * pt.m_x * pt.m_z;                     // 13
+		result(1, 2) -= dp * pt.m_y * pt.m_z;                     // 23
 	}
 
 	return result;
@@ -99,9 +99,9 @@ cif::symmetric_matrix3x3<float> createInertiaTensorForLigand(const cif::mm::resi
 		result(0, 0) += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
 		result(1, 1) += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
 		result(2, 2) += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
-		result(1, 2) -= dp * pt.m_x * pt.m_y;                     // 12
-		result(1, 3) -= dp * pt.m_x * pt.m_z;                     // 13
-		result(2, 3) -= dp * pt.m_y * pt.m_z;                     // 23
+		result(0, 1) -= dp * pt.m_x * pt.m_y;                     // 12
+		result(0, 2) -= dp * pt.m_x * pt.m_z;                     // 13
+		result(1, 2) -= dp * pt.m_y * pt.m_z;                     // 23
 	}
 
 	return result;
