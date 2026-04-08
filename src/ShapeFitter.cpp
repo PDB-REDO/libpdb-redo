@@ -39,7 +39,6 @@
 #include <clipper/core/clipper_types.h>
 #include <clipper/core/coords.h>
 #include <cmath>
-#include <glm/glm.hpp>
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
 #include <gsl/gsl_eigen.h>
 #include <gsl/gsl_multimin.h>
@@ -49,9 +48,9 @@
 namespace pdb_redo
 {
 
-auto createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap)
+cif::symmetric_matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap)
 {
-	std::array<float, 6> If{};
+	cif::symmetric_matrix3x3<float> result;
 
 	auto [c, r] = cif::smallest_sphere_around_points(pts);
 
@@ -63,24 +62,20 @@ auto createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap
 
 		pt -= c;
 
-		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
-		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
-		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
-		If[3] -= dp * pt.m_x * pt.m_y;                     // 12
-		If[4] -= dp * pt.m_x * pt.m_z;                     // 13
-		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
+		result(0, 0) += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		result(1, 1) += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		result(2, 2) += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		result(1, 2) -= dp * pt.m_x * pt.m_y;                     // 12
+		result(1, 3) -= dp * pt.m_x * pt.m_z;                     // 13
+		result(2, 3) -= dp * pt.m_y * pt.m_z;                     // 23
 	}
 
-	return glm::mat3{
-		glm::normalize(glm::vec3{ If[0], If[3], If[4] }),
-		glm::normalize(glm::vec3{ If[3], If[1], If[5] }),
-		glm::normalize(glm::vec3{ If[4], If[5], If[2] })
-	};
+	return result;
 }
 
-auto createInertiaTensorForLigand(const cif::mm::residue &res)
+cif::symmetric_matrix3x3<float> createInertiaTensorForLigand(const cif::mm::residue &res)
 {
-	std::array<float, 6> If{};
+	cif::symmetric_matrix3x3<float> result;
 
 	auto [c, r] = cif::smallest_sphere_around_points(
 		res.atoms() | std::views::transform(&cif::mm::atom::get_location) | std::ranges::to<std::vector>());
@@ -94,27 +89,23 @@ auto createInertiaTensorForLigand(const cif::mm::residue &res)
 
 		auto dp = t.weight();
 
-		If[0] += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
-		If[1] += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
-		If[2] += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
-		If[3] -= dp * pt.m_x * pt.m_y;                     // 12
-		If[4] -= dp * pt.m_x * pt.m_z;                     // 13
-		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
+		result(0, 0) += dp * (pt.m_y * pt.m_y + pt.m_z * pt.m_z); // 11
+		result(1, 1) += dp * (pt.m_x * pt.m_x + pt.m_z * pt.m_z); // 22
+		result(2, 2) += dp * (pt.m_x * pt.m_x + pt.m_y * pt.m_y); // 33
+		result(1, 2) -= dp * pt.m_x * pt.m_y;                     // 12
+		result(1, 3) -= dp * pt.m_x * pt.m_z;                     // 13
+		result(2, 3) -= dp * pt.m_y * pt.m_z;                     // 23
 	}
 
-	return glm::mat3{
-		glm::normalize(glm::vec3{ If[0], If[3], If[4] }),
-		glm::normalize(glm::vec3{ If[3], If[1], If[5] }),
-		glm::normalize(glm::vec3{ If[4], If[5], If[2] })
-	};
+	return result;
 }
 
-auto principalAxis(const glm::mat3 &m)
+cif::point principalAxis(const cif::symmetric_matrix3x3<float> &m)
 {
 	double data[9] = {
-		m[0][0], m[0][1], m[0][2],
-		m[0][1], m[1][1], m[1][2],
-		m[0][2], m[1][2], m[2][2]
+		m(0, 0), m(0, 1), m(0, 2),
+		m(0, 1), m(1, 1), m(1, 2),
+		m(0, 2), m(1, 2), m(2, 2)
 	};
 
 	gsl_matrix_view g = gsl_matrix_view_array(data, 3, 3);
@@ -130,8 +121,7 @@ auto principalAxis(const glm::mat3 &m)
 
 	gsl_vector_view evec_i = gsl_matrix_column(evec, 0);
 
-	cif::point result
-	{
+	cif::point result{
 		static_cast<float>(gsl_vector_get(&evec_i.vector, 0)),
 		static_cast<float>(gsl_vector_get(&evec_i.vector, 1)),
 		static_cast<float>(gsl_vector_get(&evec_i.vector, 2))
@@ -477,7 +467,7 @@ double JiggleFitter::refine()
 cif::point centerOfMassBlob(clipper::Xmap<float> &xmap, const std::vector<cif::point> &blob)
 {
 	double sumMass = 0;
-	std::array<double, 3> c{ 0, 0, 0  };
+	std::array<double, 3> c{ 0, 0, 0 };
 	for (auto pt : blob)
 	{
 		clipper::Coord_orth cp{ pt.m_x, pt.m_y, pt.m_z };
@@ -496,7 +486,7 @@ cif::point centerOfMassBlob(clipper::Xmap<float> &xmap, const std::vector<cif::p
 cif::point centerOfMassLigand(const cif::mm::residue &lig)
 {
 	double sumMass = 0;
-	std::array<double, 3> c{ 0, 0, 0  };
+	std::array<double, 3> c{ 0, 0, 0 };
 	for (auto a : lig.atoms())
 	{
 		auto pt = a.get_location();
