@@ -42,4 +42,6 @@ cif::matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif::point> p
 cif::matrix3x3<float> createInertiaTensorForLigand(const cif::mm::residue &res);
 cif::point principalAxis(const cif::matrix3x3<float> &m);
 
+std::vector<cif::point> create_spherical_dots(int P);
+
 }

@@ -48,6 +48,37 @@
 namespace pdb_redo
 {
 
+// --------------------------------------------------------------------
+
+std::vector<cif::point> create_spherical_dots(int P)
+{
+	const float
+		kGoldenRatio = std::numbers::phi_v<float>;
+
+	std::vector<cif::point> result;
+	result.reserve(P);
+
+	const auto N = (P - 1) / 2;
+
+	for (int32_t i = -N; i <= N; ++i)
+	{
+		float lat = std::asin((2.0f * i) / P);
+		float lon = std::fmod(static_cast<float>(i), kGoldenRatio) * 2 * std::numbers::pi_v<float> / kGoldenRatio;
+
+		result.emplace_back(
+			std::sin(lon) * std::cos(lat),
+			std::cos(lon) * std::cos(lat),
+			std::sin(lat)			
+		);
+	}
+
+	// assert(result.size() == P);
+
+	return result;
+}
+
+// --------------------------------------------------------------------
+
 cif::matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif::point> pts, clipper::Xmap<float> &xmap)
 {
 	std::array<float, 6> If{};
@@ -531,7 +562,7 @@ cif::point centerOfMassLigand(const cif::mm::residue &lig)
 double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipper::Xmap<float> &xmap,
 	const std::vector<cif::point> &blob)
 {
-	const auto dots = cif::spherical_dots<30>::instance();
+	const auto dots = create_spherical_dots(15);
 
 	auto &ligand = structure.get_residue(asym_id);
 
