@@ -25,6 +25,12 @@ jobs:
       run: >
         sudo apt-get update && sudo apt-get install catch2 libeigen3-dev libccp4-dev libclipper-dev libgsl-dev
 
+    - name: Build & install libcifpp
+      run: |
+        cmake -B ${{github.workspace}}/libcifpp/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -S ${{github.workspace}}/libcifpp -DBUILD_DOCUMENTATION=OFF -DBUILD_TESTING=OFF
+        cmake --build ${{github.workspace}}/libcifpp/build
+        sudo cmake --install ${{github.workspace}}/libcifpp/build
+
     - name: Configure CMake
       run: >
         cmake -B ${{ steps.strings.outputs.build-output-dir }}
