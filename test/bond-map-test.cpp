@@ -781,7 +781,7 @@ TEST_CASE("test-iter")
 		CHECK(bm(one, two));
 		if (not bm(one, two))
 		{
-			println(std::cout, "not bonded? {} and {}", one, two);
+			std::cout << std::format("not bonded? {} and {}\n", one, two);
 			break;
 		}
 	}
