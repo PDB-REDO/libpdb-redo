@@ -26,6 +26,7 @@
 
 #pragma once
 
+#include "cif++/datablock.hpp"
 #include <cif++/cif++.hpp>
 #include <vector>
 
@@ -180,6 +181,11 @@ class Compound
 	[[nodiscard]] cif::datablock generateCCDCompound() const;
 
 	[[nodiscard]] std::string getDescriptor(std::string_view type) const;
+
+	[[nodiscard]] const cif::datablock &getCFData() const
+	{
+		return mCF;
+	}
 
   private:
 	cif::datablock mCF;
