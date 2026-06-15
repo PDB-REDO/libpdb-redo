@@ -1,3 +1,11 @@
+Version 3.6.0
+- Added blob finding code
+- Added fit shape code, fitting a rigid body
+- Changes for new libcifpp
+
+Version 3.5.0
+- Modernise code
+
 Version 3.4.0
 - Include coordinates in CompoundAtom
 

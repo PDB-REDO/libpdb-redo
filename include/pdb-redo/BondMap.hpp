@@ -73,10 +73,9 @@ class BondMap
 
 	bool is1_4(const std::string &atom_1, const std::string &atom_2) const
 	{
-		uint32_t ixa = index.at(atom_1);
-		uint32_t ixb = index.at(atom_2);
-
-		return bond_1_4.count(key(ixa, ixb));
+		auto aix1 = index.find(atom_1);
+		auto aix2 = index.find(atom_2);
+		return aix1 != index.end() and aix2 != index.end() and bond_1_4.count(key(aix1->second, aix2->second));
 	}
 
 	bool is1_4(const cif::mm::atom &atom_1, const cif::mm::atom &atom_2) const

@@ -1045,7 +1045,7 @@ struct TypeMapping
 {
 	std::string restr_type, ccd_type;
 };
-const TypeMapping kTypeMap[] = {
+const TypeMapping kTypeMap[] = { // NOLINT
 	{ "DNA", "DNA linking" },
 	{ "furanose", "saccharide" },
 	{ "ketopyranose", "saccharide" },

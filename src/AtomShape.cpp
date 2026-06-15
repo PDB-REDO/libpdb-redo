@@ -31,6 +31,7 @@
 #include <cmath>
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
 #include <gsl/gsl_multimin.h>
+#include <memory>
 #include <mutex>
 
 namespace pdb_redo
@@ -621,7 +622,7 @@ AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_anis
 	}
 
 	if (bFactor.has_value() and *bFactor != 0)
-		mImpl.reset(new AtomShapeImpl({ x, y, z }, type, formal_charge, static_cast<float>(clipper::Util::b2u(*bFactor)), 1.0, resHigh, resLow, electronScattering));
+		mImpl = std::make_shared<AtomShapeImpl>(cif::point{ x, y, z }, type, formal_charge, static_cast<float>(clipper::Util::b2u(*bFactor)), 1.0, resHigh, resLow, electronScattering);
 	else if (not atom_aniso.empty())
 	{
 		const auto &[u11, u12, u13, u22, u23, u33] =
@@ -632,7 +633,7 @@ AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_anis
 		while (u.det() < 1.0e-20)
 			u = u + clipper::U_aniso_orth(0.01, 0.01, 0.01, 0, 0, 0);
 
-		mImpl.reset(new AtomShapeAnisoImpl({ x, y, z }, type, formal_charge, u, occupancy, resHigh, resLow, electronScattering));
+		mImpl = std::make_shared<AtomShapeAnisoImpl>(cif::point{ x, y, z }, type, formal_charge, u, occupancy, resHigh, resLow, electronScattering);
 	}
 	else
 	{
@@ -648,7 +649,7 @@ AtomShape::AtomShape(cif::const_row_handle atom, cif::const_row_handle atom_anis
 		if (iso == 0)
 			iso = 2.0f / static_cast<float>(8 * std::numbers::pi_v<float> * std::numbers::pi_v<float>);
 
-		mImpl.reset(new AtomShapeImpl({ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering));
+		mImpl = std::make_shared<AtomShapeImpl>(cif::point{ x, y, z }, type, formal_charge, iso, occupancy, resHigh, resLow, electronScattering);
 	}
 }
 
