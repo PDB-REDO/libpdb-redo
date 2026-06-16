@@ -482,9 +482,16 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 
 	for (auto atom : mAtomData                                    //
 						 | std::views::transform(&AtomData::atom) //
+#if 0
 						 | std::views::filter([asymID](auto &a)
-							   { return a.get_label_asym_id() == asymID; }))
+							   { return a.get_label_asym_id() == asymID; })
+#endif
+
+	)
 	{
+		if (atom.get_label_asym_id() != asymID)
+			continue;
+
 		PerResidueInfo pr{ atom.get_label_asym_id(), atom.get_label_seq_id(), atom.get_auth_seq_id(), atom.get_label_comp_id() };
 
 		if (residues.empty() or residues.back() != pr)
@@ -1028,7 +1035,7 @@ void EDIAStatsCollector::calculate(std::vector<AtomData> &atomData) const
 
 	// Calculate EDIA scores
 
-#if __cpp_lib_ranges_to_container >= 202202L
+#if __cpp_lib_ranges_to_container >= 202202L and __GNUC__ >= 16
 	DistanceMap dm(mAtomData | std::views::transform(&AtomData::atom) | std::ranges::to<std::vector>(),
 		cif::crystal(mDb), 3.5f);
 #else
