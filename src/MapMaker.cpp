@@ -26,18 +26,18 @@
 
 #include "pdb-redo/MapMaker.hpp"
 
-#include "cif++/gzio.hpp"
 #include "pdb-redo/ClipperWrapper.hpp"
 #include "pdb-redo/ResolutionCalculator.hpp"
 
 #include <cerrno>
 #include <cif++/cif++.hpp>
-#include <cif++/text.hpp>
+// #include <cif++/gzio.hpp>
+// #include <cif++/text.hpp>
 #include <clipper/clipper-ccp4.h>
 #include <clipper/clipper-contrib.h>
+#include <clocale>
 #include <filesystem>
 #include <fstream>
-#include <locale.h>
 #include <stdexcept>
 #include <system_error>
 
@@ -498,7 +498,7 @@ class LocaleSaver
   public:
 	LocaleSaver()
 	{
-		locale_t loc = newlocale(LC_ALL_MASK, "C", NULL);
+		locale_t loc = newlocale(LC_ALL_MASK, "C", nullptr);
 		mSavedLocale = uselocale(loc);
 		freelocale(loc);
 	}
