@@ -1307,7 +1307,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 
 		while (ri != residues.end())
 		{
-			if ((*ri)->get_seq_id() != endSeqID + 1 or (*ri)->get_asym_id() != monomer->get_asym_id())
+			if ((*ri)->get_seq_id() != endSeqID or (*ri)->get_asym_id() != monomer->get_asym_id())
 				break;
 			++endSeqID;
 			++ri;
@@ -1319,6 +1319,9 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 			throw std::runtime_error("cif::mm::polymer not found for asym ID " + monomer->get_asym_id());
 
 		result->addPolySection(*pi, startSeqID, endSeqID);
+
+		if (ri == residues.end())
+			break;
 	}
 
 	// Add any residue that might be bonded to our list of residues via a struct_conn record
