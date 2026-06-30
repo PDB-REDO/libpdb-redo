@@ -48,14 +48,13 @@ endif()
 # Building shared libraries?
 option(BUILD_SHARED_LIBS "Build a shared library instead of a static one" OFF)
 
+option(STATIC_RDKIT "Link to static libraries of RDKit" OFF)
+
 # We do not want to write an export file for all our symbols...
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
 # Optionally build a version to be installed inside CCP4
 option(BUILD_FOR_CCP4 "Build a version to be installed in CCP4" OFF)
-
-# Optionally leave out the minimizer
-option(BUILD_MINIMIZER "Build the minimizer code" ON)
 
 if(BUILD_FOR_CCP4)
 	if("$ENV{CCP4}" STREQUAL "" OR NOT EXISTS $ENV{CCP4})
@@ -105,6 +104,7 @@ endif()
 find_package(Eigen3 REQUIRED)
 find_package(CCP4 REQUIRED ccp4c clipper-core clipper-ccp4 clipper-contrib)
 find_package(GSL REQUIRED)
+find_package(rdkit REQUIRED)
 
 if(NOT (TARGET cifpp OR cifpp_FOUND))
 	CPMFindPackage(
@@ -119,51 +119,37 @@ include(VersionString)
 write_version_header("${PROJECT_SOURCE_DIR}/src" LIB_NAME "LibPDBREDO")
 
 # Sources
-list(APPEND project_sources
-	${PROJECT_SOURCE_DIR}/src/AtomShape.cpp
-	${PROJECT_SOURCE_DIR}/src/BlobFinder.cpp
-	${PROJECT_SOURCE_DIR}/src/BondMap.cpp
-	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
-	${PROJECT_SOURCE_DIR}/src/Compound.cpp
-	${PROJECT_SOURCE_DIR}/src/DistanceMap.cpp
-	${PROJECT_SOURCE_DIR}/src/MapMaker.cpp
-	${PROJECT_SOURCE_DIR}/src/Ramachandran.cpp
-	${PROJECT_SOURCE_DIR}/src/ResolutionCalculator.cpp
-	${PROJECT_SOURCE_DIR}/src/SkipList.cpp
-	${PROJECT_SOURCE_DIR}/src/Statistics.cpp
-	${PROJECT_SOURCE_DIR}/src/TLS.cpp
-	${PROJECT_SOURCE_DIR}/src/Version.cpp
+file(GLOB project_sources ${PROJECT_SOURCE_DIR}/src/*.cpp)
+file(GLOB project_headers ${PROJECT_SOURCE_DIR}/include/pdb-redo/*.hpp)
+
+set(RDKit_LIBS
+    # RDKit::ChemReactions
+    RDKit::FileParsers
+    # RDKit::SmilesParse
+    # RDKit::Depictor
+    RDKit::RDGeometryLib
+    RDKit::RDGeneral
+    # RDKit::SubstructMatch
+    # RDKit::Subgraphs
+    # RDKit::MolDraw2D
+    RDKit::GraphMol
+    RDKit::DistGeometry
+    RDKit::DistGeomHelpers
+    # RDKit::MolAlign
+    # RDKit::Optimizer
+    # RDKit::ForceField
+    # RDKit::ForceFieldHelpers
+    # RDKit::Alignment
+    # RDKit::ForceField
+    RDKit::MolTransforms
+    # RDKit::EigenSolvers
 )
 
-list(APPEND project_headers
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/AtomShape.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/BlobFinder.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/BondMap.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/ClipperWrapper.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/Compound.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/DistanceMap.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/MapMaker.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/Ramachandran.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/ResolutionCalculator.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/SkipList.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/Statistics.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/TLS.hpp
-	${PROJECT_SOURCE_DIR}/include/pdb-redo/Version.hpp
-)
-
-if(BUILD_MINIMIZER)
-	list(APPEND project_sources
-		${PROJECT_SOURCE_DIR}/src/Minimizer.cpp
-		${PROJECT_SOURCE_DIR}/src/Restraints.cpp
-		${PROJECT_SOURCE_DIR}/src/ShapeFitter.cpp
-	)
-
-	list(APPEND project_headers
-		${PROJECT_SOURCE_DIR}/include/pdb-redo/Minimizer.hpp
-		${PROJECT_SOURCE_DIR}/include/pdb-redo/Restraints.hpp
-		${PROJECT_SOURCE_DIR}/include/pdb-redo/ShapeFitter.hpp
-	)
+if(STATIC_RDKIT)
+    list(TRANSFORM RDKit_LIBS APPEND _static)
 endif()
+
+message(NOTICE "libs: ${RDKit_LIBS}")
 
 add_library(pdb-redo ${project_sources} ${project_headers})
 add_library(pdb-redo::pdb-redo ALIAS pdb-redo)
@@ -176,7 +162,7 @@ target_include_directories(pdb-redo
 	"$<BUILD_INTERFACE:${PROJECT_SOURCE_DIR}/include>"
 	"$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}>"
 	${CCP4_INCLUDE_DIRS})
-target_link_libraries(pdb-redo PUBLIC cifpp::cifpp GSL::gsl ${CCP4_LIBRARIES})
+target_link_libraries(pdb-redo PUBLIC cifpp::cifpp GSL::gsl ${CCP4_LIBRARIES} ${RDKit_LIBS})
 target_include_directories(pdb-redo PRIVATE ${EIGEN3_INCLUDE_DIR})
 
 if(CMAKE_CXX_COMPILER_ID STREQUAL "AppleClang")
