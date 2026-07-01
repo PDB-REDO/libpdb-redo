@@ -92,7 +92,7 @@ class Minimizer
 	virtual ~Minimizer() = default;
 
 	// factory method:
-	static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last, const XMap &xMap);
+	// static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last, const XMap &xMap);
 
 	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap &xMap)
 	{
@@ -141,6 +141,8 @@ class Minimizer
 	double score();
 	[[nodiscard]] virtual std::vector<std::pair<std::string, cif::point>> getAtoms() const = 0;
 	virtual void storeAtomLocations() = 0;
+
+	void analyseRestraints();
 
   protected:
 

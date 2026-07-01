@@ -108,12 +108,6 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 	if (not compound)
 		throw std::runtime_error("Missing compound information for " + res.get_compound_id());
 
-	for (auto a : res.atoms())
-	{
-		(void)ref(a);
-		mAtoms.push_back(a);
-	}
-
 	for (auto &b : compound->bonds())
 	{
 		try
@@ -869,6 +863,29 @@ double Minimizer::score(const AtomLocationProvider &loc)
 	return result;
 }
 
+struct Distortion
+{
+	std::tuple<double, double> d;
+
+};
+
+void Minimizer::analyseRestraints()
+{
+	AtomLocationProvider loc(mReferencedAtoms);
+
+	for (auto r : mRestraints)
+	{
+		auto distortion = r->distortion(loc);
+		if (distortion == std::tuple<double, double>{ -1, -1 })
+			continue;
+
+		if (std::get<0>(distortion) < 0)
+			continue;
+
+		r->print(loc);
+	}
+}
+
 // --------------------------------------------------------------------
 
 #include <gsl/gsl_blas.h> // for debugging norm of gradient
@@ -1252,15 +1269,15 @@ void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 
 // --------------------------------------------------------------------
 
-Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
-	const XMap &xMap)
-{
-	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure()));
-	result->addPolySection(poly, first, last);
-	result->addDensityMap(xMap, kDefaultMapWeight);
-	result->Finish(crystal);
-	return result.release();
-}
+// Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
+// 	const XMap &xMap)
+// {
+// 	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure()));
+// 	result->addPolySection(poly, first, last);
+// 	result->addDensityMap(xMap, kDefaultMapWeight);
+// 	result->Finish(crystal);
+// 	return result.release();
+// }
 
 Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap *xMap)
 {
@@ -1270,6 +1287,8 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 
 	for (auto atom : atoms)
 	{
+		result->mAtoms.emplace_back(atom);
+
 		auto &res = structure.get_residue(atom);
 
 		auto ri = std::ranges::find_if(residues, [rp = &res](const cif::mm::residue *r)
