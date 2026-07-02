@@ -879,7 +879,7 @@ void Minimizer::analyseRestraints()
 		if (distortion == std::tuple<double, double>{ -1, -1 })
 			continue;
 
-		if (std::get<0>(distortion) < 0)
+		if (std::get<0>(distortion) < 5)
 			continue;
 
 		r->print(loc);

@@ -210,7 +210,12 @@ std::tuple<double, double> AngleRestraint::distortion(const AtomLocationProvider
 
 void AngleRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "angle " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " => " << mAngle << " / " << mESD << '\n';
+	// std::cout << "angle " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " => " << mAngle << " / " << mESD << '\n';
+	auto d = distortion(atoms);
+
+	std::println("Angle: [{:8}] - [{:8}] - [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
+		atoms.atom(mA), atoms.atom(mB), atoms.atom(mC),
+		std::get<1>(d), mAngle, mESD, std::get<0>(d));
 }
 
 // --------------------------------------------------------------------
@@ -418,7 +423,7 @@ void ChiralVolumeRestraint::print(const AtomLocationProvider &atoms) const
 		atoms.atom(mCentre),
 		std::get<1>(d), mVolume, mESD, std::get<0>(d));
 
-		// std::cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << mESD << '\n';
+	// std::cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << mESD << '\n';
 }
 
 // --------------------------------------------------------------------
@@ -636,8 +641,13 @@ std::tuple<double, double> NonBondedContactRestraint::distortion(const AtomLocat
 
 void NonBondedContactRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "nbc " << atoms.atom(mA) << " " << atoms.atom(mB)
-			  << " => " << distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << '\n';
+	// std::cout << "nbc " << atoms.atom(mA) << " " << atoms.atom(mB)
+	// 		  << " => " << distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << '\n';
+	auto d = distortion(atoms);
+
+	std::println("Bond: [{:8}] to [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
+		atoms.atom(mA), atoms.atom(mB),
+		std::get<1>(d), mMinDist, mDistESD, std::get<0>(d));
 }
 
 // --------------------------------------------------------------------

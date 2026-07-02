@@ -135,7 +135,7 @@ struct TransPeptideRestraint : public TorsionRestraint
 	}
 };
 
-const double kChiralVolumeESD = 0.2; // according to coot that's a reasonable value...
+const double kChiralVolumeESD = 0.1; // according to coot 0.2 was a reasonable value... but they changed it to 0.1
 
 struct ChiralVolumeRestraint : public Restraint
 {
