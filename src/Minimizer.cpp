@@ -830,7 +830,7 @@ void Minimizer::printStats()
 	auto print = [](std::string_view name, std::tuple<double, double> v)
 	{
 		auto [z, sum] = v;
-		std::cerr << std::format("  {:15} {:10.1f} {:6.2f}\n", name, sum, z);
+		std::println(std::cerr,"  {:15} {:10.1f} {:6.2f}", name, sum, z);
 	};
 
 	print("bond", rmsz(loc, mBondRestraints));
@@ -842,7 +842,8 @@ void Minimizer::printStats()
 	print("nbc", rmsz(loc, mNonBondedContactRestraints));
 
 	double densityScore = mDensityRestraint ? mDensityRestraint->f(loc) : 0;
-	std::cerr << std::format("  {:15} {:10.1f}\n", "density", densityScore);
+	std::println(std::cerr, "  {:15} {:10.1f}", "density", densityScore);
+	std::println(std::cerr, "  {:15} {:10.1f}", "total", score(loc));
 }
 
 double Minimizer::score()

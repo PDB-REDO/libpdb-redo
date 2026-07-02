@@ -367,7 +367,7 @@ double ChiralVolumeRestraint::f(const AtomLocationProvider &atoms) const
 	auto chiralVolume = dot_product(atoms[mA1] - atoms[mCentre],
 		cross_product(atoms[mA2] - atoms[mCentre], atoms[mA3] - atoms[mCentre]));
 
-	double d = mVolume - chiralVolume;
+	double d = chiralVolume - mVolume;
 	double result = (d * d) / (mESD * mESD);
 
 	if (cif::VERBOSE > 2)
