@@ -800,7 +800,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 			}
 
 			if (atoms.size() > 3)
-				mPlanarityRestraints.emplace_back( std::move(atoms), plane.esd );
+				mPlanarityRestraints.emplace_back(std::move(atoms), plane.esd);
 		}
 		catch (const std::exception &ex)
 		{
@@ -866,7 +866,6 @@ double Minimizer::score(const AtomLocationProvider &loc)
 struct Distortion
 {
 	std::tuple<double, double> d;
-
 };
 
 void Minimizer::analyseRestraints()
@@ -944,7 +943,8 @@ DPoint GSLAtomLocation::operator[](AtomRef atomID) const
 	return {
 		gsl_vector_get(mV, ix * 3 + 0),
 		gsl_vector_get(mV, ix * 3 + 1),
-		gsl_vector_get(mV, ix * 3 + 2)};
+		gsl_vector_get(mV, ix * 3 + 2)
+	};
 }
 
 void GSLAtomLocation::storeLocations()
@@ -1269,15 +1269,23 @@ void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 
 // --------------------------------------------------------------------
 
-// Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
-// 	const XMap &xMap)
-// {
-// 	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure()));
-// 	result->addPolySection(poly, first, last);
-// 	result->addDensityMap(xMap, kDefaultMapWeight);
-// 	result->Finish(crystal);
-// 	return result.release();
-// }
+Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
+	const XMap &xMap)
+{
+	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure()));
+
+	for (int i = first; i <= last; ++i)
+	{
+		auto &res = poly[i];
+		for (auto a : res.atoms())
+			result->mAtoms.emplace_back(a);
+	}
+
+	result->addPolySection(poly, first, last);
+	result->addDensityMap(xMap, kDefaultMapWeight);
+	result->Finish(crystal);
+	return result.release();
+}
 
 Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap *xMap)
 {
