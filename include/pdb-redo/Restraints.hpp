@@ -139,12 +139,13 @@ const double kChiralVolumeESD = 0.1; // according to coot 0.2 was a reasonable v
 
 struct ChiralVolumeRestraint : public Restraint
 {
-	ChiralVolumeRestraint(AtomRef c, AtomRef a1, AtomRef a2, AtomRef a3, double volume)
+	ChiralVolumeRestraint(AtomRef c, AtomRef a1, AtomRef a2, AtomRef a3, double volume, bool both)
 		: mCentre(c)
 		, mA1(a1)
 		, mA2(a2)
 		, mA3(a3)
 		, mVolume(volume)
+		, mBoth(both)
 	{
 	}
 
@@ -155,6 +156,7 @@ struct ChiralVolumeRestraint : public Restraint
 
 	AtomRef mCentre, mA1, mA2, mA3;
 	double mVolume, mESD = kChiralVolumeESD;
+	bool mBoth;
 };
 
 struct PlanarityRestraint : public Restraint

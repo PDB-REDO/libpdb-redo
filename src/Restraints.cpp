@@ -367,7 +367,7 @@ double ChiralVolumeRestraint::f(const AtomLocationProvider &atoms) const
 	auto chiralVolume = dot_product(atoms[mA1] - atoms[mCentre],
 		cross_product(atoms[mA2] - atoms[mCentre], atoms[mA3] - atoms[mCentre]));
 
-	double d = chiralVolume - mVolume;
+	double d = mBoth ? std::abs(chiralVolume) - std::abs(mVolume) : chiralVolume - mVolume;
 	double result = (d * d) / (mESD * mESD);
 
 	if (cif::VERBOSE > 2)
@@ -388,7 +388,7 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &d
 
 	auto chiralVolume = dot_product(a, cross_product(b, c));
 
-	auto d = chiralVolume - mVolume;
+	double d = mBoth ? std::abs(chiralVolume) - std::abs(mVolume) : chiralVolume - mVolume;
 	auto s = (d * d) / (mESD * mESD);
 
 	df.add(mCentre, s * DPoint{
@@ -410,7 +410,7 @@ std::tuple<double, double> ChiralVolumeRestraint::distortion(const AtomLocationP
 
 	auto chiralVolume = dot_product(a, cross_product(b, c));
 
-	auto d = chiralVolume - mVolume;
+	double d = mBoth ? std::abs(chiralVolume) - std::abs(mVolume) : chiralVolume - mVolume;
 
 	return { d * d / (mESD * mESD), d };
 }
