@@ -42,6 +42,8 @@
 #include <initializer_list>
 #include <iomanip>
 #include <memory>
+#include <numeric>
+#include <print>
 #include <regex>
 #include <stdexcept>
 
@@ -857,7 +859,11 @@ double Minimizer::score(const AtomLocationProvider &loc)
 {
 	double result = 0;
 	for (auto r : mRestraints)
-		result += r->f(loc);
+	{
+		auto atoms = r->referencedAtoms();
+		if (std::ranges::find_if(atoms, [this](AtomRef a) { return a < mRef2AtomIndex.size() and mRef2AtomIndex[a] != kRefSentinel; }) != atoms.end())
+			result += r->f(loc);
+	}
 
 	if (cif::VERBOSE > 3)
 		std::cout << "score: " << result << '\n';
@@ -991,6 +997,7 @@ class GSLDFCollector : public DFCollector
 	~GSLDFCollector() override;
 
 	void add(AtomRef atom, double dx, double dy, double dz) override;
+	[[nodiscard]] bool isFixed(AtomRef atom) const override;
 
   private:
 	// for debugging
@@ -1044,6 +1051,11 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 		if (cif::VERBOSE > 4)
 			std::cerr << "atom: " << label(atom) << " d: " << std::setprecision(10) << dx << ", " << dy << ", " << dz << '\n';
 	}
+}
+
+bool GSLDFCollector::isFixed(AtomRef atom) const
+{
+	return atom >= mIndex.size() or mIndex[atom] == kRefSentinel;
 }
 
 // --------------------------------------------------------------------
@@ -1255,18 +1267,30 @@ void GSLMinimizer::Df(const gsl_vector *v, gsl_vector *df)
 	GSLDFCollector c(mReferencedAtoms, mRef2AtomIndex, df);
 
 	for (auto r : mRestraints)
-		r->df(loc, c);
+	{
+		auto atoms = r->referencedAtoms();
+		if (std::ranges::find_if(atoms, [this](AtomRef a) { return a < mRef2AtomIndex.size() and mRef2AtomIndex[a] != kRefSentinel; }) != atoms.end())
+			r->df(loc, c);
+	}
 }
 
 void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 {
 	GSLAtomLocation loc(mReferencedAtoms, mFixedLocations, mRef2AtomIndex, x);
-	*f = score(loc);
 
 	GSLDFCollector c(mReferencedAtoms, mRef2AtomIndex, df);
 
+	*f = 0;
+
 	for (auto r : mRestraints)
-		r->df(loc, c);
+	{
+		auto atoms = r->referencedAtoms();
+		if (std::ranges::find_if(atoms, [this](AtomRef a) { return a < mRef2AtomIndex.size() and mRef2AtomIndex[a] != kRefSentinel; }) != atoms.end())
+		{
+			*f += r->f(loc);
+			r->df(loc, c);
+		}
+	}
 }
 
 // --------------------------------------------------------------------

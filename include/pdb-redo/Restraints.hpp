@@ -31,6 +31,7 @@
 
 #pragma once
 
+#include <algorithm>
 #include <cif++/point.hpp>
 #include <pdb-redo/MapMaker.hpp>
 
@@ -60,6 +61,8 @@ struct Restraint
 	[[nodiscard]] virtual std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const = 0;
 
 	virtual void print(const AtomLocationProvider &atoms) const = 0;
+
+	[[nodiscard]] virtual std::vector<AtomRef> referencedAtoms() const = 0;
 };
 
 struct BondRestraint : public Restraint
@@ -76,6 +79,11 @@ struct BondRestraint : public Restraint
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
+
+	[[nodiscard]] virtual std::vector<AtomRef> referencedAtoms() const override
+	{
+		return { mA, mB };
+	}
 
 	AtomRef mA, mB;
 	double mDist, mDistESD;
@@ -96,6 +104,11 @@ struct AngleRestraint : public Restraint
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
+
+	[[nodiscard]] virtual std::vector<AtomRef> referencedAtoms() const override
+	{
+		return { mA, mB, mC };
+	}
 
 	AtomRef mA, mB, mC;
 	double mAngle, mESD;
@@ -118,6 +131,11 @@ struct TorsionRestraint : public Restraint
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
+
+	[[nodiscard]] virtual std::vector<AtomRef> referencedAtoms() const override
+	{
+		return { mA, mB, mC, mD };
+	}
 
 	AtomRef mA, mB, mC, mD;
 	int mPeriodicity;
@@ -154,6 +172,11 @@ struct ChiralVolumeRestraint : public Restraint
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
+	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
+	{
+		return { mCentre, mA1, mA2, mA3 };
+	}
+
 	AtomRef mCentre, mA1, mA2, mA3;
 	double mVolume, mESD = kChiralVolumeESD;
 	bool mBoth;
@@ -176,6 +199,11 @@ struct PlanarityRestraint : public Restraint
 
 	void calculatePlaneFunction(const AtomLocationProvider &atoms, double abcd[4]) const;
 
+	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
+	{
+		return mAtoms;
+	}
+
 	std::vector<AtomRef> mAtoms;
 	double mESD;
 };
@@ -196,6 +224,11 @@ struct NonBondedContactRestraint : public Restraint
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
+	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
+	{
+		return { mA, mB };
+	}
+
 	AtomRef mA, mB;
 	double mMinDist, mMinDistSq, mDistESD;
 };
@@ -209,6 +242,12 @@ struct DensityRestraint : public Restraint
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
+
+	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
+	{
+		return mAtoms | std::views::transform([](auto t) { return std::get<0>(t); }) | std::ranges::to<std::vector>();
+	}
+
 
 	std::vector<std::pair<AtomRef, double>> mAtoms;
 	const Xmap &mXMap;

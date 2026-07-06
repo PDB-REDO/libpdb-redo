@@ -77,6 +77,8 @@ class DFCollector
 	{
 		add(atom, d.m_x, d.m_y, d.m_z);
 	}
+
+	[[nodiscard]] virtual bool isFixed(AtomRef atom) const = 0;
 };
 
 // --------------------------------------------------------------------
