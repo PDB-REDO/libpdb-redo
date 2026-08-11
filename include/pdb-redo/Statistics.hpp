@@ -102,9 +102,9 @@ class StatsCollector
 
 	// [[nodiscard]] virtual ResidueStatistics collect(std::initializer_list<const cif::mm::residue *> residues) const;
 
-	// [[nodiscard]] virtual ResidueStatistics collect(std::initializer_list<cif::mm::atom> atoms) const;
+	[[nodiscard]] virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
 
-	// [[nodiscard]] virtual ResidueStatistics collect(const std::vector<cif::mm::atom> &atoms) const;
+	[[nodiscard]] virtual ResidueStatistics collectSum(const std::string &asymID) const;
 
   protected:
 	struct PerResidueInfo
@@ -121,9 +121,9 @@ class StatsCollector
 		}
 	};
 
-	using RedidueList = std::vector<PerResidueInfo>;
+	using ResidueList = std::vector<PerResidueInfo>;
 
-	std::vector<ResidueStatistics> collect(const RedidueList &residues, BoundingBox &bbox, bool addWaters) const;
+	std::vector<ResidueStatistics> collect(const ResidueList &residues, BoundingBox &bbox, bool addWaters) const;
 
 	void initialize();
 

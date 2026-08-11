@@ -37,6 +37,9 @@
 #include <cif++/validate.hpp>
 #include <limits>
 #include <optional>
+#include <stdexcept>
+#include <unordered_map>
+#include <unordered_set>
 
 // --------------------------------------------------------------------
 
@@ -44,6 +47,7 @@ namespace pdb_redo
 {
 
 using cif::atom_type_traits;
+using std::unary_function;
 
 // --------------------------------------------------------------------
 
@@ -451,7 +455,7 @@ void StatsCollector::initialize()
 
 std::vector<ResidueStatistics> StatsCollector::collect() const
 {
-	RedidueList residues;
+	ResidueList residues;
 	BoundingBox bbox;
 
 	for (auto atom : mAtomData | std::views::transform(&AtomData::atom))
@@ -477,7 +481,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 {
 	using namespace std::literals;
 
-	RedidueList residues;
+	ResidueList residues;
 	BoundingBox bbox;
 
 	for (auto atom : mAtomData                                    //
@@ -574,7 +578,7 @@ std::vector<ResidueStatistics> StatsCollector::collect(const std::string &asymID
 // 	return collect(residues, bbox, false);
 // }
 
-std::vector<ResidueStatistics> StatsCollector::collect(const RedidueList &residues, BoundingBox &bbox, bool addWaters) const
+std::vector<ResidueStatistics> StatsCollector::collect(const ResidueList &residues, BoundingBox &bbox, bool addWaters) const
 {
 	std::vector<AtomData> atomData;
 
@@ -771,59 +775,81 @@ std::vector<ResidueStatistics> StatsCollector::collect(const RedidueList &residu
 	return result;
 }
 
-// ResidueStatistics StatsCollector::collect(std::initializer_list<const cif::mm::residue *> residues) const
-// {
-// 	std::vector<cif::mm::atom> atoms;
-// 	for (auto &r : residues)
-// 		for (auto a : r->atoms())
-// 			atoms.push_back(a);
-
-// 	return collect(atoms);
-// }
-
 // ResidueStatistics StatsCollector::collect(std::initializer_list<cif::mm::atom> atoms) const
 // {
 // 	std::vector<cif::mm::atom> v(atoms);
 // 	return collect(v);
 // }
 
+ResidueStatistics StatsCollector::collect(const std::vector<cif::mm::atom> &atoms) const
+{
+	std::vector<AtomData> atomData;
+
+	for (auto &ad : mAtomData)
+	{
+		if (std::ranges::contains(atoms, ad.atom))
+			atomData.emplace_back(ad);
+	}
+
+	calculate(atomData);
+
+	AtomDataSums sums;
+	std::size_t n = 0, m = 0;
+	double ediaSum = 0;
+
+	for (auto &ad : atomData)
+	{
+		++n;
+
+		sums += ad.sums;
+		ediaSum += std::pow(ad.edia + 0.1, -2);
+
+		if (ad.edia >= 0.8)
+			++m;
+	}
+
+	ResidueStatistics result{
+		"", 0, "", "",
+		(sums.rfSums[0] / sums.rfSums[1]),        // rsr
+		sums.srg(),                               // srsr
+		sums.cc(),                                // rsccs
+		1 / std::sqrt(ediaSum / n) - 0.1,         // ediam
+		100. * m / n,                             // opia
+		static_cast<int>(round(mVF * sums.ngrid)) // ngrid
+	};
+
+	return result;
+}
+
+[[nodiscard]] ResidueStatistics StatsCollector::collectSum(const std::string &asymID) const
+{
+	std::vector<cif::mm::atom> atoms;
+
+	for (auto &ad : mAtomData)
+	{
+		if (ad.atom.get_label_asym_id() == asymID)
+			atoms.emplace_back(ad.atom);
+	}
+
+	return collect(atoms);
+}
+
 // ResidueStatistics StatsCollector::collect(const std::vector<cif::mm::atom> &atoms) const
 // {
-// 	std::vector<AtomData> atomData;
-
-// 	BoundingBox bbox(4.f);
-
-// 	for (auto atom : mStructure.atoms())
-// 	{
-// 		if (not bbox.contains(atom.get_location()))
-// 			continue;
-
-// 		AtomShape shape(atom, mResHigh, mResLow, mElectronScattering);
-
-// 		atomData.emplace_back(atom, std::move(shape));
-// 	}
-
-// 	calculate(atomData);
-
 // 	AtomDataSums sums;
 // 	std::size_t n = 0, m = 0;
 // 	double ediaSum = 0;
 
-// 	for (auto &atom : atoms)
+// 	for (auto &ad : mAtomData)
 // 	{
-// 		++n;
-
-// 		auto ci = std::ranges::find_if(atomData,
-// 			[=](auto &d)
-// 			{ return d.asymID == atom.get_label_asym_id() and d.seqID == atom.get_label_seq_id() and d.atom.get_label_atom_id() == atom.get_label_atom_id(); });
-
-// 		if (ci == atomData.end())
+// 		if (not std::ranges::contains(atoms, ad.atom))
 // 			continue;
 
-// 		sums += ci->sums;
-// 		ediaSum += std::pow(ci->edia + 0.1, -2);
-
-// 		if (ci->edia >= 0.8)
+// 		sums += ad.sums;
+// 		ediaSum += std::pow(ad.edia + 0.1, -2);
+		
+// 		++n;
+// 		if (ad.edia >= 0.8)
 // 			++m;
 // 	}
 
