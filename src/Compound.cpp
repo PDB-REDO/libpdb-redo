@@ -1146,7 +1146,7 @@ cif::datablock Compound::generateCCDCompound() const
 			{ "atom_id_1", bond.atomID[0] },
 			{ "atom_id_2", bond.atomID[1] },
 			{ "value_order", valueOrder },
-			{ "pdbx_aromatic_flag", bond.aromatic },
+			{ "pdbx_aromatic_flag", bond.aromatic ? "y" : "n" },
 			{ "pdbx_stereo_config", unknown },
 			{ "pdbx_ordinal", nr++ } });
 	}
@@ -1173,9 +1173,9 @@ cif::datablock Compound::generateCCDCompound() const
 		{ "one_letter_code", oneLetterCode },
 		{ "three_letter_code", threeLetterCode },
 		{ "pdbx_model_coordinates_details", unknown },
-		{ "pdbx_model_coordinates_missing_flag", false },
+		{ "pdbx_model_coordinates_missing_flag", "n" },
 		{ "pdbx_ideal_coordinates_details", unknown },
-		{ "pdbx_ideal_coordinates_missing_flag", pdbx_ideal_coordinates_missing_flag },
+		{ "pdbx_ideal_coordinates_missing_flag", pdbx_ideal_coordinates_missing_flag ? "y" : "n" },
 		{ "pdbx_model_coordinates_db_code", unknown },
 		{ "pdbx_subcomponent_list", unknown },
 		{ "pdbx_processing_site", unknown },
