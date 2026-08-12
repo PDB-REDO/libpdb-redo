@@ -80,7 +80,7 @@ struct BondRestraint : public Restraint
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
-	[[nodiscard]] virtual std::vector<AtomRef> referencedAtoms() const override
+	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
 	{
 		return { mA, mB };
 	}
@@ -105,7 +105,7 @@ struct AngleRestraint : public Restraint
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
-	[[nodiscard]] virtual std::vector<AtomRef> referencedAtoms() const override
+	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
 	{
 		return { mA, mB, mC };
 	}
@@ -132,7 +132,7 @@ struct TorsionRestraint : public Restraint
 	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
-	[[nodiscard]] virtual std::vector<AtomRef> referencedAtoms() const override
+	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
 	{
 		return { mA, mB, mC, mD };
 	}
