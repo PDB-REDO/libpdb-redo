@@ -245,7 +245,15 @@ struct DensityRestraint : public Restraint
 
 	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
 	{
+#if __cpp_lib_ranges_to_container >= 202202L and __GNUC__ >= 16
 		return mAtoms | std::views::transform([](auto t) { return std::get<0>(t); }) | std::ranges::to<std::vector>();
+#else
+		std::vector<AtomRef> result;
+		result.reserve(mAtoms.size());
+		for (auto &a : mAtoms)
+			result.emplace_back(a.first);
+		return result;
+#endif
 	}
 
 
