@@ -75,7 +75,14 @@ class Map
 	[[nodiscard]] clipper::Cell cell() const { return mMap.cell(); }
 
 	/// \brief Create a masked map blotting out the density for all \a atom_ids in the structure contained in \a db
-	[[nodiscard]] Map masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const;
+	[[deprecated("structure is unused, use the one without")]]
+	[[nodiscard]] Map masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const
+	{
+		return masked(atom_ids);
+	}
+
+	/// \brief Create a masked map blotting out the density for all \a atom_ids in the structure contained in \a db
+	[[nodiscard]] Map masked(const std::vector<cif::mm::atom> &atom_ids) const;
 
 	/// \brief Return the z-weighted density sum for the atoms \a atom_ids in the structure contained in \a db
 	[[nodiscard]] float z_weighted_density(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atom_ids) const;

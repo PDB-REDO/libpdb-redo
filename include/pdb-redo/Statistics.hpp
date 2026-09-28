@@ -183,6 +183,9 @@ class StatsCollector
 
 		[[nodiscard]] double cc() const
 		{
+			if (ngrid == 0)
+				return 0;
+
 			double s = (ccSums[1] - (edSums[0] * edSums[0]) / ngrid) * (ccSums[2] - (edSums[1] * edSums[1]) / ngrid);
 			return (ccSums[0] - edSums[0] * edSums[1] / ngrid) / std::sqrt(s);
 		}

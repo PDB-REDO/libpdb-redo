@@ -10,10 +10,9 @@ shared by the various tools we develop at the NKI for the
 Requirements
 ------------
 
-The code for this library was written in C++17. You therefore need a
-recent compiler to build it. For the development gcc with version 9.4.0
-and up and clang 9.0 have been used. On MS Windows you'll need at least
-the 2019 version of MSVC.
+The code for this library was written in C++23. You therefore need a
+recent compiler to build it. For the development gcc with version 16
+and up and clang 22.1 have been used.
 
 Other requirements are:
 

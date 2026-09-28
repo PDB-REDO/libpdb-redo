@@ -405,7 +405,7 @@ void Map<FTYPE>::write_masked(const std::filesystem::path &f, clipper::Grid_rang
 // --------------------------------------------------------------------
 
 template <typename FTYPE>
-Map<FTYPE> Map<FTYPE>::masked(const cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms) const
+Map<FTYPE> Map<FTYPE>::masked(const std::vector<cif::mm::atom> &atoms) const
 {
 	using clipper::Coord_frac;
 	using clipper::Coord_grid;

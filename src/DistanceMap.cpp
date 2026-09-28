@@ -123,7 +123,7 @@ DistanceMap::DistanceMap(std::vector<cif::mm::atom> atoms, cif::crystal crystal,
 
 						if (k.x >= k1.x and k.x <= k2.x and
 							k.y >= k1.y and k.y <= k2.y and
-							k.y >= k1.z and k.z <= k2.z)
+							k.z >= k1.z and k.z <= k2.z)
 						{
 							mIndex.emplace(k, Entry{ id, symop });
 						}

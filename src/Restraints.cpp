@@ -342,10 +342,10 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 			std::tie(d[0], d[1], d[2], d[3]) = CalculateTorsionGradients(theta, p);
 
-			df.add(mA, /* 2.0 *  */ diff * d[0] * scale * w);
-			df.add(mB, /* 2.0 *  */ diff * d[1] * scale * w);
-			df.add(mC, /* 2.0 *  */ diff * d[2] * scale * w);
-			df.add(mD, /* 2.0 *  */ diff * d[3] * scale * w);
+			df.add(mA, 2 * diff * d[0] * scale * w);
+			df.add(mB, 2 * diff * d[1] * scale * w);
+			df.add(mC, 2 * diff * d[2] * scale * w);
+			df.add(mD, 2 * diff * d[3] * scale * w);
 		}
 	}
 }
@@ -389,7 +389,10 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &d
 	auto chiralVolume = dot_product(a, cross_product(b, c));
 
 	double d = mBoth ? std::abs(chiralVolume) - std::abs(mVolume) : chiralVolume - mVolume;
-	auto s = (d * d) / (mESD * mESD);
+	auto s = 2 * d / (mESD * mESD);
+
+	if (mBoth and chiralVolume < 0)
+		s = -s;
 
 	df.add(mCentre, s * DPoint{
 							-(b.m_y * c.m_z - b.m_z * c.m_y) - (a.m_z * c.m_y - a.m_y * c.m_z) - (a.m_y * b.m_z - a.m_z * b.m_y),

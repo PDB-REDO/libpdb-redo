@@ -28,7 +28,6 @@
 
 #include <algorithm>
 #include <cif++/cif++.hpp>
-
 #include <iostream>
 #include <memory>
 #include <stdexcept>
@@ -148,7 +147,6 @@ void dump_selection(const std::vector<tls_residue> &selected, std::size_t indent
 			}
 		}
 
-
 		if (from == kNoSeqNum or to == kNoSeqNum)
 			std::cout << indent << " >> " << chainID << '\n';
 		else
@@ -170,7 +168,7 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 
 	// Collect the residues from poly seq scheme...
 	for (const auto &[chain, seqNr, iCode, name] :
-		db["pdbx_poly_seq_scheme"].rows<std::string,int,std::string,std::string>("pdb_strand_id", "pdb_seq_num", "pdb_ins_code", "pdb_mon_id"))
+		db["pdbx_poly_seq_scheme"].rows<std::string, int, std::string, std::string>("pdb_strand_id", "pdb_seq_num", "pdb_ins_code", "pdb_mon_id"))
 	{
 		if (iCode.length() > 1)
 			throw std::runtime_error("invalid iCode");
@@ -180,7 +178,7 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 
 	// ... those from the nonpoly scheme
 	for (const auto &[chain, iCode, name] :
-		db["pdbx_nonpoly_scheme"].rows<std::string,std::string,std::string>("pdb_strand_id", "pdb_ins_code", "pdb_mon_id"))
+		db["pdbx_nonpoly_scheme"].rows<std::string, std::string, std::string>("pdb_strand_id", "pdb_ins_code", "pdb_mon_id"))
 	{
 		if (cif::iequals(name, "HOH") or cif::iequals(name, "H2O"))
 			continue;
@@ -193,7 +191,7 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 
 	// ... those from the nonpoly scheme
 	for (const auto &[chain, iCode, name] :
-		db["pdbx_branch_scheme"].rows<std::string,std::string,std::string>("pdb_strand_id", "pdb_ins_code", "pdb_mon_id"))
+		db["pdbx_branch_scheme"].rows<std::string, std::string, std::string>("pdb_strand_id", "pdb_ins_code", "pdb_mon_id"))
 	{
 		if (iCode.length() > 1)
 			throw std::runtime_error("invalid iCode");
@@ -244,8 +242,10 @@ std::vector<std::tuple<std::string, int, int>> tls_selection::get_ranges(cif::da
 
 	for (auto &&[name, i1, i2] : result)
 	{
-		if (i1 == kNoSeqNum) i1 = 0;
-		if (i2 == kNoSeqNum) i2 = 0;
+		if (i1 == kNoSeqNum)
+			i1 = 0;
+		if (i2 == kNoSeqNum)
+			i2 = 0;
 	}
 
 	return result;
@@ -386,13 +386,13 @@ struct tls_selection_range_id : public tls_selection_all
 		for (std::string chain : chains)
 		{
 			auto f = std::ranges::find_if(residues,
-				[this,chain](auto r) -> bool
+				[this, chain](auto r) -> bool
 				{
 					return r.chainID == chain and r.seqNr == m_first and r.iCode == m_icode_first;
 				});
 
 			auto l = std::ranges::find_if(residues,
-				[this,chain](auto r) -> bool
+				[this, chain](auto r) -> bool
 				{
 					return r.chainID == chain and r.seqNr == m_last and r.iCode == m_icode_last;
 				});
@@ -1268,7 +1268,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBuster::ParseGroup()
 		if (result == nullptr)
 			result.reset(s.release());
 		else
-			result = std::make_unique<tls_selection_union>( result, s );
+			result = std::make_unique<tls_selection_union>(result, s);
 	};
 
 	match('{');
@@ -1311,7 +1311,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBuster::ParseGroup()
 					if (result == nullptr)
 						result.reset(s.release());
 					else
-						result = std::make_unique<tls_selection_union>( result, s );
+						result = std::make_unique<tls_selection_union>(result, s);
 
 					chain1.clear();
 				}
@@ -1962,4 +1962,4 @@ std::unique_ptr<tls_selection> parse_tls_selection_details(const std::string &pr
 	return result;
 }
 
-} // namespace cif
+} // namespace pdb_redo
