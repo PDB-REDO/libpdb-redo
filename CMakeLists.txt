@@ -124,6 +124,7 @@ list(APPEND project_sources
 	${PROJECT_SOURCE_DIR}/src/BlobFinder.cpp
 	${PROJECT_SOURCE_DIR}/src/BondMap.cpp
 	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
+	${PROJECT_SOURCE_DIR}/src/DensityCalculations.cpp
 	${PROJECT_SOURCE_DIR}/src/Compound.cpp
 	${PROJECT_SOURCE_DIR}/src/DistanceMap.cpp
 	${PROJECT_SOURCE_DIR}/src/MapMaker.cpp
