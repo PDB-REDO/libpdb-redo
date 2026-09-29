@@ -181,6 +181,11 @@ class Compound
 
 	[[nodiscard]] std::string getDescriptor(std::string_view type) const;
 
+	[[nodiscard]] const cif::datablock &getCFData() const
+	{
+		return mCF;
+	}
+
   private:
 	cif::datablock mCF;
 	std::string mID;
