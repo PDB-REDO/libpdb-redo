@@ -109,8 +109,6 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 			cif::tie(b.atomID[0], b.atomID[1], valueOrder, aromatic, b.distance, b.esd) =
 				row.get("atom_id_1", "atom_id_2", "value_order", "pdbx_aromatic_flag", "value_dist", "value_dist_esd");
 
-			// Such a briliant idea, to rename columns in an CIF file...
-
 			if (not valueOrder)
 				cif::tie(valueOrder) = row.get("type");
 
@@ -118,8 +116,6 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 				cif::tie(aromatic) = row.get("aromatic");
 
 			b.aromatic = cif::iequals(aromatic.value_or("N"), "Y");
-
-			// ... and not only once, but even multiple times
 
 			if (not aromatic)
 				cif::tie(aromatic) = row.get("aromat");
