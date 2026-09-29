@@ -25,7 +25,7 @@
 cmake_minimum_required(VERSION 3.16)
 
 # set the project name
-project(libpdb-redo VERSION 3.5.1 LANGUAGES CXX C)
+project(libpdb-redo VERSION 3.5.2 LANGUAGES CXX C)
 
 list(APPEND CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake")
 
@@ -124,6 +124,7 @@ list(APPEND project_sources
 	${PROJECT_SOURCE_DIR}/src/BlobFinder.cpp
 	${PROJECT_SOURCE_DIR}/src/BondMap.cpp
 	${PROJECT_SOURCE_DIR}/src/ClipperWrapper.cpp
+	${PROJECT_SOURCE_DIR}/src/DensityCalculations.cpp
 	${PROJECT_SOURCE_DIR}/src/Compound.cpp
 	${PROJECT_SOURCE_DIR}/src/DistanceMap.cpp
 	${PROJECT_SOURCE_DIR}/src/MapMaker.cpp

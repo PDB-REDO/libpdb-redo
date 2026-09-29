@@ -222,7 +222,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 			auto volume = compound->chiralVolume(cv.id);
 
 			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1),
-				ref(a2), ref(a3), volume * 6);
+				ref(a2), ref(a3), volume * 6, cv.volumeSign == ChiralVolumeSign::both);
 		}
 		catch (const std::exception &ex)
 		{
@@ -781,7 +781,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 				continue;
 			}
 
-			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1), ref(a2), ref(a3), volume);
+			mChiralVolumeRestraints.emplace_back(ref(cc), ref(a1), ref(a2), ref(a3), volume, center.volumeSign == ChiralVolumeSign::both);
 		}
 		catch (const std::exception &ex)
 		{
