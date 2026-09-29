@@ -1190,6 +1190,8 @@ cif::datablock Compound::generateCCDCompound() const
 
 CompoundFactory::CompoundFactory()
 {
+	(void)get_version(); // force version info registration
+
 	fs::path mon_lib_list;
 	if (const char *clibdMon = getenv("CLIBD_MON"))
 		mon_lib_list = fs::path(clibdMon) / "list" / "mon_lib_list.cif";
@@ -1204,8 +1206,6 @@ CompoundFactory::CompoundFactory()
 	}
 	else
 		mImpl = new CLibdMonCompoundFactoryImpl(file, nullptr);
-
-	force_link = 42;
 }
 
 CompoundFactory::~CompoundFactory()
