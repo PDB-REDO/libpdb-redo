@@ -70,7 +70,7 @@ Compound::Compound(const cif::datablock &db, const std::string &id,
 			std::string atom_id, symbol, energy;
 			float charge, x, y, z;
 
-			cif::tie(atom_id, symbol, energy, charge, x, y, z) = row.get("atom_id", "type_symbol", "type_energy", "partial_charge", "x", "y", "z");
+			cif::tie(atom_id, symbol, energy, charge, x, y, z) = row.get("atom_id", "type_symbol", "type_energy", "charge", "x", "y", "z");
 
 			mAtoms.push_back({ atom_id, atom_type_traits(symbol).type(), energy, charge, x, y, z });
 		}

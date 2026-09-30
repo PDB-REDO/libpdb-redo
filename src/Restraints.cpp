@@ -53,7 +53,7 @@ void BondRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 
 void BondRestraint::print(const AtomLocationProvider &atoms) const
 {
-	double d = mDist - distance(atoms[mA], atoms[mB]);
+	double d = std::abs(mDist - distance(atoms[mA], atoms[mB]));
 
 	std::println("Bond: [{:8}] to [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
 		atoms.atom(mA), atoms.atom(mB),
