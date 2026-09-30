@@ -71,7 +71,7 @@ class Minimizer
 	virtual ~Minimizer() = default;
 
 	// factory method:
-	static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last, const XMap &xMap);
+	static Minimizer *create(const cif::crystal &crystal, const cif::mm::polymer &poly, int firstSeqID, int lastSeqID, const XMap &xMap);
 
 	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap &xMap)
 	{
@@ -131,7 +131,7 @@ class Minimizer
 
 	virtual void addAtom(const cif::mm::atom &atom);
 	virtual void addResidue(const cif::mm::residue &res);
-	virtual void addPolySection(const cif::mm::polymer &poly, int first, int last);
+	virtual void addPolySection(const cif::mm::polymer &poly, int firstSeqID, int lastSeqID);
 	virtual void addDensityMap(const XMap &xMap, float mapWeight);
 	virtual void Finish(const cif::crystal &crystal);
 

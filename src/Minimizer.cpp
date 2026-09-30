@@ -263,19 +263,19 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 	}
 }
 
-void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last)
+void Minimizer::addPolySection(const cif::mm::polymer &poly, int firstSeqID, int lastSeqID)
 {
 	const cif::mm::monomer *prev = nullptr; // used to link residues
 
 	for (auto &r : poly)
 	{
-		if (r.get_seq_id() < first)
+		if (r.get_seq_id() < firstSeqID)
 		{
 			prev = &r;
 			continue;
 		}
 
-		if (r.get_seq_id() <= last)
+		if (r.get_seq_id() <= lastSeqID)
 			addResidue(r);
 
 		if (prev != nullptr)
@@ -323,7 +323,7 @@ void Minimizer::addPolySection(const cif::mm::polymer &poly, int first, int last
 				//			continue;
 			}
 
-		if (r.get_seq_id() > last)
+		if (r.get_seq_id() > lastSeqID)
 			break;
 
 		prev = &r;
@@ -1305,19 +1305,12 @@ void GSLMinimizer::Fdf(const gsl_vector *x, double *f, gsl_vector *df)
 
 // --------------------------------------------------------------------
 
-Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int first, int last,
+Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer &poly, int firstSeqID, int lastSeqID,
 	const XMap &xMap)
 {
 	std::unique_ptr<Minimizer> result(new GSLMinimizer(*poly.get_structure()));
 
-	for (int i = first; i <= last; ++i)
-	{
-		auto &res = poly[i];
-		for (auto a : res.atoms())
-			result->addAtom(a);
-	}
-
-	result->addPolySection(poly, poly[first].get_seq_id(), poly[last].get_seq_id());
+	result->addPolySection(poly, firstSeqID, lastSeqID);
 	result->addDensityMap(xMap, kDefaultMapWeight);
 	result->Finish(crystal);
 	return result.release();
