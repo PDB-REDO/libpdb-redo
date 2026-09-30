@@ -1317,7 +1317,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer
 			result->addAtom(a);
 	}
 
-	result->addPolySection(poly, first, last);
+	result->addPolySection(poly, poly[first].get_seq_id(), poly[last].get_seq_id());
 	result->addDensityMap(xMap, kDefaultMapWeight);
 	result->Finish(crystal);
 	return result.release();
