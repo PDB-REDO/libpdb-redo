@@ -889,14 +889,14 @@ struct Distortion
 	std::tuple<double, double> d;
 };
 
-void Minimizer::analyseRestraints()
+void Minimizer::analyseRestraints(float inMinDistortion)
 {
 	AtomLocationProvider loc(mReferencedAtoms);
 
 	for (auto r : mRestraints)
 	{
 		auto distortion = r->f(loc);
-		if (distortion < 5)
+		if (distortion < inMinDistortion)
 			continue;
 
 		r->print(loc);
@@ -1327,10 +1327,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		result->addAtom(atom);
 
 		auto &res = structure.get_residue(atom);
-
-		auto ri = std::ranges::find_if(residues, [rp = &res](const cif::mm::residue *r)
-			{ return r == rp; });
-		if (ri != residues.end())
+		if (std::ranges::contains(residues, &res))
 			continue;
 
 		residues.emplace_back(&res);
@@ -1347,9 +1344,10 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 
 	auto &polymers = structure.polymers();
 
-	for (auto ri = residues.begin(); ri != residues.end(); ++ri)
+	auto ri = residues.begin();
+	while (ri != residues.end())
 	{
-		auto res = *ri;
+		auto res = *ri++;
 		auto monomer = dynamic_cast<const cif::mm::monomer *>(res);
 
 		if (monomer == nullptr)
@@ -1361,10 +1359,8 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 		int startSeqID = monomer->get_seq_id();
 		int endSeqID = startSeqID;
 
-		while (ri != residues.end())
+		while (ri != residues.end() and (*ri)->get_seq_id() == endSeqID + 1 and (*ri)->get_asym_id() == monomer->get_asym_id())
 		{
-			if ((*ri)->get_seq_id() != endSeqID or (*ri)->get_asym_id() != monomer->get_asym_id())
-				break;
 			++endSeqID;
 			++ri;
 		}
@@ -1375,9 +1371,6 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 			throw std::runtime_error("cif::mm::polymer not found for asym ID " + monomer->get_asym_id());
 
 		result->addPolySection(*pi, startSeqID, endSeqID);
-
-		if (ri == residues.end())
-			break;
 	}
 
 	// Add any residue that might be bonded to our list of residues via a struct_conn record

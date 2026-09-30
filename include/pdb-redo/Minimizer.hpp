@@ -121,7 +121,7 @@ class Minimizer
 	[[nodiscard]] virtual std::vector<std::pair<std::string, cif::point>> getAtoms() const = 0;
 	virtual void storeAtomLocations() = 0;
 
-	void analyseRestraints();
+	void analyseRestraints(float inMinDistortion = 5.0f);
 
   protected:
 
