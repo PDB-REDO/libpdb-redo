@@ -985,7 +985,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplPhenix::ParseFactor()
 			std::string chainID = m_value_s;
 			if (m_lookahead == pt_NUMBER) // sigh
 			{
-				chainID = to_string(m_value_i);
+				chainID = std::to_string(m_value_i);
 				match(pt_NUMBER);
 			}
 			else
@@ -1223,7 +1223,7 @@ std::string TLSSelectionParserImplBuster::to_string(int token)
 	switch (token)
 	{
 		case bt_IDENT: return "identifier (" + m_value_s + ')';
-		case bt_NUMBER: return "number (" + to_string(m_value_i) + ')';
+		case bt_NUMBER: return "number (" + std::to_string(m_value_i) + ')';
 		case bt_EOLN: return "end of line";
 
 		default:
@@ -1529,7 +1529,7 @@ int TLSSelectionParserImplBusterOld::get_next_token()
 			case st_CHAINRESID:
 				if (isalpha(ch))
 				{
-					m_value_s += to_string(m_value_i);
+					m_value_s += std::to_string(m_value_i);
 					m_value_s += ch;
 					state = st_IDENT;
 				}
@@ -1611,8 +1611,8 @@ std::string TLSSelectionParserImplBusterOld::to_string(int token)
 	{
 		case pt_IDENT: return "identifier (" + m_value_s + ')';
 		case pt_STRING: return "std::string (" + m_value_s + ')';
-		case pt_NUMBER: return "number (" + to_string(m_value_i) + ')';
-		case pt_RANGE: return "range (" + to_string(m_value_r[0]) + ':' + to_string(m_value_r[1]) + ')';
+		case pt_NUMBER: return "number (" + std::to_string(m_value_i) + ')';
+		case pt_RANGE: return "range (" + std::to_string(m_value_r[0]) + ':' + std::to_string(m_value_r[1]) + ')';
 		case pt_EOLN: return "end of line";
 
 		case pt_KW_ALL: return "ALL";
@@ -1700,7 +1700,7 @@ std::unique_ptr<tls_selection> TLSSelectionParserImplBusterOld::ParseFactor()
 			std::string chainID = m_value_s;
 			if (m_lookahead == pt_NUMBER) // sigh
 			{
-				chainID = to_string(m_value_i);
+				chainID = std::to_string(m_value_i);
 				match(pt_NUMBER);
 			}
 			else
