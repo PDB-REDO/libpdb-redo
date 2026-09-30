@@ -84,6 +84,12 @@ Minimizer::Minimizer(const cif::mm::structure &structure)
 {
 }
 
+void Minimizer::addAtom(const cif::mm::atom &atom)
+{
+	if (not std::ranges::contains(mAtoms, atom))
+		mAtoms.emplace_back(atom);
+}
+
 void Minimizer::addResidue(const cif::mm::residue &res)
 {
 	auto compound = CompoundFactory::instance().create(res.get_compound_id()); // r.get_compound();
@@ -93,7 +99,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 	for (auto a : res.atoms())
 	{
 		(void)ref(a);
-		mAtoms.push_back(a);
+		addAtom(a);
 	}
 
 	auto isHydrogen = [compound](const std::string &atom_id)
@@ -889,11 +895,8 @@ void Minimizer::analyseRestraints()
 
 	for (auto r : mRestraints)
 	{
-		auto distortion = r->distortion(loc);
-		if (distortion == std::tuple<double, double>{ -1, -1 })
-			continue;
-
-		if (std::get<0>(distortion) < 5)
+		auto distortion = r->f(loc);
+		if (distortion < 5)
 			continue;
 
 		r->print(loc);
@@ -1311,7 +1314,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, const cif::mm::polymer
 	{
 		auto &res = poly[i];
 		for (auto a : res.atoms())
-			result->mAtoms.emplace_back(a);
+			result->addAtom(a);
 	}
 
 	result->addPolySection(poly, first, last);
@@ -1328,7 +1331,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 
 	for (auto atom : atoms)
 	{
-		result->mAtoms.emplace_back(atom);
+		result->addAtom(atom);
 
 		auto &res = structure.get_residue(atom);
 

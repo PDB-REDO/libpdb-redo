@@ -136,7 +136,7 @@ TEST_CASE("refine_1")
 
 	auto &res3 = chain.at(2);
 	for (auto a : res3.atoms())
-		structure.move_atom(a, cif::nudge(a.get_location(), 0.5f));
+		structure.move_atom(a, cif::nudge(a.get_location(), 0.3f));
 
 	cif::file refFile(example.string());
 	cif::mm::structure reference(refFile);

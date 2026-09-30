@@ -8,7 +8,6 @@
 
 #include "pdb-redo/Restraints.hpp"
 
-#include "cif++/point.hpp"
 #include "pdb-redo/Minimizer.hpp"
 
 #include <algorithm>
@@ -52,27 +51,13 @@ void BondRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) const
 	df.add(mB, (a2 - a1) * c);
 }
 
-std::tuple<double, double> BondRestraint::distortion(const AtomLocationProvider &atoms) const
-{
-	auto a1 = atoms[mA], a2 = atoms[mB];
-
-	auto bi = distance(a1, a2);
-	if (bi < 0.1)
-		bi = 0.1;
-
-	auto d = bi - mDist;
-	auto z = d / mDistESD;
-
-	return { z * z, d };
-}
-
 void BondRestraint::print(const AtomLocationProvider &atoms) const
 {
-	auto d = distortion(atoms);
+	double d = mDist - distance(atoms[mA], atoms[mB]);
 
 	std::println("Bond: [{:8}] to [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
 		atoms.atom(mA), atoms.atom(mB),
-		std::get<1>(d), mDist, mDistESD, std::get<0>(d));
+		d, mDist, mDistESD, f(atoms));
 }
 
 // --------------------------------------------------------------------
@@ -100,19 +85,19 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 	if (cif::VERBOSE > 2)
 		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ":\n";
 
-	DPoint k = atoms[mA], l = atoms[mB], m = atoms[mC];
+	DPoint p0 = atoms[mA], p1 = atoms[mB], m = atoms[mC];
 
-	auto aVec = (k - l);
-	auto bVec = (m - l);
+	auto aVec = (p0 - p1);
+	auto bVec = (m - p1);
 
-	auto a = distance(k, l);
+	auto a = distance(p0, p1);
 	if (a < 0.01)
 	{
 		a = 0.01;
 		aVec = DPoint{ 0.01, 0.01, 0.01 };
 	};
 
-	auto b = distance(m, l);
+	auto b = distance(m, p1);
 	if (b < 0.01)
 	{
 		b = 0.01;
@@ -133,66 +118,29 @@ void AngleRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) cons
 	auto wf = 2 * (theta - target) * kRadToDegree * kRadToDegree / (mESD * mESD);
 	auto prem = -wf / std::sin(theta);
 
-	df.add(mA, prem * (cosTheta * (l - k) / (a * a) + (m - l) / (a * b)));
-	df.add(mC, prem * (cosTheta * (l - m) / (b * b) + (k - l) / (a * b)));
+	df.add(mA, prem * (cosTheta * (p1 - p0) / (a * a) + (m - p1) / (a * b)));
+	df.add(mC, prem * (cosTheta * (p1 - m) / (b * b) + (p0 - p1) / (a * b)));
 
-	auto term1 = (l - k) * -cosTheta / (a * a) + (l - m) * -cosTheta / (b * b);
-	auto term2 = ((l - k) + (l - m)) / (a * b);
+	auto term1 = (p1 - p0) * -cosTheta / (a * a) + (p1 - m) * -cosTheta / (b * b);
+	auto term2 = ((p1 - p0) + (p1 - m)) / (a * b);
 
 	df.add(mB, prem * (term1 + term2));
 }
 
-std::tuple<double, double> AngleRestraint::distortion(const AtomLocationProvider &atoms) const
-{
-	const double kRadToDegree = 180.0 / std::numbers::pi, kDegreeToRad = 1 / kRadToDegree;
-
-	if (cif::VERBOSE > 2)
-		std::cerr << "angle::df() " << atoms.atom(mA) << "/" << atoms.atom(mB) << "/" << atoms.atom(mC) << ' ' << ":\n";
-
-	DPoint k = atoms[mA], l = atoms[mB], m = atoms[mC];
-
-	auto aVec = (k - l);
-	auto bVec = (m - l);
-
-	auto a = distance(k, l);
-	if (a < 0.01)
-	{
-		a = 0.01;
-		aVec = DPoint{ 0.01, 0.01, 0.01 };
-	};
-
-	auto b = distance(m, l);
-	if (b < 0.01)
-	{
-		b = 0.01;
-		bVec = DPoint{ 0.01, 0.01, 0.01 };
-	};
-
-	auto cosTheta = dot_product(aVec, bVec) / (a * b);
-	if (cosTheta > 1.0)
-		cosTheta = 1.0;
-	if (cosTheta < -1.0)
-		cosTheta = -1.0;
-	auto theta = std::acos(cosTheta);
-	if (theta < 0.001)
-		theta = 0.001;
-
-	auto angle = theta * kRadToDegree;
-
-	auto d = angle - mAngle;
-	auto z = d / mESD;
-
-	return { z * z, d };
-}
-
 void AngleRestraint::print(const AtomLocationProvider &atoms) const
 {
-	// std::cout << "angle " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " => " << mAngle << " / " << mESD << '\n';
-	auto d = distortion(atoms);
+	DPoint p[3] = { atoms[mA], atoms[mB], atoms[mC] };
+
+	double c = cosinus_angle(p[1], p[0], p[1], p[2]);
+	double angle = std::atan2(std::sqrt(1 - c * c), c) * 180 / std::numbers::pi;
+
+	double d = mAngle - angle;
+	double distortion = (d * d) / (mESD * mESD);
 
 	std::println("Angle: [{:8}] - [{:8}] - [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
 		atoms.atom(mA), atoms.atom(mB), atoms.atom(mC),
-		std::get<1>(d), mAngle, mESD, std::get<0>(d));
+		d, mAngle, mESD, distortion);
+	// std::cout << "angle " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " => " << mAngle << " / " << mESD << '\n';
 }
 
 // --------------------------------------------------------------------
@@ -327,14 +275,22 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 	}
 }
 
-std::tuple<double, double> TorsionRestraint::distortion(const AtomLocationProvider &atoms) const
-{
-	return { -1, -1 };
-}
-
 void TorsionRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "torsion " << atoms.atom(mA) << " ; " << atoms.atom(mB) << " ; " << atoms.atom(mC) << " ; " << atoms.atom(mD) << " => " << mPeriodicity << " / " << mESD << '\n';
+	auto cos_a1 = cosinus_angle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
+	auto cos_a2 = cosinus_angle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
+
+	double period = 360.0;
+	if (mPeriodicity > 0)
+		period /= mPeriodicity;
+
+	auto theta = dihedral_angle(atoms[mA], atoms[mB], atoms[mC], atoms[mD]);
+	auto diff = std::fmod(std::abs(theta - mTarget) + period / 2, period) - period / 2;
+	auto distortion = (diff * diff) / (mESD * mESD);
+
+	std::println("Torsion: [{:8}] - [{:8}] - [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
+		atoms.atom(mA), atoms.atom(mB), atoms.atom(mC),
+		diff, mTarget, mESD, distortion);
 }
 
 // --------------------------------------------------------------------
@@ -381,7 +337,7 @@ void ChiralVolumeRestraint::df(const AtomLocationProvider &atoms, DFCollector &d
 	df.add(mA3, s * DPoint{ a.m_y * b.m_z - a.m_z * b.m_y, a.m_z * b.m_x - a.m_x * b.m_z, a.m_x * b.m_y - a.m_y * b.m_x });
 }
 
-std::tuple<double, double> ChiralVolumeRestraint::distortion(const AtomLocationProvider &atoms) const
+void ChiralVolumeRestraint::print(const AtomLocationProvider &atoms) const
 {
 	DPoint centre = atoms[mCentre];
 	DPoint a = atoms[mA1] - centre;
@@ -391,19 +347,11 @@ std::tuple<double, double> ChiralVolumeRestraint::distortion(const AtomLocationP
 	auto chiralVolume = dot_product(a, cross_product(b, c));
 
 	double d = mBoth ? std::abs(chiralVolume) - std::abs(mVolume) : chiralVolume - mVolume;
+	auto distortion = d * d / (mESD * mESD);
 
-	return { d * d / (mESD * mESD), d };
-}
-
-void ChiralVolumeRestraint::print(const AtomLocationProvider &atoms) const
-{
-	auto d = distortion(atoms);
-
-	std::println("Chiral Volume: [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
+	std::println("Chirality: [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
 		atoms.atom(mCentre),
-		std::get<1>(d), mVolume, mESD, std::get<0>(d));
-
-	// std::cout << "chiral volume " << atoms.atom(mA1) << " ; " << atoms.atom(mA2) << " ; " << atoms.atom(mA3) << " => " << mVolume << " / " << mESD << '\n';
+		d, mVolume, mESD, distortion);
 }
 
 // --------------------------------------------------------------------
@@ -528,19 +476,13 @@ void PlanarityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) 
 	}
 }
 
-std::tuple<double, double> PlanarityRestraint::distortion(const AtomLocationProvider &atoms) const
-{
-	return { -1, -1 };
-}
-
 void PlanarityRestraint::print(const AtomLocationProvider &atoms) const
 {
-	std::cout << "plane ";
-
+	std::vector<std::string> as;
 	for (auto &a : mAtoms)
-		std::cout << atoms.atom(a) << ' ';
+		as.emplace_back(std::format("[{:8}]", atoms.atom(a)));
 
-	std::cout << "=> " << 0 << " / " << mESD << '\n';
+	std::println("Plane: {} distortion {:.3f}", cif::join(as, " - "), f(atoms));
 }
 
 // --------------------------------------------------------------------
@@ -587,47 +529,11 @@ void NonBondedContactRestraint::df(const AtomLocationProvider &atoms, DFCollecto
 	}
 }
 
-std::tuple<double, double> NonBondedContactRestraint::distortion(const AtomLocationProvider &atoms) const
-{
-	const double lj_epsilon = 1.0;
-	double Vlj_at_rmax = -0.016316891136 * lj_epsilon; // see Lennard-Jones truncated and shifted for
-
-	auto a1 = atoms[mA], a2 = atoms[mB];
-
-	auto dist_sq = cif::distance_squared(a1, a2);
-	auto dist = std::sqrt(dist_sq);
-	auto delta = dist - mMinDist;
-
-	// Duh
-
-	auto lj_sigma = mMinDist;
-	auto lj_r_min = std::pow(2.0, 1.0 / 6.0) * lj_sigma;
-
-	auto max_dist = 2.5 * lj_sigma;
-
-	if (dist_sq < 0.01)
-		dist_sq = 0.01;
-
-	auto alpha_sq = lj_r_min * lj_r_min / dist_sq;
-	auto alpha_up_6 = alpha_sq * alpha_sq * alpha_sq;
-	auto alpha_up_12 = alpha_up_6 * alpha_up_6;
-
-	auto V_lj = lj_epsilon * (alpha_up_12 - 2 * alpha_up_6);
-
-	V_lj += Vlj_at_rmax;
-
-	return { V_lj, delta };
-}
-
 void NonBondedContactRestraint::print(const AtomLocationProvider &atoms) const
 {
-	// std::cout << "nbc " << atoms.atom(mA) << " " << atoms.atom(mB)
-	// 		  << " => " << distance(atoms[mA], atoms[mB]) << ' ' << mMinDist << " / " << mDistESD << '\n';
-	auto d = distortion(atoms);
-
-	std::println("Bond: [{:8}] to [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
+	std::println("NBC: [{:8}] to [{:8}] delta {:.3f} target {:.3f} sigma {:.3f} distortion {:.3f}",
 		atoms.atom(mA), atoms.atom(mB),
-		std::get<1>(d), mMinDist, mDistESD, std::get<0>(d));
+		distance(atoms[mA], atoms[mB]), mMinDist, mDistESD, f(atoms));
 }
 
 // --------------------------------------------------------------------
@@ -679,11 +585,6 @@ void DensityRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 		df.add(a.first, DPoint{ gradOrth.dx(), gradOrth.dy(), gradOrth.dz() } * mMapWeight * -a.second);
 	}
-}
-
-std::tuple<double, double> DensityRestraint::distortion(const AtomLocationProvider &atoms) const
-{
-	return { -1, -1 };
 }
 
 void DensityRestraint::print(const AtomLocationProvider &atoms) const

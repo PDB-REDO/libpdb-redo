@@ -35,7 +35,6 @@ struct Restraint
 
 	[[nodiscard]] virtual double f(const AtomLocationProvider &atoms) const = 0;
 	virtual void df(const AtomLocationProvider &atoms, DFCollector &d) const = 0;
-	[[nodiscard]] virtual std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const = 0;
 
 	virtual void print(const AtomLocationProvider &atoms) const = 0;
 
@@ -54,7 +53,6 @@ struct BondRestraint : public Restraint
 
 	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
-	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
 	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
@@ -79,7 +77,6 @@ struct AngleRestraint : public Restraint
 
 	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
-	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
 	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
@@ -106,7 +103,6 @@ struct TorsionRestraint : public Restraint
 
 	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
-	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
 	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
@@ -146,7 +142,6 @@ struct ChiralVolumeRestraint : public Restraint
 
 	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
-	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
 	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
@@ -171,7 +166,6 @@ struct PlanarityRestraint : public Restraint
 
 	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
-	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
 	void calculatePlaneFunction(const AtomLocationProvider &atoms, double abcd[4]) const;
@@ -198,7 +192,6 @@ struct NonBondedContactRestraint : public Restraint
 
 	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
-	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
 	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
@@ -217,20 +210,15 @@ struct DensityRestraint : public Restraint
 
 	[[nodiscard]] double f(const AtomLocationProvider &atoms) const override;
 	void df(const AtomLocationProvider &atoms, DFCollector &d) const override;
-	[[nodiscard]] std::tuple<double, double> distortion(const AtomLocationProvider &atoms) const override;
 	void print(const AtomLocationProvider &atoms) const override;
 
 	[[nodiscard]] std::vector<AtomRef> referencedAtoms() const override
 	{
-#if __cpp_lib_ranges_to_container >= 202202L and __GNUC__ >= 16
-		return mAtoms | std::views::transform([](auto t) { return std::get<0>(t); }) | std::ranges::to<std::vector>();
-#else
 		std::vector<AtomRef> result;
 		result.reserve(mAtoms.size());
 		for (auto &a : mAtoms)
 			result.emplace_back(a.first);
 		return result;
-#endif
 	}
 
 

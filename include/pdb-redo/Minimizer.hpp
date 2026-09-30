@@ -129,6 +129,7 @@ class Minimizer
 
 	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap *xMap);
 
+	virtual void addAtom(const cif::mm::atom &atom);
 	virtual void addResidue(const cif::mm::residue &res);
 	virtual void addPolySection(const cif::mm::polymer &poly, int first, int last);
 	virtual void addDensityMap(const XMap &xMap, float mapWeight);
