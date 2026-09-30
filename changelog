@@ -1,4 +1,10 @@
 Version 3.6.0
+
+Version 3.5.2
+- Fixed some issues in refinement calculations
+- Added calculating densities in a hull around a ligand
+
+Version 3.5.1
 - Added blob finding code
 - Added fit shape code, fitting a rigid body
 - Changes for new libcifpp

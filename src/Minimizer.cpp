@@ -12,8 +12,10 @@
 #include "pdb-redo/Restraints.hpp"
 
 #include <algorithm>
+#include <cif++/compound.hpp>
 #include <cif++/point.hpp>
 #include <cmath>
+#include <exception>
 #include <filesystem>
 #include <format>
 #include <initializer_list>
@@ -88,15 +90,34 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 	if (not compound)
 		throw std::runtime_error("Missing compound information for " + res.get_compound_id());
 
-	for (auto &b : compound->bonds())
+	for (auto a : res.atoms())
+	{
+		(void)ref(a);
+		mAtoms.push_back(a);
+	}
+
+	auto isHydrogen = [compound](const std::string &atom_id)
 	{
 		try
 		{
-			if (compound->get_atom_by_atom_id(b.atomID[0]).typeSymbol == cif::H or
-				compound->get_atom_by_atom_id(b.atomID[1]).typeSymbol == cif::H)
-			{
-				continue;
-			}
+			return compound->get_atom_by_atom_id(atom_id).typeSymbol == cif::H;
+		}
+		catch (const std::out_of_range &ex)
+		{
+			std::throw_with_nested(std::runtime_error(std::format("The restraint file for {} contains a reference to a non existing atom {}", compound->id(), atom_id)));
+		}
+	};
+
+	for (auto &b : compound->bonds())
+	{
+		if (isHydrogen(b.atomID[0]) or
+			isHydrogen(b.atomID[1]))
+		{
+			continue;
+		}
+
+		try
+		{
 
 			cif::mm::atom a1 = res.get_atom_by_atom_id(b.atomID[0]);
 			cif::mm::atom a2 = res.get_atom_by_atom_id(b.atomID[1]);
@@ -116,15 +137,15 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 
 	for (auto &a : compound->angles())
 	{
+		if (isHydrogen(a.atomID[0]) or
+			isHydrogen(a.atomID[1]) or
+			isHydrogen(a.atomID[2]))
+		{
+			continue;
+		}
+
 		try
 		{
-			if (compound->get_atom_by_atom_id(a.atomID[0]).typeSymbol == cif::H or
-				compound->get_atom_by_atom_id(a.atomID[1]).typeSymbol == cif::H or
-				compound->get_atom_by_atom_id(a.atomID[2]).typeSymbol == cif::H)
-			{
-				continue;
-			}
-
 			cif::mm::atom a1 = res.get_atom_by_atom_id(a.atomID[0]);
 			cif::mm::atom a2 = res.get_atom_by_atom_id(a.atomID[1]);
 			cif::mm::atom a3 = res.get_atom_by_atom_id(a.atomID[2]);
@@ -148,16 +169,16 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 		if (a.esd == 0)
 			continue;
 
+		if (isHydrogen(a.atomID[0]) or
+			isHydrogen(a.atomID[1]) or
+			isHydrogen(a.atomID[2]) or
+			isHydrogen(a.atomID[3]))
+		{
+			continue;
+		}
+
 		try
 		{
-			if (compound->get_atom_by_atom_id(a.atomID[0]).typeSymbol == cif::H or
-				compound->get_atom_by_atom_id(a.atomID[1]).typeSymbol == cif::H or
-				compound->get_atom_by_atom_id(a.atomID[2]).typeSymbol == cif::H or
-				compound->get_atom_by_atom_id(a.atomID[3]).typeSymbol == cif::H)
-			{
-				continue;
-			}
-
 			cif::mm::atom a1 = res.get_atom_by_atom_id(a.atomID[0]);
 			cif::mm::atom a2 = res.get_atom_by_atom_id(a.atomID[1]);
 			cif::mm::atom a3 = res.get_atom_by_atom_id(a.atomID[2]);
@@ -176,15 +197,15 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 
 	for (auto &cv : compound->chiralCentres())
 	{
+		if (isHydrogen(cv.atomID[0]) or
+			isHydrogen(cv.atomID[1]) or
+			isHydrogen(cv.atomID[2]))
+		{
+			continue;
+		}
+
 		try
 		{
-			if (compound->get_atom_by_atom_id(cv.atomID[0]).typeSymbol == cif::H or
-				compound->get_atom_by_atom_id(cv.atomID[1]).typeSymbol == cif::H or
-				compound->get_atom_by_atom_id(cv.atomID[2]).typeSymbol == cif::H)
-			{
-				continue;
-			}
-
 			cif::mm::atom cc = res.get_atom_by_atom_id(cv.atomIDCentre);
 			cif::mm::atom a1 = res.get_atom_by_atom_id(cv.atomID[0]);
 			cif::mm::atom a2 = res.get_atom_by_atom_id(cv.atomID[1]);
@@ -214,7 +235,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 
 			for (auto a : p.atomID)
 			{
-				if (compound->get_atom_by_atom_id(a).typeSymbol == cif::H)
+				if (isHydrogen(a))
 					continue;
 
 				auto a1 = res.get_atom_by_atom_id(a);
@@ -634,12 +655,18 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 	                  ? link.bonds().front().atom[0].atomID == atom_id_a
 	                  : link.bonds().front().atom[1].atomID == atom_id_a;
 
-	auto getCompoundAtom = [&](const LinkAtom &la)
+	auto isHydrogen = [&](const LinkAtom &la)
 	{
-		if (la.compID == 1)
-			return a_is_1 ? c1->get_atom_by_atom_id(la.atomID) : c2->get_atom_by_atom_id(la.atomID);
-		else
-			return a_is_1 ? c2->get_atom_by_atom_id(la.atomID) : c1->get_atom_by_atom_id(la.atomID);
+		auto c = la.compID == 1 or not a_is_1 ? c1 : c2;
+
+		try
+		{
+			return c->get_atom_by_atom_id(la.atomID).type_symbol == cif::H;
+		}
+		catch (const std::out_of_range &ex)
+		{
+			std::throw_with_nested(std::runtime_error(std::format("The restraint file for {} contains a reference to a non existing atom {}", c->id(), la.atomID)));
+		}
 	};
 
 	auto getAtom = [&](const LinkAtom &la)
@@ -652,14 +679,14 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 
 	for (auto &bond : link.bonds())
 	{
+		if (isHydrogen(bond.atom[0]) or
+			isHydrogen(bond.atom[1]))
+		{
+			continue;
+		}
+
 		try
 		{
-			if (getCompoundAtom(bond.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(bond.atom[1]).type_symbol == cif::H)
-			{
-				continue;
-			}
-
 			cif::mm::atom a1 = getAtom(bond.atom[0]);
 			cif::mm::atom a2 = getAtom(bond.atom[1]);
 
@@ -675,15 +702,15 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 
 	for (auto &angle : link.angles())
 	{
+		if (isHydrogen(angle.atom[0]) or
+			isHydrogen(angle.atom[1]) or
+			isHydrogen(angle.atom[2]))
+		{
+			continue;
+		}
+
 		try
 		{
-			if (getCompoundAtom(angle.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(angle.atom[1]).type_symbol == cif::H or
-				getCompoundAtom(angle.atom[2]).type_symbol == cif::H)
-			{
-				continue;
-			}
-
 			cif::mm::atom a1 = getAtom(angle.atom[0]);
 			cif::mm::atom a2 = getAtom(angle.atom[1]);
 			cif::mm::atom a3 = getAtom(angle.atom[2]);
@@ -703,16 +730,16 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 		if (torsion.esd == 0)
 			continue;
 
+		if (isHydrogen(torsion.atom[0]) or
+			isHydrogen(torsion.atom[1]) or
+			isHydrogen(torsion.atom[2]) or
+			isHydrogen(torsion.atom[3]))
+		{
+			continue;
+		}
+
 		try
 		{
-			if (getCompoundAtom(torsion.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(torsion.atom[1]).type_symbol == cif::H or
-				getCompoundAtom(torsion.atom[2]).type_symbol == cif::H or
-				getCompoundAtom(torsion.atom[3]).type_symbol == cif::H)
-			{
-				continue;
-			}
-
 			cif::mm::atom a1 = getAtom(torsion.atom[0]);
 			cif::mm::atom a2 = getAtom(torsion.atom[1]);
 			cif::mm::atom a3 = getAtom(torsion.atom[2]);
@@ -730,15 +757,15 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 
 	for (auto &center : link.chiralCentres())
 	{
+		if (isHydrogen(center.atom[0]) or
+			isHydrogen(center.atom[1]) or
+			isHydrogen(center.atom[2]))
+		{
+			continue;
+		}
+
 		try
 		{
-			if (getCompoundAtom(center.atom[0]).type_symbol == cif::H or
-				getCompoundAtom(center.atom[1]).type_symbol == cif::H or
-				getCompoundAtom(center.atom[2]).type_symbol == cif::H)
-			{
-				continue;
-			}
-
 			cif::mm::atom cc = getAtom(center.atomCentre);
 			cif::mm::atom a1 = getAtom(center.atom[0]);
 			cif::mm::atom a2 = getAtom(center.atom[1]);
@@ -767,13 +794,16 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 
 	for (auto &plane : link.planes())
 	{
+		for (auto atom : plane.atoms)
+			(void)isHydrogen(atom);
+
 		try
 		{
 			std::vector<AtomRef> atoms;
 
 			for (auto atom : plane.atoms)
 			{
-				if (getCompoundAtom(atom).type_symbol == cif::H)
+				if (isHydrogen(atom))
 					continue;
 
 				atoms.push_back(ref(getAtom(atom)));
