@@ -256,7 +256,7 @@ void Minimizer::addResidue(const cif::mm::residue &res)
 		}
 		catch (const std::exception &ex)
 		{
-			if (cif::VERBOSE > 1)
+			if (cif::VERBOSE > 0)
 				std::cerr << "While processing planarity restraints: " << ex.what() << '\n';
 			continue;
 		}
@@ -663,7 +663,7 @@ void Minimizer::addLinkRestraints(const cif::mm::residue &a, const cif::mm::resi
 
 	auto isHydrogen = [&](const LinkAtom &la)
 	{
-		auto c = la.compID == 1 or not a_is_1 ? c1 : c2;
+		auto c = (la.compID == 1) == a_is_1 ? c1 : c2;
 
 		try
 		{
@@ -884,11 +884,6 @@ double Minimizer::score(const AtomLocationProvider &loc)
 	return result;
 }
 
-struct Distortion
-{
-	std::tuple<double, double> d;
-};
-
 void Minimizer::analyseRestraints(float inMinDistortion)
 {
 	AtomLocationProvider loc(mReferencedAtoms);
@@ -1051,6 +1046,10 @@ void GSLDFCollector::add(AtomRef atom, double dx, double dy, double dz)
 {
 	assert(atom < mIndex.size());
 
+	assert(not std::isnan(dx));
+	assert(not std::isnan(dy));
+	assert(not std::isnan(dz));
+
 	std::size_t ix = mIndex[atom];
 	if (ix != kRefSentinel)
 	{
@@ -1136,12 +1135,12 @@ double GSLMinimizer::refine(bool storeAtoms)
 	m_s = gsl_multimin_fdfminimizer_alloc(T, 3 * mAtoms.size());
 
 	// float tolerance = 0.06f;
-	// double stepSize = 0.25 * gsl_blas_dnrm2(x);
-	// float tolerance = 0.1f;
-	// double stepSize = 0.25;
+	double stepSize = 0.1 * gsl_blas_dnrm2(x);
+	float tolerance = 0.1f;
+	// double stepSize = 0.1;
 
-	float tolerance = 0;
-	float stepSize = 0.1f;
+	// float tolerance = 0;
+	// float stepSize = 0.1f;
 
 	gsl_multimin_fdfminimizer_set(m_s, &fdf, x, stepSize, tolerance);
 
