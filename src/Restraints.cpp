@@ -277,9 +277,6 @@ void TorsionRestraint::df(const AtomLocationProvider &atoms, DFCollector &df) co
 
 void TorsionRestraint::print(const AtomLocationProvider &atoms) const
 {
-	auto cos_a1 = cosinus_angle(atoms[mB], atoms[mA], atoms[mC], atoms[mB]);
-	auto cos_a2 = cosinus_angle(atoms[mC], atoms[mB], atoms[mD], atoms[mC]);
-
 	double period = 360.0;
 	if (mPeriodicity > 0)
 		period /= mPeriodicity;
