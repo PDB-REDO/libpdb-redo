@@ -4,6 +4,7 @@
 #pragma once
 
 #include <cif++/cif++.hpp>
+#include <cif++/symmetry.hpp>
 #include <cstdint>
 #include <filesystem>
 #include <iterator>
@@ -28,6 +29,7 @@ class BondMapException : public std::runtime_error
 class BondMap
 {
   public:
+	BondMap(const cif::datablock &db, const cif::crystal &crystal, std::optional<std::tuple<cif::point, float>> around = {}, int model_nr = 1);
 	BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, float>> around = {}, int model_nr = 1);
 
 	BondMap(const BondMap &) = delete;

@@ -143,7 +143,7 @@ TEST_CASE("sf-2")
 	mm.loadMTZ(gTestDir / ".." / "examples" / "1cbs_map.mtz", samplingRate);
 
 	auto &mm_fb = mm.fb();
-	auto maskedmap = mm_fb.masked(s, s.atoms());
+	auto maskedmap = mm_fb.masked(s.atoms());
 
 	pdb_redo::BlobFinder blobFinder(maskedmap, s);
 

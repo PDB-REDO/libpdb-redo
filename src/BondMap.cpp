@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <cif++/row.hpp>
+#include <cif++/symmetry.hpp>
 #include <fstream>
 #include <mutex>
 
@@ -147,6 +148,11 @@ BondMap &BondMap::operator=(BondMap &&bm)
 }
 
 BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, float>> around, int model_nr)
+	: BondMap(db, cif::crystal{ db }, around, model_nr)
+{
+}
+
+BondMap::BondMap(const cif::datablock &db, const cif::crystal &crystal, std::optional<std::tuple<cif::point, float>> around, int model_nr)
 {
 	using namespace cif::literals;
 
@@ -154,8 +160,6 @@ BondMap::BondMap(const cif::datablock &db, std::optional<std::tuple<cif::point, 
 
 	// First collect the atoms from the datablock
 	std::vector<cif::const_row_handle> atoms;
-
-	cif::crystal crystal(db);
 
 	for (auto rh : db["atom_site"].find("pdbx_PDB_model_num"_key == model_nr or "pdbx_PDB_model_num"_key == cif::null))
 	{

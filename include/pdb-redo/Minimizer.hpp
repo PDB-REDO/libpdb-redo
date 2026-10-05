@@ -172,7 +172,7 @@ class Minimizer
 
 	AtomRef ref(const cif::mm::atom &atom);
 
-	BondMap createBondMap();
+	BondMap createBondMap(const cif::crystal &crystal);
 
 	bool mElectronScattering = false; // TODO: use!
 

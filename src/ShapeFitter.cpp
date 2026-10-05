@@ -45,8 +45,7 @@ std::vector<cif::point> create_spherical_dots(int P)
 		result.emplace_back(
 			std::sin(lon) * std::cos(lat),
 			std::cos(lon) * std::cos(lat),
-			std::sin(lat)			
-		);
+			std::sin(lat));
 	}
 
 	// assert(result.size() == P);
@@ -78,15 +77,17 @@ cif::matrix3x3<float> createInertiaTensorForBlob(const std::vector<cif::point> p
 		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
 	}
 
-	cif::point p1{ If[0], If[3], If[4] }; p1.normalize();
-	cif::point p2{ If[3], If[1], If[5] }; p2.normalize();
-	cif::point p3{ If[4], If[5], If[2] }; p3.normalize();
+	cif::point p1{ If[0], If[3], If[4] };
+	p1.normalize();
+	cif::point p2{ If[3], If[1], If[5] };
+	p2.normalize();
+	cif::point p3{ If[4], If[5], If[2] };
+	p3.normalize();
 
-	cif::matrix3x3<float> result({
+	cif::matrix3x3<float> result({ //
 		p1.m_x, p1.m_y, p1.m_z,
 		p2.m_x, p2.m_y, p2.m_z,
-		p3.m_x, p3.m_y, p3.m_z
-	});	
+		p3.m_x, p3.m_y, p3.m_z });
 
 	return result;
 }
@@ -122,15 +123,17 @@ cif::matrix3x3<float> createInertiaTensorForLigand(const cif::mm::residue &res)
 		If[5] -= dp * pt.m_y * pt.m_z;                     // 23
 	}
 
-	cif::point p1{ If[0], If[3], If[4] }; p1.normalize();
-	cif::point p2{ If[3], If[1], If[5] }; p2.normalize();
-	cif::point p3{ If[4], If[5], If[2] }; p3.normalize();
+	cif::point p1{ If[0], If[3], If[4] };
+	p1.normalize();
+	cif::point p2{ If[3], If[1], If[5] };
+	p2.normalize();
+	cif::point p3{ If[4], If[5], If[2] };
+	p3.normalize();
 
-	cif::matrix3x3<float> result({
+	cif::matrix3x3<float> result({ //
 		p1.m_x, p1.m_y, p1.m_z,
 		p2.m_x, p2.m_y, p2.m_z,
-		p3.m_x, p3.m_y, p3.m_z
-	});	
+		p3.m_x, p3.m_y, p3.m_z });
 
 	return result;
 }
@@ -542,6 +545,13 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 	const auto dots = create_spherical_dots(15);
 
 	auto &ligand = structure.get_residue(asym_id);
+	cif::crystal crystal(structure.get_datablock());
+
+	// Make sure the atom locations to conform to the restraints
+	{
+		std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, ligand.atoms()));
+		minimizer->refine(true);
+	}
 
 	std::vector<cif::point> atomLocations;
 	for (auto a : ligand.atoms())
@@ -584,8 +594,6 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 		for (auto &loc : atomLocations)
 			loc.rotate(q, blobCenterOfMass);
 	}
-
-	cif::crystal crystal(structure.get_datablock());
 
 	double bestScore = 0;
 	std::vector<cif::point> bestLoc;

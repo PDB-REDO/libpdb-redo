@@ -14,6 +14,7 @@
 #include <algorithm>
 #include <cif++/compound.hpp>
 #include <cif++/point.hpp>
+#include <cif++/symmetry.hpp>
 #include <cmath>
 #include <exception>
 #include <filesystem>
@@ -377,7 +378,7 @@ void Minimizer::Finish(const cif::crystal &crystal)
 
 	std::set<std::tuple<AtomRef, AtomRef>> nbc;
 
-	BondMap bm = createBondMap();
+	BondMap bm = createBondMap(crystal);
 	// const BondMap &bm = mBonds;
 
 	auto add_nbc = [this, &nbc, &libAtom, &bm](const cif::mm::atom &a1, const cif::mm::atom &a2)
@@ -1469,7 +1470,7 @@ Minimizer *Minimizer::create(const cif::crystal &crystal, cif::mm::structure &st
 	return result.release();
 }
 
-BondMap Minimizer::createBondMap()
+BondMap Minimizer::createBondMap(const cif::crystal &crystal)
 {
 	std::vector<cif::point> pts;
 	for (auto a : mReferencedAtoms)
@@ -1477,7 +1478,7 @@ BondMap Minimizer::createBondMap()
 
 	const auto [center, radius] = cif::smallest_sphere_around_points(pts);
 
-	return { mStructure.get_datablock(), std::make_tuple(center, radius + kMaxNonBondedContactDistance) };
+	return { mStructure.get_datablock(), crystal, std::make_tuple(center, radius + kMaxNonBondedContactDistance) };
 }
 
 } // namespace pdb_redo
