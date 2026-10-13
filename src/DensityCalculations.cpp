@@ -27,7 +27,7 @@ HullDensity calculateDensityAroundLigand(const cif::mm::residue &lig, const clip
 			pts.emplace_back(loc + r * dot);
 	}
 
-	for (const auto [loc, r] : locationsAndRadii)
+	for (const auto &[loc, r] : locationsAndRadii)
 	{
 		std::erase_if(pts, [loc, r](const cif::point &p)
 			{ return distance(p, loc) < r; });
