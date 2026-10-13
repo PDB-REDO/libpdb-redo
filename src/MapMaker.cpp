@@ -679,10 +679,10 @@ void MapMaker<FTYPE>::loadMTZ(const fs::path &f, float samplingRate,
 		auto res = rc(hi.hkl().h(), hi.hkl().k(), hi.hkl().l());
 
 		if (mResHigh > res)
-			mResHigh = res;
+			mResHigh = static_cast<float>(res);
 
 		if (mResLow < res)
-			mResLow = res;
+			mResLow = static_cast<float>(res);
 	}
 
 	if (mResLow == 0 and mResHigh == 99)
@@ -1036,10 +1036,10 @@ void MapMaker<FTYPE>::recalc(const cif::mm::structure &structure,
 		auto res = rc(hi.hkl().h(), hi.hkl().k(), hi.hkl().l());
 
 		if (mResHigh > res)
-			mResHigh = res;
+			mResHigh = static_cast<float>(res);
 
 		if (mResLow < res)
-			mResLow = res;
+			mResLow = static_cast<float>(res);
 	}
 
 	if (cif::VERBOSE > 1)
