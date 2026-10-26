@@ -547,11 +547,11 @@ double fitShape(cif::mm::structure &structure, const std::string &asym_id, clipp
 	auto &ligand = structure.get_residue(asym_id);
 	cif::crystal crystal(structure.get_datablock());
 
-	// Make sure the atom locations to conform to the restraints
-	{
-		std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, ligand.atoms()));
-		minimizer->refine(true);
-	}
+	// // Make sure the atom locations to conform to the restraints
+	// {
+	// 	std::unique_ptr<pdb_redo::Minimizer> minimizer(pdb_redo::Minimizer::create(crystal, structure, ligand.atoms()));
+	// 	minimizer->refine(true);
+	// }
 
 	std::vector<cif::point> atomLocations;
 	for (auto a : ligand.atoms())
