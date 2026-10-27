@@ -850,13 +850,13 @@ void Minimizer::printStats()
 		std::println(std::cerr,"  {:15} {:10.1f} {:6.2f}", name, sum, z);
 	};
 
-	print("bond", rmsz(loc, mBondRestraints));
-	print("angle", rmsz(loc, mAngleRestraints));
-	print("torsion", rmsz(loc, mTorsionRestraints));
-	print("chiralityVolume", rmsz(loc, mChiralVolumeRestraints));
-	print("planarity", rmsz(loc, mPlanarityRestraints));
-	print("transpeptide", rmsz(loc, mTransPeptideRestraints));
-	print("nbc", rmsz(loc, mNonBondedContactRestraints));
+	print("bond", getBondRmsz(loc));
+	print("angle", getAngleRmsz(loc));
+	print("torsion", getTorsionRmsz(loc));
+	print("chiral volume", getChiralVolumeRmsz(loc));
+	print("planarity", getPlanarityRmsz(loc));
+	print("trans peptide", getTransPeptideRmsz(loc));
+	print("non bonded contact", getNonBondedContactRmsz(loc));
 
 	double densityScore = mDensityRestraint ? mDensityRestraint->f(loc) : 0;
 	std::println(std::cerr, "  {:15} {:10.1f}", "density", densityScore);

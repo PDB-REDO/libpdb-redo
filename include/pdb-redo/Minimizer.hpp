@@ -8,11 +8,11 @@
 
 #pragma once
 
-#include <cif++/cif++.hpp>
-
 #include "pdb-redo/BondMap.hpp"
 #include "pdb-redo/Compound.hpp"
 #include "pdb-redo/Restraints.hpp"
+
+#include <cif++/cif++.hpp>
 
 // --------------------------------------------------------------------
 
@@ -96,9 +96,9 @@ class Minimizer
 			[this, cb = std::forward<F>(cb)](TorsionRestraint &r)
 			{
 				return r.mA >= mAtoms.size() or r.mB >= mAtoms.size() or r.mC >= mAtoms.size() or r.mD >= mAtoms.size() or
-					cb(mAtoms[r.mA], mAtoms[r.mB], mAtoms[r.mC], mAtoms[r.mD]);
+			           cb(mAtoms[r.mA], mAtoms[r.mB], mAtoms[r.mC], mAtoms[r.mD]);
 			});
-		
+
 		for (auto i = e; i != mTorsionRestraints.end(); ++i)
 			mRestraints.erase(std::remove(mRestraints.begin(), mRestraints.end(), &*i), mRestraints.end());
 
@@ -116,6 +116,48 @@ class Minimizer
 
 	void printStats();
 
+	[[nodiscard]] std::tuple<double, double> getBondRmsz()
+	{
+		AtomLocationProvider loc(mReferencedAtoms);
+		return getBondRmsz(loc);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getAngleRmsz()
+	{
+		AtomLocationProvider loc(mReferencedAtoms);
+		return getAngleRmsz(loc);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getTorsionRmsz()
+	{
+		AtomLocationProvider loc(mReferencedAtoms);
+		return getTorsionRmsz(loc);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getChiralVolumeRmsz()
+	{
+		AtomLocationProvider loc(mReferencedAtoms);
+		return getChiralVolumeRmsz(loc);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getPlanarityRmsz()
+	{
+		AtomLocationProvider loc(mReferencedAtoms);
+		return getPlanarityRmsz(loc);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getTransPeptideRmsz()
+	{
+		AtomLocationProvider loc(mReferencedAtoms);
+		return getTransPeptideRmsz(loc);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getNonBondedContactRmsz()
+	{
+		AtomLocationProvider loc(mReferencedAtoms);
+		return getNonBondedContactRmsz(loc);
+	}
+
 	virtual double refine(bool storeAtoms) = 0;
 	double score();
 	[[nodiscard]] virtual std::vector<std::pair<std::string, cif::point>> getAtoms() const = 0;
@@ -124,7 +166,6 @@ class Minimizer
 	void analyseRestraints(float inMinDistortion = 5.0f);
 
   protected:
-
 	Minimizer(const cif::mm::structure &structure);
 
 	static Minimizer *create(const cif::crystal &crystal, cif::mm::structure &structure, const std::vector<cif::mm::atom> &atoms, const XMap *xMap);
@@ -168,6 +209,41 @@ class Minimizer
 		}
 
 		return { z, sum };
+	}
+
+	[[nodiscard]] std::tuple<double, double> getBondRmsz(AtomLocationProvider &loc) const
+	{
+		return rmsz(loc, mBondRestraints);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getAngleRmsz(AtomLocationProvider &loc) const
+	{
+		return rmsz(loc, mAngleRestraints);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getTorsionRmsz(AtomLocationProvider &loc) const
+	{
+		return rmsz(loc, mTorsionRestraints);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getChiralVolumeRmsz(AtomLocationProvider &loc) const
+	{
+		return rmsz(loc, mChiralVolumeRestraints);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getPlanarityRmsz(AtomLocationProvider &loc) const
+	{
+		return rmsz(loc, mPlanarityRestraints);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getTransPeptideRmsz(AtomLocationProvider &loc) const
+	{
+		return rmsz(loc, mTransPeptideRestraints);
+	}
+
+	[[nodiscard]] std::tuple<double, double> getNonBondedContactRmsz(AtomLocationProvider &loc) const
+	{
+		return rmsz(loc, mNonBondedContactRestraints);
 	}
 
 	AtomRef ref(const cif::mm::atom &atom);
